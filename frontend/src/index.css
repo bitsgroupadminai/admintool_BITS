@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+/* Jade pebble morning */
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --color-mist: #e6e6e6;
+  --color-sage: #7b9669;
+  --color-sage-light: #bac8b1;
+  --color-slate: #6c8480;
+  --color-forest: #404e3b;
+
+  --color-background: #e6e6e6;
+  --color-surface: #ffffff;
+  --color-foreground: #404e3b;
+  --color-muted: #6c8480;
+  /* Secondary text — meets ~4.5:1 on mist/sage tints and white */
+  --color-subtle: #4a5c58;
+  --color-border: #bac8b1;
+  --color-accent: #bac8b1;
+  --color-hero: #404e3b;
+
+  --color-primary: #7b9669;
+  --color-primary-foreground: #ffffff;
+  --color-destructive: #a85c5c;
+  --color-warning: #6c5e48;
+  --color-warning-surface: #e8ebe4;
+
+  --color-insight-surface: #e8eef3;
+  --color-insight-border: #9eb5c4;
+  --color-insight-foreground: #3d5563;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-sage-light) 80%, var(--color-sage));
+    color: var(--color-forest);
+  }
+}

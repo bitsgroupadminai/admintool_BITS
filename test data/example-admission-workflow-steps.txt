@@ -1,0 +1,217 @@
+This is an example knowledge document extract of "B.E. Computer Science (UG-CS)" -> admission service offering workflow steps conversion (the actual number of steps generated will depend on the thoroughness of service each offering that can be inferred from the document and learning from the following example):
+-----------------------------------------------------------------
+
+IF a knowledge document has course details as follows for 
+
+5.1 B.E. Computer Science (UG-CS)
+Programme Overview
+The B.E. Computer Science programme is a four-year undergraduate engineering programme
+focused on:
+●
+Software systems
+●
+Algorithms
+●
+AI and ML fundamentals
+●
+Distributed systems
+●
+Operating systems
+●
+Data engineering
+This programme historically receives the highest applicant demand across all campuses.
+Admission Channel
+Primary admission mode:
+●
+BITSAT-based admission
+Additional channels (where applicable):
+●
+●
+International student admissions
+Board toppers admission scheme
+Eligibility Rules
+Applicants must satisfy ALL of the following:
+Requirement Rule
+Qualification 10+2 or equivalent
+Subjects Physics, Chemistry, Mathematics
+English Proficiency Mandatory
+Minimum Aggregate 75% aggregate in PCM
+Individual Subject
+Requirement
+Minimum 60% in Physics, Chemistry, and Mathematics
+individually
+Common Applicant Errors
+Error Type Handling Rule
+Biology instead of Mathematics Reject for ineligibility
+Aggregate calculated incorrectly Recompute using official normalization
+Marksheet mismatch across
+uploads
+Escalate
+Provisional marksheet without seal Mark REUPLOAD
+REQUIRED
+_
+Required Documents
+Mandatory documents:
+●
+Class 10 marksheet
+●
+Class 12 marksheet
+●
+BITSAT scorecard
+●
+Government-issued ID proof
+●
+Passport-size photograph
+●
+Signature image
+Conditional documents:
+●
+●
+●
+Category-related documents (if applicable)
+Migration certificate
+Passport (international applicants)
+Operational Notes
+●
+●
+●
+High ticket volume expected during score normalization windows.
+Queue prioritization enabled during final counseling rounds.
+AI chatbot should recommend early slot booking during peak periods.
+Escalation Conditions
+Escalate to senior admissions officer if:
+●
+Marks conversion requires manual interpretation
+●
+Foreign board equivalency unclear
+●
+Duplicate applications detected
+●
+Name mismatch exceeds permitted threshold
+
+-- THEN the extracted workflow steps for the admission service offering for the same course should be as follows:
+
+Step 1: Document Verification
+Handled by: AI + Admissions Verification Team
+Purpose: Verify uploaded documents are complete, authentic, and readable.
+Outcomes
+✅ Documents Verified
+Action:
+Go to next step
+Next:
+Step 2: Eligibility Validation
+🔧 Missing / Invalid Documents
+Action:
+Return to student
+Required Re-upload:
+Class 10 marksheet
+Class 12 marksheet
+BITSAT scorecard
+Government ID
+Photograph
+Signature
+Student sees:
+Missing documents list
+Reason for rejection
+❌ Fraud / Serious Mismatch
+Action:
+End workflow
+Terminal State:
+Rejected
+Reason examples:
+Forged marksheet
+Identity mismatch
+Duplicate application
+Step 2: Eligibility Validation
+Handled by: Admissions Officer / AI Rules Engine
+Purpose: Verify academic eligibility.
+Outcomes
+✅ Eligible
+Action:
+Go to next step
+Next:
+Step 3: Seat Allocation & Merit Processing
+🔧 Eligibility Clarification Required
+Action:
+Return to student
+Examples:
+Foreign board equivalency unclear
+Aggregate calculation dispute
+Marks conversion required
+❌ Not Eligible
+Action:
+End workflow
+Terminal State:
+Rejected
+Examples:
+PCM not present
+Maths missing
+Aggregate below 75%
+Individual subject below 60%
+Step 3: Seat Allocation & Merit Processing
+Handled by: Admissions System
+Purpose: Determine seat availability based on rank and preferences.
+Outcomes
+🎉 Seat Available
+Action:
+Go to next step
+Next:
+Step 4: Offer Release
+⏳ Waitlist
+Action:
+End workflow
+Terminal State:
+Waitlisted
+(Workflow can later be re-opened automatically if seat becomes available)
+❌ No Seat Available
+Action:
+End workflow
+Terminal State:
+Rejected
+Step 4: Offer Release
+Handled by: Admissions System
+Purpose: Generate admission offer.
+Outcomes
+✅ Offer Generated
+Action:
+Go to next step
+Next:
+Step 5: Fee Payment
+❌ Offer Expired
+Action:
+End workflow
+Terminal State:
+Rejected
+Step 5: Fee Payment
+Handled by: Student
+Purpose: Collect admission fee.
+Outcomes
+✅ Fee Paid
+Action:
+Go to next step
+Next:
+Step 6: Admission Confirmation
+⏳ Payment Pending
+Action:
+Stay in current step
+System:
+Send reminders
+❌ Payment Deadline Missed
+Action:
+End workflow
+Terminal State:
+Offer Lapsed
+Step 6: Admission Confirmation
+Handled by: Admissions System
+Purpose: Finalize admission.
+Outcomes
+🎓 Admission Confirmed
+Action:
+End workflow
+Terminal State:
+Admitted
+❌ Final Verification Failure
+Action:
+End workflow
+Terminal State:
+Rejected

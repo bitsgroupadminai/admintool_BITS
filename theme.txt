@@ -1,0 +1,26 @@
+Deep forest text: #052E1C
+Primary emerald: #0A6640
+Primary emerald hover: #084F31
+Bright emerald: #10B981
+Mint accent: #6EE7B7
+Light mint accent: #A7F3D0
+Pale mint: #D1FAE5
+Page background: #F4FAF7
+Main card surface: rgba(255, 255, 255, 0.85)
+Soft white panel: rgba(255, 255, 255, 0.55)
+Input background: #F0FAF5
+Input hover background: #EDFAF3
+Divider: #E2EEE8
+Body muted gray: #6B7280
+Label green gray: #4B6358
+Secondary green text: rgba(61, 122, 92, 0.75)
+Placeholder: #A8BDB5
+Disabled icon gray: #9CA3AF
+Card border: rgba(209, 238, 224, 0.8)
+Input border: #C4E8D4
+Input hover border: #6EE7B7
+Soft panel border: #B6DFC8
+Error text: #EF4444
+Error background: rgba(254, 242, 242, 0.6)
+Error border: #FCA5A5
+Loading button: #34D399

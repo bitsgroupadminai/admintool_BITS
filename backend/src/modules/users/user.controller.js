@@ -1,4 +1,5 @@
 import { createStaffSchema, updateStaffSchema } from '../auth/auth.validator.js';
+import { createStudentSchema } from '../student/student.validator.js';
 import * as userService from './user.service.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 
@@ -51,6 +52,34 @@ export async function getStaffRoles(req, res, next) {
   try {
     const roles = await userService.getAvailableStaffRoles(req.user.instituteId);
     sendSuccess(res, 200, 'Staff roles', { roles });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listStudents(req, res, next) {
+  try {
+    const students = await userService.listStudentUsers(req.user.instituteId);
+    sendSuccess(res, 200, 'Student users', { students });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listProgrammes(req, res, next) {
+  try {
+    const programmes = await userService.listEnrollmentProgrammes(req.user.instituteId);
+    sendSuccess(res, 200, 'Enrollment programmes', { programmes });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createStudent(req, res, next) {
+  try {
+    const payload = createStudentSchema.parse(req.body);
+    const student = await userService.createStudentUser(req.user.instituteId, payload);
+    sendSuccess(res, 201, 'Student user created', { student });
   } catch (err) {
     next(err);
   }

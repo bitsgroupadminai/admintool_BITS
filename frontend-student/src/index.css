@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --color-background: #f4f6f5;
+  --color-foreground: #1f2a28;
+  --color-muted: #5f6f6b;
+  --color-border: #d7dfdb;
+  --color-surface: #ffffff;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+}

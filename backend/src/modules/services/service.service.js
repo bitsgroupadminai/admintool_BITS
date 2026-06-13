@@ -35,6 +35,8 @@ export async function listServices(instituteId) {
     name: s.name,
     description: s.description ?? '',
     status: s.status,
+    isSystem: Boolean(s.isSystem),
+    systemKey: s.systemKey ?? null,
     offeringCount: countMap[s._id.toString()]?.total ?? 0,
     activeOfferingCount: countMap[s._id.toString()]?.active ?? 0,
     createdAt: s.createdAt,
@@ -124,6 +126,10 @@ export async function deleteService(serviceId, instituteId) {
     throw new AppError('Service not found', 404);
   }
 
+  if (service.isSystem) {
+    throw new AppError('System services cannot be deleted', 400);
+  }
+
   const offeringCount = await Offering.countDocuments({ serviceId });
   if (offeringCount > 0) {
     throw new AppError(
@@ -168,6 +174,8 @@ function formatService(service) {
     name: service.name,
     description: service.description ?? '',
     status: service.status,
+    isSystem: Boolean(service.isSystem),
+    systemKey: service.systemKey ?? null,
     knowledgeInsights: service.knowledgeInsights ?? null,
     createdAt: service.createdAt,
     updatedAt: service.updatedAt,

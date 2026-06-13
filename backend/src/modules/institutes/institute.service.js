@@ -28,8 +28,11 @@ export async function updateInstitute(instituteId, userInstituteId, payload) {
   return institute;
 }
 
+import { ensureEnrollmentServiceForInstitute } from '../enrollment/enrollment-seed.service.js';
+
 /**
  * @param {string} instituteId
+ * @param {string} userInstituteId
  */
 export async function completeSetup(instituteId, userInstituteId) {
   const institute = await getInstituteForUser(instituteId, userInstituteId);
@@ -46,6 +49,7 @@ export async function completeSetup(instituteId, userInstituteId) {
   institute.setupCompleted = true;
   institute.setupCompletedAt = new Date();
   await institute.save();
+  await ensureEnrollmentServiceForInstitute(instituteId);
   return institute;
 }
 

@@ -35,6 +35,14 @@ const serviceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+    isSystem: {
+      type: Boolean,
+      default: false,
+    },
+    systemKey: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

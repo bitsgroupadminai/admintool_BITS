@@ -123,6 +123,11 @@ const offeringSchema = new mongoose.Schema(
       trim: true,
       maxlength: 200,
     },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
     status: {
       type: String,
       enum: Object.values(OFFERING_STATUS),

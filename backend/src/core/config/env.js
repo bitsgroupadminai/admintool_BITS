@@ -9,7 +9,8 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1),
   REDIS_URL: z.string().min(1),
   SESSION_SECRET: z.string().min(16),
-  CLIENT_URL: z.string().url(),
+  ADMIN_CLIENT_URL: z.string().url(),
+  STUDENT_CLIENT_URL: z.string().url(),
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   SESSION_INACTIVITY_HOURS: z.coerce.number().default(24),
@@ -20,6 +21,7 @@ const envSchema = z.object({
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  STUDENT_PORTAL_INSTITUTE_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -29,3 +31,5 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+export const CLIENT_ORIGINS = [env.ADMIN_CLIENT_URL, env.STUDENT_CLIENT_URL];

@@ -47,6 +47,18 @@ const userSchema = new mongoose.Schema(
     lockedUntil: {
       type: Date,
     },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+    enrolledOfferingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Offering',
+    },
+    enrollmentStatus: {
+      type: String,
+      enum: ['pending', 'enrolled', 'rejected'],
+    },
   },
   { timestamps: true },
 );

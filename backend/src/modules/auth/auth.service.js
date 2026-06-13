@@ -4,7 +4,7 @@ import { Institute } from '../institutes/institute.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { env } from '../../core/config/env.js';
 import { ROLES } from '../../shared/constants/roles.js';
-import { createSession, destroySession } from '../../core/services/session.service.js';
+import { createSession, destroySession, getSession, touchSession } from '../../core/services/session.service.js';
 import { toAuthUserDto } from './auth.dto.js';
 
 const INVALID_CREDENTIALS_MSG = 'Invalid email or password';
@@ -58,7 +58,7 @@ export async function signupAdmin(payload) {
 
   return {
     session,
-    user: toAuthUserDto(admin, institute),
+    user: await toAuthUserDto(admin, institute),
   };
 }
 
@@ -103,11 +103,14 @@ export async function loginUser(payload) {
     email: user.email,
     name: user.name,
     staffRole: user.staffRole,
+    mustChangePassword: Boolean(user.mustChangePassword),
+    enrolledOfferingId: user.enrolledOfferingId?.toString() ?? null,
+    enrollmentStatus: user.enrollmentStatus ?? null,
   });
 
   return {
     session,
-    user: toAuthUserDto(user, institute),
+    user: await toAuthUserDto(user, institute),
   };
 }
 
@@ -128,6 +131,62 @@ export async function getCurrentUser(userId) {
   if (!user || !user.isActive) {
     throw new AppError('User not found', 404);
   }
+  const institute = await Institute.findById(user.instituteId);
+  return toAuthUserDto(user, institute);
+}
+
+/**
+ * @param {string} userId
+ * @param {string} [sessionId]
+ */
+async function refreshStudentSession(userId, sessionId) {
+  if (!sessionId) return;
+  const session = await getSession(sessionId);
+  if (!session || session.userId !== userId) return;
+  const user = await User.findById(userId);
+  if (!user) return;
+  await touchSession(sessionId, {
+    ...session,
+    mustChangePassword: Boolean(user.mustChangePassword),
+    enrolledOfferingId: user.enrolledOfferingId?.toString() ?? null,
+    enrollmentStatus: user.enrollmentStatus ?? null,
+  });
+}
+
+/**
+ * @param {string} userId
+ * @param {{ password: string }} payload
+ * @param {string} [sessionId]
+ */
+export async function changeStudentPassword(userId, payload, sessionId) {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user || !user.isActive || user.role !== ROLES.STUDENT) {
+    throw new AppError('User not found', 404);
+  }
+
+  user.passwordHash = await hashPassword(payload.password);
+  user.mustChangePassword = false;
+  await user.save();
+  await refreshStudentSession(userId, sessionId);
+
+  const institute = await Institute.findById(user.instituteId);
+  return toAuthUserDto(user, institute);
+}
+
+/**
+ * @param {string} userId
+ * @param {string} [sessionId]
+ */
+export async function skipPasswordChange(userId, sessionId) {
+  const user = await User.findById(userId);
+  if (!user || !user.isActive || user.role !== ROLES.STUDENT) {
+    throw new AppError('User not found', 404);
+  }
+
+  user.mustChangePassword = false;
+  await user.save();
+  await refreshStudentSession(userId, sessionId);
+
   const institute = await Institute.findById(user.instituteId);
   return toAuthUserDto(user, institute);
 }

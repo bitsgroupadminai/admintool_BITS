@@ -1,6 +1,7 @@
 export const ROLES = {
   ADMIN: 'admin',
   STAFF: 'staff',
+  STUDENT: 'student',
 };
 
 export const STAFF_ROLES = [

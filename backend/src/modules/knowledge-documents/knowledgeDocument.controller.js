@@ -1,4 +1,6 @@
 import * as knowledgeService from './knowledgeDocument.service.js';
+import { KnowledgeDocument } from './knowledgeDocument.model.js';
+import { recordKnowledgeDocumentVersion } from './knowledgeDocument.version.service.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 import { AppError } from '../../core/utils/AppError.js';
 
@@ -24,6 +26,10 @@ export async function upload(req, res, next) {
       req.params.serviceId,
       req.file,
     );
+    const doc = await KnowledgeDocument.findById(document.id);
+    if (doc) {
+      await recordKnowledgeDocumentVersion(doc, 'upload').catch(() => {});
+    }
     sendSuccess(res, 201, 'Document uploaded', { document });
   } catch (err) {
     next(err);

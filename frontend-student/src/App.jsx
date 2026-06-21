@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AppRoutes } from '@/routes/AppRoutes';
+import { ConfirmProvider } from '@/components/ui/confirm';
+import { SocketProvider } from '@/contexts/SocketContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function App() {
@@ -13,8 +16,14 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppRoutes />
-      <Toaster position="top-right" richColors closeButton />
+      <ConfirmProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <AppRoutes />
+            <Toaster position="top-right" richColors closeButton />
+          </NotificationProvider>
+        </SocketProvider>
+      </ConfirmProvider>
     </BrowserRouter>
   );
 }

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, ChevronRight, Trash2, Layers } from "lucide-react";
+import { Plus, ChevronRight, Trash2, Layers, Pencil, PowerOff, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Drawer } from "@/components/ui/drawer";
 import { useConfirm } from "@/components/ui/confirm-context";
-import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { ServicesListSkeleton } from "@/components/skeletons";
 import { servicesApi } from "@/api/services.api";
 
 export function ServicesListPage() {
@@ -16,6 +16,9 @@ export function ServicesListPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const confirm = useConfirm();
 
   const load = async () => {
@@ -70,6 +73,48 @@ export function ServicesListPage() {
       await load();
     } catch (err) {
       toast.error(err.message || "Failed to delete service");
+    }
+  };
+
+  const openEdit = (service) => {
+    setEditingService(service);
+    setEditName(service.name);
+    setEditDescription(service.description ?? "");
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    if (!editingService) return;
+    setSubmitting(true);
+    try {
+      await servicesApi.update(editingService.id, {
+        name: editName,
+        description: editDescription,
+      });
+      toast.success("Service updated");
+      setEditingService(null);
+      await load();
+    } catch (err) {
+      toast.error(err.message || "Failed to update service");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleStatusChange = async (service, status) => {
+    const labels = { disabled: "disable", archived: "archive", draft: "reactivate" };
+    const ok = await confirm({
+      title: `${labels[status] ?? status} "${service.name}"?`,
+      confirmLabel: labels[status] ?? status,
+      variant: status === "archived" ? "danger" : "default",
+    });
+    if (!ok) return;
+    try {
+      await servicesApi.update(service.id, { status });
+      toast.success(`Service ${status === "draft" ? "reactivated" : status}`);
+      await load();
+    } catch (err) {
+      toast.error(err.message || "Failed to update service status");
     }
   };
 
@@ -157,8 +202,47 @@ export function ServicesListPage() {
           </form>
         </Drawer>
 
+        <Drawer
+          open={Boolean(editingService)}
+          title="Edit service"
+          description="Update service name and description."
+          onClose={() => setEditingService(null)}
+        >
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#4B6358] uppercase tracking-wide">
+                Service name
+              </label>
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                className="w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 py-2.5 text-sm text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#4B6358] uppercase tracking-wide">
+                Description
+              </label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 py-3 text-sm text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0A6640] to-[#084F31] disabled:opacity-60"
+            >
+              {submitting ? "Saving..." : "Save changes"}
+            </button>
+          </form>
+        </Drawer>
+
         {loading ? (
-          <GlobalLoader label="Loading services..." />
+          <ServicesListSkeleton />
         ) : services.length === 0 ? (
           <div className="rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_4px_24px_rgba(10,102,64,0.07)] px-7 py-16 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#D1FAE5] to-[#A7F3D0]">
@@ -216,13 +300,49 @@ export function ServicesListPage() {
                   />
                 </Link>
                 {!service.isSystem && (
-                  <button
-                    onClick={() => handleDelete(service)}
-                    title="Delete service"
-                    className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#9CA3AF] border border-transparent transition-all duration-200 hover:border-[#FCA5A5] hover:bg-red-50 hover:text-[#EF4444] sm:mr-4"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2} />
-                  </button>
+                  <div className="mr-3 flex shrink-0 items-center gap-1 sm:mr-4">
+                    <button
+                      onClick={() => openEdit(service)}
+                      title="Edit service"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                    {service.status === "active" && (
+                      <button
+                        onClick={() => handleStatusChange(service, "disabled")}
+                        title="Disable service"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#D97706]"
+                      >
+                        <PowerOff className="h-4 w-4" strokeWidth={2} />
+                      </button>
+                    )}
+                    {service.status !== "archived" && service.status !== "active" && (
+                      <button
+                        onClick={() => handleStatusChange(service, "archived")}
+                        title="Archive service"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-red-50 hover:text-[#EF4444]"
+                      >
+                        <Archive className="h-4 w-4" strokeWidth={2} />
+                      </button>
+                    )}
+                    {(service.status === "disabled" || service.status === "archived") && (
+                      <button
+                        onClick={() => handleStatusChange(service, "draft")}
+                        title="Reactivate service"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                      >
+                        <RotateCcw className="h-4 w-4" strokeWidth={2} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(service)}
+                      title="Delete service"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9CA3AF] border border-transparent transition-all duration-200 hover:border-[#FCA5A5] hover:bg-red-50 hover:text-[#EF4444]"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

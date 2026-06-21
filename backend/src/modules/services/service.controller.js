@@ -65,6 +65,18 @@ export async function remove(req, res, next) {
   }
 }
 
+export async function activate(req, res, next) {
+  try {
+    const service = await serviceService.activateService(
+      req.params.id,
+      req.user.instituteId,
+    );
+    sendSuccess(res, 200, 'Service activated', { service });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getInsights(req, res, next) {
   try {
     const data = await serviceInsightsService.getServiceInsights(
@@ -143,6 +155,26 @@ export async function createOfferingFromSuggestion(req, res, next) {
       req.params.suggestionId,
     );
     sendSuccess(res, 201, 'Offering created from suggestion', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getRagStatus(req, res, next) {
+  try {
+    const { getServiceRagStatus } = await import('../../shared/services/rag.service.js');
+    const status = await getServiceRagStatus(req.user.instituteId, req.params.id);
+    sendSuccess(res, 200, 'RAG index status', status);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function reindexRag(req, res, next) {
+  try {
+    const { enqueueServiceReindex } = await import('../../core/queues/embedding.queue.js');
+    await enqueueServiceReindex(req.user.instituteId, req.params.id, 'manual-reindex');
+    sendSuccess(res, 202, 'Knowledge re-index queued', { queued: true });
   } catch (err) {
     next(err);
   }

@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import { authApi } from '@/api/auth.api';
+import { bootstrapSession } from '@/utils/authBootstrap';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  authError: null,
 
   setUser: (user) =>
     set({
       user,
       isAuthenticated: Boolean(user),
       isLoading: false,
+      authError: null,
     }),
 
   clearUser: () =>
@@ -18,25 +21,33 @@ export const useAuthStore = create((set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      authError: null,
     }),
 
-  fetchMe: async () => {
-    set({ isLoading: true });
+  fetchMe: async ({ silent = false } = {}) => {
+    if (!silent) {
+      set({ isLoading: true, authError: null });
+    }
+
     try {
-      const { data } = await authApi.me();
+      const result = await bootstrapSession(() => authApi.me());
       set({
-        user: data.data.user,
-        isAuthenticated: true,
+        user: result.user,
+        isAuthenticated: result.isAuthenticated,
         isLoading: false,
+        authError: null,
       });
-      return data.data.user;
+      return result.user;
     } catch {
+      const current = get();
       set({
-        user: null,
-        isAuthenticated: false,
+        user: current.user,
+        isAuthenticated: current.isAuthenticated && Boolean(current.user),
         isLoading: false,
+        authError:
+          'We could not verify your session right now. Check your connection and refresh the page.',
       });
-      return null;
+      return current.user;
     }
   },
 
@@ -48,6 +59,7 @@ export const useAuthStore = create((set) => ({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        authError: null,
       });
     }
   },

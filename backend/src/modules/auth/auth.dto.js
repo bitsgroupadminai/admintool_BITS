@@ -17,6 +17,13 @@ export async function toAuthUserDto(user, institute) {
     }
   }
 
+  if (!enrolledProgramme && user.enrolledProgrammeName) {
+    enrolledProgramme = {
+      id: null,
+      name: user.enrolledProgrammeName,
+    };
+  }
+
   return {
     id: user._id.toString(),
     name: user.name,
@@ -26,8 +33,10 @@ export async function toAuthUserDto(user, institute) {
     instituteId: user.instituteId.toString(),
     mustChangePassword: Boolean(user.mustChangePassword),
     enrolledOfferingId: user.enrolledOfferingId?.toString() ?? null,
+    enrolledProgrammeName: user.enrolledProgrammeName ?? null,
     enrollmentStatus: user.enrollmentStatus ?? null,
     enrolledProgramme,
+    avatarUrl: user.avatarUrl ?? null,
     institute: institute
       ? {
           id: institute._id.toString(),

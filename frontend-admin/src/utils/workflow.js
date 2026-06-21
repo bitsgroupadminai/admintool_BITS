@@ -54,7 +54,6 @@ export function defaultOutcomes(nextStepId) {
       type: 'needs_correction',
       route: {
         action: ROUTE_ACTION.RETURN_TO_STUDENT,
-        returnToStepId: null,
         requireReupload: [],
       },
     },
@@ -120,7 +119,6 @@ function canonicalizeOutcomes(outcomes, nextStepId) {
       type: 'needs_correction',
       route: {
         action: ROUTE_ACTION.RETURN_TO_STUDENT,
-        returnToStepId: null,
         requireReupload: [],
       },
     },

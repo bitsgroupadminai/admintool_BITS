@@ -8,17 +8,36 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  ClipboardList,
+  UserCheck,
   Users,
+  UserCircle,
+  UserCog,
+  Settings,
+  Bell,
+  Ticket,
+  CalendarDays,
+  CreditCard,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import { useConfirm } from "@/components/ui/confirm-context";
+import { NotificationBell, NotificationSidebar } from '@/components/notifications/NotificationBell';
 
 const navItems = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/services", label: "Services", icon: Layers },
+  { to: "/admin/enrollment-intakes", label: "Enrollment intakes", icon: UserCheck },
+  { to: "/admin/applications", label: "Requests", icon: ClipboardList },
+  { to: "/admin/payments", label: "Payments", icon: CreditCard },
+  { to: "/admin/queue", label: "Queue monitor", icon: Ticket },
+  { to: "/admin/appointments", label: "Appointments", icon: CalendarDays },
   { to: "/admin/students", label: "Students", icon: Users },
+  { to: "/admin/staff", label: "Staff", icon: UserCog },
+  { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin/notifications", label: "Notifications", icon: Bell },
+  { to: "/admin/profile", label: "Profile", icon: UserCircle },
 ];
 
 export function AdminLayout({ children }) {
@@ -41,7 +60,7 @@ export function AdminLayout({ children }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F4FAF7]">
+    <div className="flex h-screen overflow-hidden bg-[#F4FAF7]">
       <aside
         className={cn(
           "hidden lg:flex fixed inset-y-0 left-0 z-40 flex-col bg-white/85 border-r border-[#E2EEE8] shadow-[4px_0_24px_rgba(10,102,64,0.06)] transition-[width] duration-300",
@@ -88,7 +107,7 @@ export function AdminLayout({ children }) {
 
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col transition-[padding] duration-300",
+          "flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-300",
           sidebarCollapsed ? "lg:pl-20" : "lg:pl-60",
         )}
       >
@@ -109,6 +128,7 @@ export function AdminLayout({ children }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell />
             <div className="hidden sm:flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#D1FAE5] to-[#A7F3D0] shadow-[0_2px_6px_rgba(10,102,64,0.12)] text-xs font-bold text-[#0A6640]">
                 {user?.name?.slice(0, 2).toUpperCase() ?? "AD"}
@@ -136,7 +156,8 @@ export function AdminLayout({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="min-h-0 flex-1 overflow-auto bg-[#F4FAF7]">{children}</main>
+        <NotificationSidebar />
       </div>
     </div>
   );

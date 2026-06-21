@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GlobalLoader } from '@/components/ui/GlobalLoader';
+import { SetupFormSkeleton } from '@/components/skeletons';
 import { instituteApi } from '@/api/institute.api';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -75,7 +75,7 @@ export function InstituteSetupPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <GlobalLoader label="Loading institute details..." variant="inline" size="sm" />
+            <SetupFormSkeleton />
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">

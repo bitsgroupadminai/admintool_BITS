@@ -28,15 +28,20 @@ export async function chatJson({ system, user, schema, normalize }) {
     throw new Error('OpenAI API key is not configured');
   }
 
-  const response = await openai.chat.completions.create({
-    model: env.OPENAI_MODEL,
-    temperature: 0.2,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
+  const response = await Promise.race([
+    openai.chat.completions.create({
+      model: env.OPENAI_MODEL,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI request timed out')), 12_000);
+    }),
+  ]);
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {

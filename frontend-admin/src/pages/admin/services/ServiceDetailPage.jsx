@@ -17,6 +17,7 @@ import {
   X,
   Layers,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
@@ -24,10 +25,19 @@ import { DocumentPurposeStrip } from "@/components/services/DocumentPurposeStrip
 import { ExtractKnowledgeBridge } from "@/components/services/ExtractKnowledgeBridge";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm-context";
-import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { AdminServiceDetailSkeleton } from "@/components/skeletons";
 import { servicesApi } from "@/api/services.api";
 import { offeringsApi } from "@/api/offerings.api";
 import { knowledgeApi } from "@/api/knowledge.api";
+import {
+  formatOfferingMissing,
+  countServiceReadyOfferings,
+} from "@/constants/offeringCompleteness.constants";
+import {
+  OfferingBulkToolbar,
+  OfferingBulkCheckbox,
+} from "@/components/offerings/OfferingBulkToolbar";
+import { settingsApi } from "@/api/settings.api";
 
 export function ServiceDetailPage() {
   const { id } = useParams();
@@ -44,6 +54,11 @@ export function ServiceDetailPage() {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [activatingService, setActivatingService] = useState(false);
+  const [ragStatus, setRagStatus] = useState(null);
+  const [reindexing, setReindexing] = useState(false);
+  const [knowledgeCoverage, setKnowledgeCoverage] = useState(null);
+  const [selectedOfferingIds, setSelectedOfferingIds] = useState(new Set());
   const confirm = useConfirm();
 
   const step2Ref = useRef(null);
@@ -62,18 +77,23 @@ export function ServiceDetailPage() {
 
   const load = async () => {
     try {
-      const [serviceRes, offeringsRes, docsRes, insightsRes] =
+      const [serviceRes, offeringsRes, docsRes, insightsRes, ragRes] =
         await Promise.all([
           servicesApi.get(id),
           offeringsApi.list(id),
           knowledgeApi.list(id),
           servicesApi.getInsights(id),
+          servicesApi.getRagStatus(id).catch(() => ({ data: { data: null } })),
         ]);
       setService(serviceRes.data.data.service);
       setOfferings(offeringsRes.data.data.offerings);
       setDocuments(docsRes.data.data.documents);
       setInsights(insightsRes.data.data.insights);
       setAiEnabled(Boolean(insightsRes.data.data.aiEnabled));
+      setRagStatus(ragRes.data.data ?? null);
+      settingsApi.getKnowledgeCoverage(id).then(({ data }) => {
+        setKnowledgeCoverage(data.data);
+      }).catch(() => setKnowledgeCoverage(null));
     } catch (err) {
       toast.error(err.message || "Failed to load service");
     }
@@ -92,7 +112,7 @@ export function ServiceDetailPage() {
     try {
       await knowledgeApi.upload(id, file);
       toast.success(
-        "Document uploaded — run Extract knowledge when you are done adding files",
+        "Document uploaded — indexing for student chat starts automatically",
       );
       await load();
     } catch (err) {
@@ -208,6 +228,31 @@ export function ServiceDetailPage() {
     }
   };
 
+  const handleActivateService = async () => {
+    const readyCount = countServiceReadyOfferings(offerings);
+    const ok = await confirm({
+      title: `Activate "${service?.name}"?`,
+      description:
+        readyCount === 1
+          ? "This service will go live. At least one offering is active or fully configured. Other incomplete offerings can stay as drafts."
+          : `${readyCount} offerings are active or fully configured. This service will go live; any incomplete offerings can remain as drafts.`,
+      confirmLabel: "Activate service",
+    });
+    if (!ok) return;
+
+    setActivatingService(true);
+    try {
+      const { data } = await servicesApi.activate(id);
+      setService(data.data.service);
+      toast.success("Service is now active");
+      await load();
+    } catch (err) {
+      toast.error(err.message || "Could not activate service");
+    } finally {
+      setActivatingService(false);
+    }
+  };
+
   const handleDeleteOffering = async (offering) => {
     const activeNote =
       offering.status === "active"
@@ -232,11 +277,15 @@ export function ServiceDetailPage() {
   const pendingSuggestions =
     insights?.suggestedOfferings?.filter((s) => s.status === "pending") ?? [];
 
+  const readyOfferingCount = countServiceReadyOfferings(offerings);
+  const canActivateService =
+    service?.status !== "active" && readyOfferingCount >= 1;
+
   if (!service) {
     return (
       <AdminLayout>
         <div className="mx-auto max-w-7xl px-6 py-10">
-          <GlobalLoader label="Loading service details..." />
+          <AdminServiceDetailSkeleton />
         </div>
       </AdminLayout>
     );
@@ -269,14 +318,39 @@ export function ServiceDetailPage() {
                 {service.description}
               </p>
             )}
+            {service.status !== "active" && (
+              <p className="mt-2 text-xs text-[#6B7280]">
+                {readyOfferingCount >= 1
+                  ? `${readyOfferingCount} offering${readyOfferingCount === 1 ? "" : "s"} ready — you can activate this service even if other offerings are still incomplete.`
+                  : "Configure at least one offering (active or fully saved) before activating this service."}
+              </p>
+            )}
           </div>
-          <button
-            onClick={handleDeleteService}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#EF4444] border border-[#FCA5A5] bg-red-50/60 transition-all duration-200 hover:bg-red-50 hover:border-[#EF4444]"
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={2} />
-            Delete service
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {service.status !== "active" && (
+              <button
+                type="button"
+                onClick={handleActivateService}
+                disabled={!canActivateService || activatingService}
+                title={
+                  canActivateService
+                    ? "Make this service active"
+                    : "Requires at least one active or fully configured offering"
+                }
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0A6640] to-[#10B981] shadow-[0_2px_8px_rgba(10,102,64,0.22)] transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Zap className="h-4 w-4" strokeWidth={2} />
+                {activatingService ? "Activating…" : "Activate service"}
+              </button>
+            )}
+            <button
+              onClick={handleDeleteService}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#EF4444] border border-[#FCA5A5] bg-red-50/60 transition-all duration-200 hover:bg-red-50 hover:border-[#EF4444]"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
+              Delete service
+            </button>
+          </div>
         </div>
 
         <div className="mb-8 rounded-2xl border border-[#C4E8D4] bg-gradient-to-r from-[#F0FAF5] to-[#D1FAE5]/30 px-6 py-4">
@@ -368,6 +442,19 @@ export function ServiceDetailPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-3">
+                        {doc.indexStatus === 'indexed' ? (
+                          <span className="text-[10px] font-semibold text-[#0A6640] bg-[#D1FAE5] border border-[#A7F3D0] rounded-full px-2 py-0.5">
+                            Chat ready
+                          </span>
+                        ) : doc.indexStatus === 'indexing' ? (
+                          <span className="text-[10px] font-semibold text-[#92400E] bg-[#FFFBEB] border border-[#FDE68A] rounded-full px-2 py-0.5">
+                            Indexing
+                          </span>
+                        ) : doc.indexStatus === 'failed' ? (
+                          <span className="text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                            Index failed
+                          </span>
+                        ) : null}
                         {doc.hasExtractedText ? (
                           <span className="text-[10px] font-semibold text-[#0A6640] bg-[#D1FAE5] border border-[#A7F3D0] rounded-full px-2 py-0.5">
                             Text OK
@@ -388,6 +475,69 @@ export function ServiceDetailPage() {
                   ))}
                 </ul>
               )}
+
+              {ragStatus ? (
+                <div className="mt-4 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+                        Student chat (RAG)
+                      </p>
+                      <p className="mt-1 text-sm text-[#4B6358]">
+                        {ragStatus.ragEnabled
+                          ? ragStatus.readyForChat
+                            ? 'Knowledge indexed — chatbot answers from your documents and programme configuration.'
+                            : 'Upload documents and configure offerings — indexing runs automatically in the background.'
+                          : 'Add OPENAI_API_KEY and PINECONE_API_KEY in backend .env to enable semantic chat.'}
+                      </p>
+                    </div>
+                    {ragStatus.ragEnabled ? (
+                      <button
+                        type="button"
+                        disabled={reindexing}
+                        onClick={async () => {
+                          setReindexing(true);
+                          try {
+                            await servicesApi.reindexRag(id);
+                            toast.success('Re-indexing queued for student chat');
+                            await load();
+                          } catch (err) {
+                            toast.error(err.message || 'Could not queue re-index');
+                          } finally {
+                            setReindexing(false);
+                          }
+                        }}
+                        className="rounded-lg border border-[#C4E8D4] bg-white px-3 py-1.5 text-xs font-semibold text-[#0A6640] hover:bg-[#F0FAF5] disabled:opacity-60"
+                      >
+                        {reindexing ? 'Queuing...' : 'Re-index chat knowledge'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {knowledgeCoverage ? (
+                <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 py-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+                    Knowledge coverage
+                  </p>
+                  <p className="mt-1 text-sm text-[#4B6358]">{knowledgeCoverage.recommendation}</p>
+                  <p className="mt-2 text-xs text-[#6B7280]">
+                    {knowledgeCoverage.knowledgeDocuments.indexed} of{' '}
+                    {knowledgeCoverage.knowledgeDocuments.total} documents indexed ·{' '}
+                    {knowledgeCoverage.chatbotCoverage.ready} offering(s) chat-ready
+                  </p>
+                  {knowledgeCoverage.chatbotCoverage.gaps?.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-[#92400E]">
+                      {knowledgeCoverage.chatbotCoverage.gaps.slice(0, 3).map((gap) => (
+                        <li key={gap.offeringId}>
+                          {gap.offeringName}: missing {gap.gaps.join(', ')}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -770,6 +920,12 @@ export function ServiceDetailPage() {
             </div>
 
             <div className="px-7 py-6">
+              <OfferingBulkToolbar
+                offerings={offerings}
+                onUpdated={load}
+                selected={selectedOfferingIds}
+                onSelectedChange={setSelectedOfferingIds}
+              />
               {offerings.length === 0 ? (
                 <div className="flex items-center gap-3 rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-5 py-4">
                   <Layers
@@ -788,6 +944,17 @@ export function ServiceDetailPage() {
                       key={offering.id}
                       className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-5 py-4 transition-all duration-200 hover:border-[#6EE7B7] hover:bg-[#EDFAF3]"
                     >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <OfferingBulkCheckbox
+                          offeringId={offering.id}
+                          checked={selectedOfferingIds.has(offering.id)}
+                          onToggle={(oid) => {
+                            const next = new Set(selectedOfferingIds);
+                            if (next.has(oid)) next.delete(oid);
+                            else next.add(oid);
+                            setSelectedOfferingIds(next);
+                          }}
+                        />
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-[#052E1C]">
@@ -799,12 +966,18 @@ export function ServiceDetailPage() {
                         </div>
                         {!offering.completeness?.isComplete && (
                           <p className="mt-1 text-xs text-[#6B7280]">
-                            Missing:{" "}
-                            {offering.completeness.missing
-                              .join(", ")
-                              .replace(/_/g, " ")}
+                            Still needed:{" "}
+                            {formatOfferingMissing(offering.completeness.missing).join(", ")}
                           </p>
                         )}
+                        {offering.completeness?.isComplete &&
+                          offering.status !== "active" && (
+                            <p className="mt-1 text-xs text-[#0A6640]">
+                              Configuration complete — open Configure, go to Review, and
+                              activate this offering.
+                            </p>
+                          )}
+                      </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button

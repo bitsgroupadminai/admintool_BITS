@@ -24,6 +24,14 @@ const knowledgeDocumentSchema = new mongoose.Schema(
     sizeBytes: { type: Number, required: true },
     filePath: { type: String, required: true },
     extractedText: { type: String },
+    indexStatus: {
+      type: String,
+      enum: ['pending', 'indexing', 'indexed', 'failed', 'skipped'],
+      default: 'pending',
+    },
+    chunkCount: { type: Number, default: 0 },
+    indexedAt: { type: Date },
+    indexError: { type: String },
   },
   { timestamps: true },
 );

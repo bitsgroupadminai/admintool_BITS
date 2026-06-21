@@ -18,10 +18,17 @@ const chatSessionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    studentEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
   },
   { timestamps: true },
 );
 
+chatSessionSchema.index({ serviceId: 1, studentEmail: 1 }, { unique: true, sparse: true });
 chatSessionSchema.index({ serviceId: 1, createdAt: -1 });
 
 export const ChatSession = mongoose.model('ChatSession', chatSessionSchema);

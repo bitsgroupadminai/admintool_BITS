@@ -13,6 +13,7 @@ export async function getInstitute(req, res, next) {
         id: institute._id.toString(),
         name: institute.name,
         setupCompleted: institute.setupCompleted,
+        isStudentPortalHost: institute.isStudentPortalHost ?? false,
       },
     });
   } catch (err) {
@@ -52,6 +53,17 @@ export async function getSetupSummary(req, res, next) {
   }
 }
 
+export async function designateStudentPortalHost(req, res, next) {
+  try {
+    const institute = await instituteService.designateStudentPortalHost(
+      req.params.id,
+      req.user.instituteId,
+    );
+    sendSuccess(res, 200, 'Student portal host updated', { institute });
+  } catch (err) {
+    next(err);
+  }
+}
 export async function completeSetup(req, res, next) {
   try {
     const institute = await instituteService.completeSetup(

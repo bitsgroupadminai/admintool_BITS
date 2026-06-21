@@ -10,6 +10,7 @@ import {
 } from '../../shared/enums/offering.enums.js';
 import { HANDLER_TYPE, AI_HANDLER } from '../../shared/enums/workflow.enums.js';
 import { deriveOfferingStatus } from '../../shared/helpers/offeringCompleteness.helper.js';
+import { validateOperatingHoursWindow } from '../../shared/helpers/operatingHours.helper.js';
 import { formatOfferingResponse } from './offering.format.js';
 import {
   createWorkflowStep,
@@ -18,6 +19,9 @@ import {
 } from '../../shared/helpers/workflow.helper.js';
 import { generateOfferingSectionSuggestions } from '../../shared/services/knowledge-ai.service.js';
 import { isOpenAiConfigured } from '../../shared/services/openai.client.js';
+import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
+import { cacheNs } from '../../shared/constants/cacheKeys.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 
 /**
  * @param {string} offeringId
@@ -109,6 +113,7 @@ export async function generateSuggestions(offeringId, instituteId, section) {
 
   await offering.save();
 
+  await flushInstituteReadCache(instituteId);
   const workflowNote =
     section === 'workflow' || !section
       ? ' Workflow uses two passes: list all steps, then fill outcomes per step.'
@@ -130,11 +135,13 @@ export async function generateSuggestions(offeringId, instituteId, section) {
  * @param {string} instituteId
  */
 export async function getSuggestions(offeringId, instituteId) {
+  return cachedRead(cacheNs.OFFERING_SUGGESTIONS, [instituteId, offeringId], async () => {
   const offering = await Offering.findOne({ _id: offeringId, instituteId });
   if (!offering) {
     throw new AppError('Offering not found', 404);
   }
   return offering.aiSuggestions ?? null;
+  });
 }
 
 /**
@@ -170,7 +177,21 @@ export async function applySuggestions(offeringId, instituteId, options) {
     if (payload.queueMode) {
       offering.queueMode = payload.queueMode;
       offering.queueConfig = payload.queueConfig;
-      offering.appointmentConfig = payload.appointmentConfig;
+      if (payload.appointmentConfig) {
+        const hours = validateOperatingHoursWindow(
+          payload.appointmentConfig.operatingHoursStart,
+          payload.appointmentConfig.operatingHoursEnd,
+        );
+        offering.appointmentConfig = {
+          ...payload.appointmentConfig,
+          operatingHoursStart:
+            hours.start ?? payload.appointmentConfig.operatingHoursStart ?? '09:00',
+          operatingHoursEnd:
+            hours.end ?? payload.appointmentConfig.operatingHoursEnd ?? '17:00',
+        };
+      } else {
+        offering.appointmentConfig = undefined;
+      }
     }
   }
 
@@ -203,6 +224,7 @@ export async function applySuggestions(offeringId, instituteId, options) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
 
+  await flushInstituteReadCache(instituteId);
   return formatOfferingResponse(offering);
 }
 
@@ -243,6 +265,7 @@ export async function rejectSuggestions(offeringId, instituteId) {
 
   offering.aiSuggestions = null;
   await offering.save();
+  await flushInstituteReadCache(instituteId);
   return formatOfferingResponse(offering);
 }
 

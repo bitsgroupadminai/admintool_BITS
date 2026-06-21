@@ -7,12 +7,16 @@ import * as offeringService from '../offerings/offering.service.js';
 import { generateServiceInsights } from '../../shared/services/knowledge-ai.service.js';
 import { isOpenAiConfigured } from '../../shared/services/openai.client.js';
 import { extractTextFromDocument } from '../../shared/services/document-text.service.js';
+import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
+import { cacheNs } from '../../shared/constants/cacheKeys.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 
 /**
  * @param {string} serviceId
  * @param {string} instituteId
  */
 export async function getServiceInsights(serviceId, instituteId) {
+  return cachedRead(cacheNs.SERVICE_INSIGHTS, [instituteId, serviceId], async () => {
   const service = await Service.findOne({ _id: serviceId, instituteId });
   if (!service) {
     throw new AppError('Service not found', 404);
@@ -25,6 +29,7 @@ export async function getServiceInsights(serviceId, instituteId) {
     insights: service.knowledgeInsights ?? null,
     aiEnabled: isOpenAiConfigured(),
   };
+  });
 }
 
 /**
@@ -66,6 +71,7 @@ export async function generateServiceInsightsAction(serviceId, instituteId) {
   };
   await service.save();
 
+  await flushInstituteReadCache(instituteId);
   const usedOpenAi = service.knowledgeInsights.analysisMode === 'openai';
 
   return {
@@ -127,6 +133,7 @@ export async function addManualOfferingSuggestion(serviceId, instituteId, payloa
 
   service.knowledgeInsights = insights;
   await service.save();
+  await flushInstituteReadCache(instituteId);
   return service.knowledgeInsights;
 }
 
@@ -151,6 +158,7 @@ export async function updateOfferingSuggestion(serviceId, instituteId, suggestio
   if (updates.description !== undefined) suggestion.description = updates.description.trim();
 
   await service.save();
+  await flushInstituteReadCache(instituteId);
   return service.knowledgeInsights;
 }
 
@@ -172,6 +180,7 @@ export async function dismissOfferingSuggestion(serviceId, instituteId, suggesti
 
   suggestion.status = 'dismissed';
   await service.save();
+  await flushInstituteReadCache(instituteId);
   return service.knowledgeInsights;
 }
 
@@ -202,5 +211,6 @@ export async function createOfferingFromSuggestion(serviceId, instituteId, sugge
   suggestion.status = 'accepted';
   await service.save();
 
+  await flushInstituteReadCache(instituteId);
   return { offering, insights: service.knowledgeInsights };
 }

@@ -101,33 +101,47 @@ export function AiStepAssist({
       )}
 
       {hasPayload && diff?.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#D4E5D0] bg-white px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-2 w-2 rounded-full bg-[#3D6B35]" />
-            <span className="text-sm font-medium text-[#1A2E16]">
-              Suggested {sectionLabel}
-            </span>
-            <span className="inline-flex items-center rounded-md bg-[#EEF4EC] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#3D6B35]">
-              {diff[0]?.status}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onApply(section)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#3D6B35] px-4 py-1.5 text-xs font-semibold text-white transition-all duration-150 hover:bg-[#2D5427] active:scale-[0.98]"
+        <div className="space-y-3">
+          {diff.map((item) => (
+            <div
+              key={item.key}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#D4E5D0] bg-white px-4 py-3"
             >
-              Apply suggestions
-              <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
-            </button>
-            <button
-              type="button"
-              onClick={onDismiss}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#6B7C69] transition-all duration-150 hover:bg-[#F4F7F3] hover:text-[#2D5427]"
-            >
-              Dismiss
-            </button>
-          </div>
+              <div className="flex items-center gap-2.5">
+                <div className="h-2 w-2 rounded-full bg-[#3D6B35]" />
+                <span className="text-sm font-medium text-[#1A2E16]">{item.label}</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                    item.status === 'new'
+                      ? 'bg-[#EEF4EC] text-[#3D6B35]'
+                      : item.status === 'updated'
+                        ? 'bg-[#FEF3C7] text-[#92400E]'
+                        : 'bg-[#FEE2E2] text-[#991B1B]',
+                  )}
+                >
+                  {item.status === 'new' ? 'New' : item.status === 'updated' ? 'Updated' : item.status}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onApply(section)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#3D6B35] px-4 py-1.5 text-xs font-semibold text-white transition-all duration-150 hover:bg-[#2D5427] active:scale-[0.98]"
+                >
+                  Confirm
+                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#6B7C69] transition-all duration-150 hover:bg-[#F4F7F3] hover:text-[#2D5427]"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

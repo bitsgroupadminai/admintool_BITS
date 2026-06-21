@@ -55,9 +55,18 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Offering',
     },
+    enrolledProgrammeName: {
+      type: String,
+      trim: true,
+      maxlength: 160,
+    },
     enrollmentStatus: {
       type: String,
       enum: ['pending', 'enrolled', 'rejected'],
+    },
+    avatarUrl: {
+      type: String,
+      trim: true,
     },
   },
   { timestamps: true },

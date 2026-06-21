@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as knowledgeController from './knowledgeDocument.controller.js';
+import * as knowledgeVersionController from './knowledgeDocument.version.controller.js';
 import { knowledgeUpload } from '../../core/config/upload.js';
 import { requireAuth } from '../../core/middlewares/requireAuth.middleware.js';
 import { requireRole } from '../../core/middlewares/authorize.middleware.js';
@@ -18,6 +19,7 @@ router.use(
 );
 
 router.get('/', knowledgeController.list);
+router.get('/:id/versions', knowledgeVersionController.listVersions);
 router.post('/', knowledgeUpload.single('file'), knowledgeController.upload);
 router.delete('/:id', knowledgeController.remove);
 

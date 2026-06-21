@@ -1,6 +1,7 @@
 import { CUSTOM_ROLE_VALUE } from '@/utils/staffRole';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 /**
  * Role dropdown with predefined + institute custom roles + add custom option.
@@ -19,26 +20,22 @@ export function StaffRoleField({
   return (
     <div className="space-y-2">
       <Label htmlFor={`${idPrefix}-select`}>Role</Label>
-      <select
+      <Select
         id={`${idPrefix}-select`}
-        className="flex h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm"
         value={roleValue}
-        onChange={(e) => onRoleChange(e.target.value)}
-      >
-        {roles.map((role) => (
-          <option key={role.value} value={role.value}>
-            {role.label}
-            {role.isCustom ? ' (custom)' : ''}
-          </option>
-        ))}
-        <option value={CUSTOM_ROLE_VALUE}>+ Add custom role...</option>
-      </select>
+        onChange={onRoleChange}
+        options={[
+          ...roles.map((role) => ({
+            value: role.value,
+            label: `${role.label}${role.isCustom ? ' (custom)' : ''}`,
+          })),
+          { value: CUSTOM_ROLE_VALUE, label: '+ Add custom role...' },
+        ]}
+      />
 
       {isCustom && (
         <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-custom`} className="text-xs text-muted">
-            Custom role name
-          </Label>
+          <Label htmlFor={`${idPrefix}-custom`}>Custom role name</Label>
           <Input
             id={`${idPrefix}-custom`}
             value={customRoleName}
@@ -49,7 +46,7 @@ export function StaffRoleField({
         </div>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-[#B91C1C]">{error}</p>}
     </div>
   );
 }

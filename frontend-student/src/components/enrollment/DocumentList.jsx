@@ -10,10 +10,10 @@ function DocumentItem({ doc }) {
 
   return (
     <li className="flex gap-3">
-      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#3D6B5C]" />
+      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0A6640]" />
       <div>
-        <p className="text-sm font-medium text-foreground">{doc.name}</p>
-        {types && <p className="mt-0.5 text-xs text-muted">Accepted: {types}</p>}
+        <p className="text-sm font-medium text-[#052E1C]">{doc.name}</p>
+        {types && <p className="mt-0.5 text-xs text-[#4B6358]">Accepted: {types}</p>}
       </div>
     </li>
   );
@@ -21,7 +21,7 @@ function DocumentItem({ doc }) {
 
 export function DocumentList({ documents }) {
   if (!documents?.length) {
-    return <p className="text-sm text-muted">Document requirements will be shared soon.</p>;
+    return <p className="text-sm text-[#4B6358]">Document requirements will be shared soon.</p>;
   }
 
   const required = documents.filter((d) => d.required !== false);
@@ -31,7 +31,7 @@ export function DocumentList({ documents }) {
     <div className="space-y-5">
       {required.length > 0 && (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Required</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#4B6358]">Required</p>
           <ul className="space-y-3">
             {required.map((doc) => (
               <DocumentItem key={doc.name} doc={doc} />
@@ -41,7 +41,7 @@ export function DocumentList({ documents }) {
       )}
       {optional.length > 0 && (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Optional</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#4B6358]">Optional</p>
           <ul className="space-y-3">
             {optional.map((doc) => (
               <DocumentItem key={doc.name} doc={doc} />

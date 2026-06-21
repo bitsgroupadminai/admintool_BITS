@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { normalizeApiError } from '@/utils/apiError';
 
 export const apiClient = axios.create({
   baseURL: '/api/v1',
@@ -10,9 +11,5 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message =
-      error.response?.data?.message || error.message || 'Something went wrong';
-    return Promise.reject({ message, errors: error.response?.data?.errors ?? [] });
-  },
+  (error) => Promise.reject(normalizeApiError(error)),
 );

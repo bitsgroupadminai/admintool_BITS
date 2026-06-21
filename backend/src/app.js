@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -7,6 +9,7 @@ import pinoHttp from 'pino-http';
 import { env, CLIENT_ORIGINS } from './core/config/env.js';
 import { logger } from './core/logger/index.js';
 import { globalErrorHandler } from './core/middlewares/globalErrorHandler.js';
+import { notFoundHandler } from './core/middlewares/notFoundHandler.js';
 import authRouter from './modules/auth/auth.router.js';
 import instituteRouter from './modules/institutes/institute.router.js';
 import userRouter from './modules/users/user.router.js';
@@ -14,6 +17,25 @@ import serviceRouter from './modules/services/service.router.js';
 import offeringRouter from './modules/offerings/offering.router.js';
 import knowledgeDocumentRouter from './modules/knowledge-documents/knowledgeDocument.router.js';
 import studentRouter from './modules/student/student.router.js';
+import applicationRouter, { staffRouter as staffApplicationRouter } from './modules/applications/application.router.js';
+import notificationRouter from './modules/notifications/notification.router.js';
+import analyticsRouter from './modules/analytics/analytics.router.js';
+import queueRouter, {
+  staffRouter as staffQueueRouter,
+  adminRouter as adminQueueRouter,
+} from './modules/queue/queue.router.js';
+import appointmentRouter, {
+  staffRouter as staffAppointmentRouter,
+  adminRouter as adminAppointmentRouter,
+} from './modules/appointments/appointment.router.js';
+import chatRouter from './modules/chat/chat.router.js';
+import enrollmentIntakeRouter, {
+  staffRouter as staffEnrollmentIntakeRouter,
+} from './modules/enrollment-intakes/enrollment-intake.router.js';
+import adminPaymentRouter from './modules/payments/payment.admin.router.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(__dirname, '../uploads');
 
 const app = express();
 
@@ -56,6 +78,8 @@ app.get('/api/v1/health', (_req, res) => {
   res.json({ success: true, message: 'OK', data: { status: 'healthy' } });
 });
 
+app.use('/uploads', express.static(uploadsDir));
+
 app.use('/api/v1/auth', authLimiter, authRouter);
 app.use('/api/v1/institutes', instituteRouter);
 app.use('/api/v1/users', userRouter);
@@ -63,7 +87,22 @@ app.use('/api/v1/services', serviceRouter);
 app.use('/api/v1/services/:serviceId/knowledge-documents', knowledgeDocumentRouter);
 app.use('/api/v1/offerings', offeringRouter);
 app.use('/api/v1/student', studentRouter);
+app.use('/api/v1/applications', applicationRouter);
+app.use('/api/v1/admin/payments', adminPaymentRouter);
+app.use('/api/v1/enrollment-intakes', enrollmentIntakeRouter);
+app.use('/api/v1/staff/enrollment-intakes', staffEnrollmentIntakeRouter);
+app.use('/api/v1/staff/applications', staffApplicationRouter);
+app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/analytics', analyticsRouter);
+app.use('/api/v1/student/queue', queueRouter);
+app.use('/api/v1/staff/queue', staffQueueRouter);
+app.use('/api/v1/admin/queue', adminQueueRouter);
+app.use('/api/v1/student/appointments', appointmentRouter);
+app.use('/api/v1/staff/appointments', staffAppointmentRouter);
+app.use('/api/v1/admin/appointments', adminAppointmentRouter);
+app.use('/api/v1/student/services/:serviceId/chat', chatRouter);
 
+app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 export default app;

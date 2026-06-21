@@ -1,0 +1,157 @@
+.phone-input-root {
+  width: 100%;
+}
+
+.phone-input-root .PhoneInput {
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.phone-input-root .PhoneInputInput {
+  height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid #c4e8d4;
+  border-radius: 0.75rem;
+  background: #f0faf5;
+  color: #052e1c;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.phone-input-root .PhoneInputInput:focus {
+  outline: none;
+  border-color: #6ee7b7;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgb(110 231 183 / 0.25);
+}
+
+.phone-country-select {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.phone-country-select__trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid #c4e8d4;
+  border-radius: 0.75rem;
+  background: #f0faf5;
+  color: #052e1c;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.phone-country-select__trigger .PhoneInputCountryIcon {
+  --PhoneInputCountryFlag-height: 1.125rem;
+}
+
+.phone-country-select__option .PhoneInputCountryIcon {
+  --PhoneInputCountryFlag-height: 1rem;
+  flex-shrink: 0;
+}
+
+.phone-country-select__trigger:hover,
+.phone-country-select__trigger--open {
+  border-color: #6ee7b7;
+  background: #e6f7ef;
+}
+
+.phone-country-select__trigger--open {
+  box-shadow: 0 0 0 2px rgb(110 231 183 / 0.25);
+}
+
+.phone-country-select__trigger--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.phone-country-select__chevron {
+  width: 1rem;
+  height: 1rem;
+  color: #0a6640;
+  transition: transform 0.2s ease;
+}
+
+.phone-country-select__chevron--open {
+  transform: rotate(180deg);
+}
+
+.phone-country-select__menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 70;
+  width: 18rem;
+  overflow: hidden;
+  border: 1px solid #c4e8d4;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgb(5 46 28 / 0.14);
+}
+
+.phone-country-select__search-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.625rem;
+  background: #ffffff;
+}
+
+.phone-country-select__search {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #c4e8d4;
+  border-radius: 0.5rem;
+  background: #f9fcfb;
+  color: #052e1c;
+  font-size: 0.875rem;
+}
+
+.phone-country-select__search:focus {
+  outline: none;
+  border-color: #6ee7b7;
+  background: #ffffff;
+}
+
+.phone-country-select__list {
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.phone-country-select__option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  color: #052e1c;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.phone-country-select__option:hover,
+.phone-country-select__option--active {
+  background: #f0faf5;
+}
+
+.phone-country-select__option--selected {
+  background: #f0faf5;
+  font-weight: 600;
+  color: #0a6640;
+}
+
+.phone-country-select__option-label {
+  min-width: 0;
+}
+
+.phone-country-select__empty {
+  padding: 0.875rem;
+  color: #4b6358;
+  font-size: 0.875rem;
+  text-align: center;
+}

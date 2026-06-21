@@ -4,23 +4,24 @@ export const HANDLER_TYPE = {
   AI: 'ai',
 };
 
-export const AI_HANDLERS = [
-  { value: 'document_verification', label: 'AI — Document verification' },
-  { value: 'eligibility_screening', label: 'AI — Eligibility screening' },
-  { value: 'template_validation', label: 'AI — Template validation' },
-];
+const AI_LABELS = {
+  document_verification: 'Automatic document check',
+  eligibility_screening: 'Automatic eligibility check',
+  template_validation: 'Automatic format check',
+};
+
+const STAFF_LABELS = {
+  document_verifier: 'Document review team',
+  approver: 'Approval team',
+  counter_staff: 'Help desk',
+  general: 'Institute staff',
+};
 
 export function getHandlerLabel(handledBy) {
-  if (!handledBy) return '—';
-  if (handledBy.type === HANDLER_TYPE.STUDENT) return 'Student';
+  if (!handledBy) return 'Institute team';
+  if (handledBy.type === HANDLER_TYPE.STUDENT) return 'You';
   if (handledBy.type === HANDLER_TYPE.AI) {
-    return AI_HANDLERS.find((h) => h.value === handledBy.assignee)?.label ?? 'AI';
+    return AI_LABELS[handledBy.assignee] ?? 'Automatic check';
   }
-  const staffLabels = {
-    document_verifier: 'Document Verifier',
-    approver: 'Approver',
-    counter_staff: 'Counter Staff',
-    general: 'General Staff',
-  };
-  return staffLabels[handledBy.assignee] ?? handledBy.assignee;
+  return STAFF_LABELS[handledBy.assignee] ?? 'Institute staff';
 }

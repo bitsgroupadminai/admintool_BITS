@@ -1,6 +1,86 @@
 import mongoose from 'mongoose';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
 
+const workflowOutcomeSchema = new mongoose.Schema(
+  {
+    type: { type: String, required: true },
+    route: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { _id: false },
+);
+
+const workflowStepSnapshotSchema = new mongoose.Schema(
+  {
+    stepId: { type: String, required: true },
+    order: { type: Number, required: true },
+    name: { type: String, required: true, trim: true },
+    description: { type: String, trim: true, default: '' },
+    handledBy: {
+      type: { type: String, required: true },
+      assignee: { type: String, required: true, trim: true },
+    },
+    slaValue: { type: Number, required: true, min: 1 },
+    slaUnit: { type: String, required: true },
+    outcomes: { type: [workflowOutcomeSchema], default: [] },
+  },
+  { _id: false },
+);
+
+const workflowHistorySchema = new mongoose.Schema(
+  {
+    stepId: { type: String, required: true },
+    stepName: { type: String, required: true, trim: true },
+    outcome: { type: String, required: true },
+    actedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    actedByName: { type: String, trim: true, default: '' },
+    actedByRole: { type: String, trim: true, default: '' },
+    note: { type: String, trim: true, default: '' },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true },
+);
+
+const applicationDocumentSchema = new mongoose.Schema(
+  {
+    requirementId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    requirementName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    originalName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    storedName: {
+      type: String,
+      required: true,
+    },
+    mimeType: {
+      type: String,
+      required: true,
+    },
+    sizeBytes: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    filePath: {
+      type: String,
+      required: true,
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true },
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     instituteId: {
@@ -33,6 +113,21 @@ const applicationSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    applicantMobile: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+    },
+    applicantDetails: {
+      type: [
+        {
+          fieldKey: { type: String, required: true, trim: true },
+          label: { type: String, required: true, trim: true },
+          value: { type: mongoose.Schema.Types.Mixed },
+        },
+      ],
+      default: [],
+    },
     status: {
       type: String,
       enum: Object.values(APPLICATION_STATUS),
@@ -41,10 +136,59 @@ const applicationSchema = new mongoose.Schema(
     currentStepId: {
       type: String,
     },
+    configurationVersion: {
+      type: Number,
+    },
+    workflowSnapshot: {
+      type: [workflowStepSnapshotSchema],
+      default: [],
+    },
+    workflowHistory: {
+      type: [workflowHistorySchema],
+      default: [],
+    },
+    correctionNote: {
+      type: String,
+      trim: true,
+    },
+    correctionRequiredDocuments: {
+      type: [String],
+      default: [],
+    },
+    autoAssignedAt: {
+      type: Date,
+    },
+    currentStepStartedAt: {
+      type: Date,
+    },
+    currentStepDueAt: {
+      type: Date,
+    },
+    slaBreached: {
+      type: Boolean,
+      default: false,
+    },
+    documents: {
+      type: [applicationDocumentSchema],
+      default: [],
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    assignedAt: {
+      type: Date,
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   { timestamps: true },
 );
 
 applicationSchema.index({ instituteId: 1, applicantEmail: 1, offeringId: 1 });
+applicationSchema.index({ instituteId: 1, assignedTo: 1, status: 1 });
 
 export const Application = mongoose.model('Application', applicationSchema);

@@ -1,0 +1,54 @@
+10 SERVICES TO CREATE FOR TESTING
+==================================
+
+Create these 10 services in Admin → Services. For each one, add the offering name shown below and activate it.
+
+
+1. Transcript & Marks Card
+   Offering: Official Transcript — Standard Processing
+   Students request their marksheet or transcript. They upload documents, join a queue, and staff approves after AI checks the files. Use this to test document upload, queue, and staff review.
+
+
+2. Fee & Finance
+   Offering: Duplicate Fee Receipt
+   Students apply for a duplicate fee receipt. They must pay online first, then submit the form. Use this to test Razorpay payment before submit and the admin payments page.
+
+
+3. Career Counselling
+   Offering: 1-on-1 Career Counselling Session
+   Students book a counselling slot instead of standing in a queue. Meeting can be on Google Meet. Use this to test appointment booking and virtual meeting links.
+
+
+4. Hostel & Accommodation
+   Offering: Hostel Room Allocation — Semester 1
+   Only enrolled students can apply for a hostel room. Student can choose queue or appointment. Use this to test eligibility rules and hybrid (queue + appointment) mode.
+
+
+5. Certificates & Letters
+   Offering: Bonafide / Study Certificate
+   Simple certificate request — student fills a form only, no file upload needed. Use this to test quick requests and fast queue approval.
+
+
+6. Identity & ID Cards
+   Offering: Student ID Card Reissue
+   Student applies for a new ID card and books an appointment. Staff can ask student to upload photo again if it is wrong. Use this to test request correction and re-upload.
+
+
+7. Scholarships & Financial Aid
+   Offering: Merit Scholarship 2026
+   Long application with 3 workflow steps. Student pays a fee in the middle of the process. Use this to test multi-step workflow and payment during workflow.
+
+
+8. Library Services
+   Offering: Library Membership Renewal
+   Student renews library membership with one document upload. Admin can upload a policy PDF on this service to test AI document extraction. Use this to test knowledge upload and AI offering suggestions.
+
+
+9. Exam & Revaluation
+   Offering: Paper Revaluation — End Semester Exam
+   Student pays fee, uploads exam papers, and must confirm one step themselves before staff reviews. Use this to test student workflow step, intake document, and reject application.
+
+
+10. Internship & Industry Relations
+    Offering: Internship NOC Letter — Summer 2026
+    Student applies for NOC letter for company internship and books appointment on Tue/Thu only. Staff can approve or reject at each step. Use this to test reject flow, limited appointment days, and 3-step staff approval.

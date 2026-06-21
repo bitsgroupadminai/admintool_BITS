@@ -12,6 +12,21 @@ const STAFF_ASSIGNEES = new Set(['document_verifier', 'approver', 'counter_staff
 const AI_ASSIGNEES = new Set(Object.values(AI_HANDLER));
 
 /**
+ * Mongoose subdocuments do not spread reliably; convert before normalization.
+ * @param {unknown} value
+ */
+export function toPlainObject(value) {
+  if (value == null || typeof value !== 'object') return value;
+  if (typeof value.toObject === 'function') {
+    return value.toObject({ flattenMaps: true, flattenObjectIds: true });
+  }
+  if (Array.isArray(value)) {
+    return value.map(toPlainObject);
+  }
+  return value;
+}
+
+/**
  * @param {string} name
  * @param {number} order
  * @param {string} [nextStepId]
@@ -200,14 +215,15 @@ export function sanitizeWorkflowSteps(steps) {
 export function normalizeWorkflowSteps(steps) {
   if (!steps?.length) return [];
 
-  const hasV2 = steps.some((s) => s.stepId && s.handledBy && s.outcomes?.length);
+  const plainSteps = steps.map((step) => toPlainObject(step));
+  const hasV2 = plainSteps.some((s) => s.stepId && s.handledBy && s.outcomes?.length);
   const normalized = hasV2
-    ? steps.map((s, i) => ({
+    ? plainSteps.map((s, i) => ({
         ...s,
         stepId: s.stepId ?? crypto.randomUUID(),
         order: s.order ?? i + 1,
       }))
-    : steps.map((s, i, arr) => migrateLegacyStep(s, i, arr));
+    : plainSteps.map((s, i, arr) => migrateLegacyStep(s, i, arr));
 
   return sanitizeWorkflowSteps(normalized.sort((a, b) => a.order - b.order));
 }

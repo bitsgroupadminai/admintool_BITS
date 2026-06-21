@@ -8,13 +8,22 @@ import { logger } from '../logger/index.js';
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} _next
  */
-export function globalErrorHandler(err, _req, res, _next) {
+export function globalErrorHandler(err, req, res, _next) {
   if (err instanceof AppError) {
     return sendError(res, err.statusCode, err.message, err.errors);
   }
 
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return sendError(res, 400, 'File exceeds maximum allowed size');
+    const isAvatar = req.originalUrl?.includes('/profile/avatar');
+    return sendError(
+      res,
+      400,
+      isAvatar ? 'Profile photo must be 500 KB or smaller' : 'File exceeds maximum allowed size',
+    );
+  }
+
+  if (err.message?.includes('files are supported')) {
+    return sendError(res, 400, err.message);
   }
 
   if (err.message?.includes('PDF')) {
@@ -27,6 +36,10 @@ export function globalErrorHandler(err, _req, res, _next) {
       message: issue.message,
     }));
     return sendError(res, 400, 'Validation failed', errors ?? []);
+  }
+
+  if (err.message === 'Not allowed by CORS') {
+    return sendError(res, 403, 'This portal is not allowed to access the server from your current address.');
   }
 
   logger.error({ err }, 'Unhandled error');

@@ -1,0 +1,803 @@
+================================================================================
+  EDU PORTAL — FULL APP TEST GUIDE (Admin → Staff → Student)
+================================================================================
+  Use this file to set up services & offerings so you can test every major
+  feature from frontend to backend across all three portals.
+
+  Last updated: 2026-06-21
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  A. BEFORE YOU START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1) Start infrastructure
+   - MongoDB running (default: mongodb://127.0.0.1:27017/admintool)
+   - Redis running   (default: redis://127.0.0.1:6379)
+   - Backend:  cd backend  → npm run dev   (port 5001)
+   - Admin UI: cd frontend-admin  → npm run dev   (port 5173)
+   - Student UI: cd frontend-student → npm run dev  (port 5174)
+
+2) Minimum .env for full testing (backend/.env)
+   - SESSION_SECRET, MONGODB_URI, REDIS_URL
+   - ADMIN_CLIENT_URL=http://localhost:5173
+   - STUDENT_CLIENT_URL=http://localhost:5174
+   - SMTP_* (for email notifications)
+   - OPENAI_API_KEY (optional — AI extraction, AI workflow steps, chat)
+   - RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET (for payment testing)
+   - GOOGLE_OAUTH_* (for virtual appointment / Google Meet links)
+
+3) Portal URLs
+   Admin / Staff login : http://localhost:5173/login
+   Student portal      : http://localhost:5174/
+   Student login       : http://localhost:5174/login
+
+4) Recommended test accounts (create during setup)
+
+   ADMIN (created at signup)
+   - admin@testcollege.edu / YourPassword123!
+
+   STAFF (create in Setup → Staff OR Admin → Staff)
+   ┌─────────────────────┬──────────────────────────┬─────────────────────┐
+   │ Name                │ Email                    │ Role                │
+   ├─────────────────────┼──────────────────────────┼─────────────────────┤
+   │ Priya Verifier      │ verifier@testcollege.edu │ document_verifier   │
+   │ Rahul Approver      │ approver@testcollege.edu │ approver            │
+   │ Sana Counter        │ counter@testcollege.edu  │ counter_staff       │
+   │ Amit Counsellor     │ counsellor@testcollege.edu│ general (counsellor)│
+   └─────────────────────┴──────────────────────────┴─────────────────────┘
+
+   STUDENTS (create in Admin → Students — assign programme after enrollment)
+   ┌─────────────────────┬──────────────────────────┬──────────────────────────────┐
+   │ Name                │ Email                    │ Use for                      │
+   ├─────────────────────┼──────────────────────────┼──────────────────────────────┤
+   │ Arjun Mehta         │ arjun@testcollege.edu    │ General happy-path tests     │
+   │ Neha Sharma         │ neha@testcollege.edu     │ Eligibility / payment tests  │
+   │ Guest Applicant     │ (use public enroll flow) │ Enrollment intake (no login) │
+   └─────────────────────┴──────────────────────────┴──────────────────────────────┘
+
+5) Setup order (do once)
+   [ ] Admin signup → create institute
+   [ ] Complete institute setup (name, address, logo, operating hours)
+   [ ] Add staff members (table above)
+   [ ] Finish setup review
+   [ ] Note your INSTITUTE ID from browser URL on student portal
+       (e.g. http://localhost:5174/<INSTITUTE_ID>/enroll)
+   [ ] Create the 10 services below (Service #0 Enrollment is AUTO-CREATED)
+   [ ] For each service: create offering → configure all wizard steps → Activate
+   [ ] Create 2 enrolled students linked to an enrollment programme offering
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  B. HOW TO CREATE A SERVICE (repeat for each)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Admin path: Admin → Services → Create service
+  → Open service detail → Create offering → Configure offering
+
+Offering wizard steps (all must be complete before Activate):
+  1. Details      — name, dates, visit location/instructions, applicant fields
+  2. Eligibility  — rules (optional)
+  3. Documents    — required uploads
+  4. Workflow     — steps (Staff / AI / Student handlers)
+  5. Queue        — queue_only | appointment_only | hybrid + payment config
+  6. Review       — check completeness → Activate
+
+After activation the service becomes Active (visible to students).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  C. 10 TEST SERVICES + OFFERINGS (copy names exactly or use your own)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 0 — Enrollment  [SYSTEM — AUTO-CREATED, DO NOT CREATE MANUALLY]
+────────────────────────────────────────────────────────────────────────────────
+Description : Student enrollment and programme admission (created on server boot
+              after institute setup is complete).
+
+Pre-seeded offerings (already exist):
+  • B.E. Computer Science (UG-CS)
+  • B.E. Electrical Engineering (UG-EE)
+  • M.Sc. Data Science (PG-DS)
+
+What it tests:
+  ADMIN  → /admin/enrollment-intakes — review guest applications
+  STAFF  → /staff/enrollment-intakes — process intake submissions
+  STUDENT→ /{instituteId}/enroll — public programme listing & apply (no login)
+         → Full admission workflow with 6 docs + multi-step workflow
+
+Test steps:
+  1. Open student portal → pick institute → Enroll → choose UG-CS programme
+  2. Submit application as guest with sample PDFs/JPGs
+  3. Admin/Staff open Enrollment Intakes → approve/reject/request correction
+  4. After approval, create student account from admin and assign programme
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 1 — Transcript & Marks Card
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Request official transcripts, semester marks cards, and grade reports.
+
+Offering name: Official Transcript — Standard Processing
+Offering description:
+  Issued within 5 working days. Collect from records office or download when ready.
+
+Details:
+  Start date : today
+  End date   : +6 months
+  Visit location : Academic Records Office, Block A, Ground Floor
+  Visit instructions : Bring original ID for in-person collection.
+  Applicant fields (optional):
+    - Purpose (select, required): Higher Studies | Job Application | Personal
+    - Delivery mode (select): Digital PDF | Physical Copy
+
+Eligibility rules: (leave empty — open to all enrolled students)
+
+Documents:
+  1. Previous semester marksheet     | required | pdf        | 5 MB
+  2. Government ID proof             | required | pdf,jpg,png| 5 MB
+  3. Fee payment receipt (if paid)     | optional | pdf        | 5 MB
+
+Workflow (2 steps):
+  Step 1 — Document Verification
+    Handler : AI → document_verification
+    SLA     : 4 hours
+    Outcomes: Approved → Step 2 | Rejected → End | Needs correction → Return to student
+
+  Step 2 — Records Approval
+    Handler : Staff → document_verifier  (assign Priya Verifier)
+    SLA     : 48 hours
+    Outcomes: Approved → End (completed) | Rejected → End | Needs correction → Return
+
+Queue mode : queue_only
+  Capacity : 50
+  Processing rate : 10/hour
+  Counters : Counter 1 (Records), Counter 2 (Records)
+
+Payment : disabled
+
+What it tests:
+  STUDENT → document upload, service journey timeline, join queue, chat on request
+  STAFF   → /staff/applications review, approve/reject, document preview
+  ADMIN   → /admin/applications, /admin/queue board, analytics on dashboard
+  EXTRA   → AI step (if OPENAI_API_KEY set), SLA tracking, notifications
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 2 — Fee & Finance
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Fee receipts, refund queries, and duplicate payment certificates.
+
+Offering name: Duplicate Fee Receipt
+Offering description:
+  Re-issue a lost or damaged fee receipt. Online payment required before submission.
+
+Details:
+  Visit location : Finance Office, Admin Block
+  Applicant fields:
+    - Transaction / UTR number (text, required)
+    - Payment date (date, required)
+    - Fee type (select): Tuition | Hostel | Exam | Other
+
+Eligibility: (none)
+
+Documents:
+  1. Bank statement or payment screenshot | required | pdf,jpg,png | 5 MB
+
+Workflow (1 step):
+  Step 1 — Finance Verification
+    Handler : Staff → counter_staff  (assign Sana Counter)
+    SLA     : 24 hours
+    Outcomes: Approved → End | Rejected → End | Needs correction → Return
+
+Queue mode : queue_only
+  Capacity : 30 | Rate : 8/hour | Counter : Finance Desk
+
+Payment : ENABLED
+  Amount  : 200 INR
+  Label   : Duplicate receipt fee
+  Timing  : before_submit   ← student must pay BEFORE submitting application
+
+What it tests:
+  STUDENT → PaymentPanel (Razorpay test mode), pay-then-submit flow
+  ADMIN   → /admin/payments — verify payment records
+  STAFF   → counter staff queue processing
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 3 — Career Counselling
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Book counselling sessions for career guidance, resume review, and placement prep.
+
+Offering name: 1-on-1 Career Counselling Session
+Offering description:
+  30-minute session with a counsellor. Virtual or in-person based on slot.
+
+Details:
+  Visit location : Career Development Cell, Student Centre
+  Applicant fields:
+    - Preferred industry (select): IT | Finance | Core Engineering | Higher Studies
+    - Brief concern (textarea, required)
+
+Eligibility: (none)
+
+Documents:
+  1. Resume (PDF) | optional | pdf | 5 MB
+
+Workflow (2 steps):
+  Step 1 — Session Scheduling Review
+    Handler : Staff → general  (assign Amit Counsellor)
+    SLA     : 12 hours
+    Outcomes: Approved → Step 2 | Rejected → End
+
+  Step 2 — Session Completion
+    Handler : Staff → general
+    SLA     : 2 days
+    Outcomes: Approved → End (completed)
+
+Queue mode : appointment_only
+  Slot duration    : 30 minutes
+  Slot capacity    : 1 per slot
+  Operating hours  : 10:00 — 17:00
+  Operating days   : Mon–Fri (1,2,3,4,5)
+  Booking horizon  : 14 days
+  Virtual appointment:
+    Enabled              : YES
+    Provider             : google_meet
+    Auto-generate link   : YES
+    Auto-send on confirm : YES
+
+Payment : disabled
+
+What it tests:
+  STUDENT → AppointmentSlotPicker, virtual meeting link on confirmation
+  STAFF   → /staff/appointments — confirm, complete, cancel appointments
+  ADMIN   → /admin/appointments — oversight view
+  EXTRA   → Google Meet auto-link (needs GOOGLE_OAUTH_* configured)
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 4 — Hostel & Accommodation
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Hostel registration, room allocation, and accommodation requests.
+
+Offering name: Hostel Room Allocation — Semester 1
+Offering description:
+  Apply for on-campus hostel. Eligible for currently enrolled students only.
+
+Details:
+  Visit location : Hostel Warden Office, Block H
+  Applicant fields:
+    - Room preference (select): Single | Double | Triple
+    - Emergency contact (phone, required)
+    - Medical conditions (textarea, optional)
+
+Eligibility rules:
+  Rule 1: Field = "Enrollment Status" | Type = Text | Operator = = | Value = enrolled
+  (Student must be created with enrollmentStatus = enrolled in admin)
+
+Documents:
+  1. Hostel application form  | required | pdf       | 5 MB
+  2. Medical fitness certificate | required | pdf    | 5 MB
+
+Workflow (2 steps):
+  Step 1 — Document Check
+    Handler : Staff → document_verifier
+    SLA     : 24 hours
+
+  Step 2 — Warden Approval
+    Handler : Staff → approver
+    SLA     : 48 hours
+
+Queue mode : hybrid   ← student chooses QUEUE or APPOINTMENT at visit-planning step
+  Queue capacity : 40 | Rate : 6/hour | Counter : Hostel Desk
+  Appointment    : 15-min slots, 10:00–16:00, Mon–Sat, horizon 7 days
+
+Payment : disabled
+
+What it tests:
+  STUDENT → eligibility warning/display, hybrid queue vs appointment choice
+  STAFF   → both queue board AND appointments for same offering
+  ADMIN   → eligibility rules configuration
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 5 — Certificates & Letters
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Bonafide certificates, character certificates, and official letters.
+
+Offering name: Bonafide / Study Certificate
+Offering description:
+  Standard bonafide certificate for bank, visa, or employer verification.
+
+Details:
+  Visit location : Admin Office — Certificate Counter
+  Applicant fields:
+    - Purpose (select, required): Bank Account | Visa | Scholarship | Employment
+    - Address to print on certificate (textarea, required)
+    - Urgency (select): Normal (3 days) | Urgent (same day)
+
+Eligibility: (none)
+
+Documents: (none — fastest path; tests offerings with zero document requirements)
+
+Workflow (1 step):
+  Step 1 — Certificate Issuance
+    Handler : Staff → counter_staff
+    SLA     : 2 hours   ← good for SLA / notification testing
+    Outcomes: Approved → End | Rejected → End
+
+Queue mode : queue_only
+  Capacity : 100 | Rate : 20/hour | Counter : Cert Counter 1
+
+Payment : disabled
+
+What it tests:
+  STUDENT → minimal request (fields only, no uploads), fast queue turnaround
+  STAFF   → quick approve from /staff/queue
+  ADMIN   → dashboard metrics update after completion
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 6 — Identity & ID Cards
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  New ID cards, reprints, and lost card replacements.
+
+Offering name: Student ID Card Reissue
+Offering description:
+  Reissue a lost or damaged ID. Photo will be captured at the appointment.
+
+Details:
+  Visit location : ID Card Cell, Security Office
+  Applicant fields:
+    - Reason (select): Lost | Damaged | Name change | Photo update
+    - Police complaint number (text, optional — required if reason = Lost)
+
+Eligibility: (none)
+
+Documents:
+  1. Passport-size photograph | required | jpg,png | 2 MB
+  2. Lost card affidavit        | required | pdf     | 5 MB
+  3. Old ID card scan (if available) | optional | jpg,png | 5 MB
+
+Workflow (2 steps):
+  Step 1 — Photo & Document Review
+    Handler : Staff → document_verifier
+    SLA     : 8 hours
+    Outcomes:
+      Approved → Step 2
+      Rejected → End
+      Needs correction → Return to student (require re-upload: Passport-size photograph)
+
+  Step 2 — ID Print & Handover
+    Handler : Staff → counter_staff
+    SLA     : 24 hours
+
+Queue mode : appointment_only
+  15-min slots, 09:00–15:00, Mon–Fri, capacity 3, horizon 10 days
+  Virtual : disabled (in-person photo capture)
+
+Payment : disabled
+
+What it tests:
+  STUDENT → request correction loop, re-upload document, re-submit
+  STAFF   → "Request correction" action, unassigned pool if auto-assign fails
+  EXTRA   → /staff/unassigned — pick up unassigned applications
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 7 — Scholarships & Financial Aid
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Merit scholarships, need-based aid, and fee waiver applications.
+
+Offering name: Merit Scholarship 2026
+Offering description:
+  Annual merit scholarship for students with strong academic record.
+
+Details:
+  Start / End : current academic year dates
+  Applicant fields:
+    - Current CGPA (number, required)
+    - Family annual income (number, required)
+    - Statement of purpose (textarea, required)
+
+Eligibility rules:
+  Rule 1: Field = "Programme" | Type = Text | Operator = contains | Value = B.E.
+  (Tests programme-based eligibility against enrolledProgrammeName)
+
+Documents:
+  1. Latest marksheet / grade report | required | pdf | 5 MB
+  2. Income certificate                | required | pdf | 5 MB
+  3. Recommendation letter             | required | pdf | 5 MB
+
+Workflow (3 steps):
+  Step 1 — AI Eligibility Screening
+    Handler : AI → eligibility_screening
+    SLA     : 1 hour
+
+  Step 2 — Document Verification
+    Handler : Staff → document_verifier
+    SLA     : 48 hours
+
+  Step 3 — Scholarship Committee Approval
+    Handler : Staff → approver
+    SLA     : 72 hours
+
+Queue mode : queue_only
+  Capacity : 200 | Rate : 5/hour
+
+Payment : ENABLED (workflow-step payment — tests mid-flow payment)
+  Amount : 500 INR
+  Label  : Application processing fee
+  Timing : workflow_step
+  Step   : Step 2 (Document Verification) — payment triggered when workflow reaches Step 2
+
+What it tests:
+  STUDENT → multi-step journey, mid-workflow payment panel
+  STAFF   → multi-step handoff between verifier and approver
+  ADMIN   → application audit log, SLA breach indicators
+  EXTRA   → AI eligibility_screening step (needs OPENAI_API_KEY)
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 8 — Library Services
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Library membership, book requests, and digital resource access.
+
+Offering name: Library Membership Renewal
+Offering description:
+  Renew annual library membership for the current academic year.
+
+Details:
+  Visit location : Central Library, Main Campus
+  Applicant fields:
+    - Membership ID (text, if renewing)
+    - Preferred reading room (select): General | Research | Digital Lab
+
+Eligibility: (none)
+
+Documents:
+  1. Previous library card photo | required | jpg,png | 3 MB
+
+Workflow (1 step):
+  Step 1 — Membership Update
+    Handler : Staff → general
+    SLA     : 24 hours
+
+Queue mode : queue_only
+  Capacity : 60 | Rate : 12/hour | Counter : Library Desk
+
+Payment : disabled
+
+KNOWLEDGE DOCUMENT (Admin-only — tests AI extraction on service detail page):
+  Upload a PDF named "Library_Membership_Policy.pdf" on this service's detail page.
+  Content suggestion (paste into a Word/PDF file):
+    - Membership fee: ₹500/year
+    - Required documents: library card, student ID
+    - Processing time: 2 working days
+    - Operating hours: 8 AM – 8 PM
+  Then click Extract → review AI suggestions → create a SECOND offering from suggestions:
+    "Library Membership — Express (AI Suggested)" to test AI-assisted offering creation.
+
+What it tests:
+  ADMIN  → knowledge document upload, extraction, AI offering suggestions
+  STUDENT→ standard service request flow
+  STAFF  → general staff role processing
+  EXTRA  → duplicate offering from admin offering actions
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 9 — Exam & Revaluation
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Exam-related requests — revaluation, answer sheet copies, and result corrections.
+
+Offering name: Paper Revaluation — End Semester Exam
+Offering description:
+  Apply for revaluation of end-semester exam answer sheets. Window open for 15 days
+  after result publication.
+
+Details:
+  Start date : today
+  End date   : +15 days   ← tests date-bound offering visibility / expiry
+  Visit location : Examination Cell, Academic Block B
+  Visit instructions : Collect revised marksheet from exam cell after approval.
+  Applicant fields:
+    - Subject code (text, required)        e.g. CS301
+    - Subject name (text, required)
+    - Exam session (select): Nov 2025 | May 2026 | Nov 2026
+    - Roll number (text, required)
+    - Reason for revaluation (textarea, required)
+
+Intake document (Details step — enable intake upload):
+  Enabled  : YES
+  Label    : Signed revaluation application form
+  Help text: Download form from exam cell website, sign, and upload before submitting.
+  Required : YES | pdf | 5 MB
+
+Eligibility rules:
+  Rule 1: Field = "Enrollment Status" | Type = Text | Operator = = | Value = enrolled
+
+Documents:
+  1. Original marksheet / grade report | required | pdf       | 5 MB
+  2. Hall ticket copy                  | required | pdf,jpg,png | 5 MB
+
+Workflow (3 steps):
+  Step 1 — Student Confirmation
+    Handler : Student → student   ← STUDENT must act before staff sees it
+    SLA     : 48 hours
+    Outcomes: Approved → Step 2 | Rejected → End
+
+  Step 2 — AI Format Check
+    Handler : AI → template_validation
+    SLA     : 2 hours
+    Outcomes: Approved → Step 3 | Rejected → End | Needs correction → Return to student
+
+  Step 3 — Exam Cell Review
+    Handler : Staff → document_verifier  (assign Priya Verifier)
+    SLA     : 72 hours
+    Outcomes: Approved → End (completed) | Rejected → End (rejected)
+
+Queue mode : queue_only
+  Capacity : 80 | Rate : 8/hour | Counter : Exam Cell Desk
+
+Payment : ENABLED
+  Amount  : 350 INR
+  Label   : Revaluation fee per subject
+  Timing  : before_submit
+
+What it tests:
+  STUDENT → intake document upload, student workflow step (confirm/submit action),
+            payment + documents together, offering end-date window
+  STAFF   → reject application path (use Reject on Step 3 for one test case)
+  ADMIN   → disable offering after end date passes → verify hidden from students
+  EXTRA   → AI template_validation handler (needs OPENAI_API_KEY)
+
+
+────────────────────────────────────────────────────────────────────────────────
+SERVICE 10 — Internship & Industry Relations
+────────────────────────────────────────────────────────────────────────────────
+Service description:
+  Internship approvals, company NOC letters, and industry placement documentation.
+
+Offering name: Internship NOC Letter — Summer 2026
+Offering description:
+  No Objection Certificate for summer internship at an external company.
+  Requires HoD approval before letter is issued.
+
+Details:
+  Start date : today
+  End date   : +4 months
+  Visit location : Training & Placement Cell, Block C
+  Visit instructions : Collect signed NOC in person or receive PDF by email.
+  Applicant fields:
+    - Company name (text, required)
+    - Company HR email (email, required)
+    - Internship start date (date, required)
+    - Internship end date (date, required)
+    - Stipend (select): Paid | Unpaid | Not disclosed
+    - Work mode (select): On-site | Remote | Hybrid
+    - Brief project description (textarea, required)
+
+Eligibility rules:
+  Rule 1: Field = "Programme" | Type = Text | Operator = contains | Value = B.E.
+  Rule 2: Field = "Enrollment Status" | Type = Text | Operator = = | Value = enrolled
+
+Documents:
+  1. Company offer letter / internship letter | required | pdf       | 5 MB
+  2. Student resume                             | required | pdf       | 5 MB
+  3. Parent / guardian consent (if minor)       | optional | pdf       | 5 MB
+
+Workflow (3 steps):
+  Step 1 — TPO Initial Review
+    Handler : Staff → general  (assign Amit Counsellor or create TPO staff role)
+    SLA     : 24 hours
+    Outcomes:
+      Approved → Step 2
+      Rejected → End (rejected)   ← use this to test full reject + student notification
+      Needs correction → Return to student (require re-upload: Company offer letter)
+
+  Step 2 — HoD Approval
+    Handler : Staff → approver  (assign Rahul Approver)
+    SLA     : 48 hours
+    Outcomes: Approved → Step 3 | Rejected → End
+
+  Step 3 — NOC Issuance
+    Handler : Staff → counter_staff  (assign Sana Counter)
+    SLA     : 24 hours
+    Outcomes: Approved → End (completed)
+
+Queue mode : appointment_only
+  Slot duration    : 20 minutes
+  Slot capacity    : 2
+  Operating hours  : 11:00 — 16:00
+  Operating days   : Tue, Thu only (2, 4)   ← tests limited operating days
+  Booking horizon  : 21 days
+  Virtual appointment:
+    Enabled              : YES
+    Provider             : manual   ← staff pastes link manually (fallback if Google OAuth off)
+    Auto-generate link   : NO
+    Auto-send on confirm : YES
+
+Payment : disabled
+
+What it tests:
+  STUDENT → email-type applicant field, limited appointment days (Tue/Thu only),
+            reject notification when staff rejects at Step 1
+  STAFF   → manual meeting link entry, multi-role chain (general → approver → counter)
+  ADMIN   → filter rejected applications at /admin/applications
+  EXTRA   → offering duplicate: create "Internship NOC — Winter 2026" via Duplicate
+            action to test bulk offering management without reconfiguring from scratch
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  D. FEATURE → SERVICE MATRIX (what each service covers)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Feature                          | S0 | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10
+---------------------------------|----|----|----|----|----|----|----|----|----|----|-----|-----
+Public enrollment (no login)     | ✓  |    |    |    |    |    |    |    |    |    |
+Student login & services browse  |    | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓
+Document upload                  | ✓  | ✓  | ✓  | ✓  | ✓  |    | ✓  | ✓  | ✓  | ✓  | ✓
+Intake document upload           |    |    |    |    |    |    |    |    |    | ✓  |
+Applicant custom fields          |    | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓
+Applicant email field type       |    |    |    |    |    |    |    |    |    |    | ✓
+Eligibility rules                | ✓  |    |    |    | ✓  |    |    | ✓  |    | ✓  | ✓
+Queue only                       | ✓  | ✓  | ✓  |    | ✓  | ✓  |    | ✓  | ✓  | ✓  |
+Appointment only                 |    |    |    | ✓  |    |    | ✓  |    |    |    | ✓
+Hybrid queue + appointment       |    |    |    |    | ✓  |    |    |    |    |    |
+Virtual meeting (Google Meet)    |    |    |    | ✓  |    |    |    |    |    |    |
+Virtual meeting (manual link)    |    |    |    |    |    |    |    |    |    |    | ✓
+Payment before submit            |    |    | ✓  |    |    |    |    |    |    | ✓  |
+Payment at workflow step         |    |    |    |    |    |    |    | ✓  |    |    |
+Student workflow handler step    |    |    |    |    |    |    |    |    |    | ✓  |
+AI workflow handler              | ✓  | ✓  |    |    |    |    |    | ✓  |    | ✓  |
+AI template_validation           |    |    |    |    |    |    |    |    |    | ✓  |
+Staff multi-step workflow        | ✓  | ✓  |    | ✓  | ✓  |    | ✓  | ✓  |    | ✓  | ✓
+Reject application (staff)       |    |    |    |    |    |    |    |    |    | ✓  | ✓
+Request correction / re-upload   | ✓  | ✓  |    |    |    |    | ✓  |    |    | ✓  | ✓
+Offering date window / expiry    |    |    |    |    |    |    |    |    |    | ✓  | ✓
+Limited appointment days         |    |    |    |    |    |    |    |    |    |    | ✓
+Knowledge doc + AI extraction    |    |    |    |    |    |    |    |    | ✓  |    |
+Duplicate offering               |    |    |    |    |    |    |    |    | ✓  |    | ✓
+Enrollment intakes (admin/staff) | ✓  |    |    |    |    |    |    |    |    |    |
+Service chat (student)           | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓
+Notifications                    | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓
+SLA / breach alerts              |    | ✓  |    |    |    | ✓  |    | ✓  |    | ✓  |
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  E. END-TO-END TEST SCENARIOS (run in order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SCENARIO 1 — Full enrollment → enrolled student
+  1. Guest applies on /{instituteId}/enroll for B.E. Computer Science
+  2. Admin reviews at /admin/enrollment-intakes → Approve
+  3. Admin creates student arjun@testcollege.edu assigned to UG-CS programme
+  4. Student logs in → forced password change → lands on dashboard
+
+SCENARIO 2 — Happy path service request (Bonafide — Service 5)
+  1. Student → Services → Certificates & Letters → Bonafide offering
+  2. Fill applicant fields → Submit (no documents)
+  3. Join queue → note ticket number
+  4. Staff → /staff/queue → call ticket → open application → Approve
+  5. Student sees Completed on dashboard + notification
+
+SCENARIO 3 — Payment before submit (Service 2)
+  1. Login as neha@testcollege.edu
+  2. Apply for Duplicate Fee Receipt → Razorpay test payment (card: 4111…)
+  3. Submit application after payment success
+  4. Admin → /admin/payments → confirm record
+  5. Staff counter approves application
+
+SCENARIO 4 — Appointment + virtual meet (Service 3)
+  1. Student books counselling slot
+  2. Staff → /staff/appointments → Confirm appointment
+  3. Verify meeting link appears for student and staff
+  4. Staff marks session Complete → workflow advances
+
+SCENARIO 5 — Request correction loop (Service 6)
+  1. Student submits ID reissue with blurry photo
+  2. Staff → Request correction → select photo document
+  3. Student re-uploads → resubmits
+  4. Staff approves through both workflow steps
+
+SCENARIO 6 — Hybrid visit planning (Service 4)
+  1. Login as enrolled student (enrollmentStatus = enrolled)
+  2. Apply for hostel → choose "Join queue" path → get queue ticket
+  3. Create SECOND application → choose "Book appointment" path instead
+  4. Verify both appear on staff queue board and appointments respectively
+
+SCENARIO 7 — Multi-step + mid-flow payment (Service 7)
+  1. Student submits scholarship application
+  2. Wait for AI step to complete (or staff manually advance if AI off)
+  3. At Step 2, student pays ₹500 processing fee
+  4. Approver completes final step
+  5. Admin → application detail → check audit log timeline
+
+SCENARIO 8 — Admin operations sweep
+  1. /admin/dashboard — charts reflect submitted applications
+  2. /admin/applications — filter by status, offering, SLA breached
+  3. /admin/queue + /admin/appointments — operational overview
+  4. /admin/notifications — mark read
+  5. /admin/settings — update operating hours → verify appointment slots change
+  6. Disable an offering → confirm student no longer sees it
+  7. Re-activate offering
+
+SCENARIO 9 — Staff workload views
+  1. Login as each staff role — verify they only see relevant applications
+  2. /staff/workload — check assigned counts
+  3. /staff/unassigned — claim an unassigned request
+  4. /staff/notifications — SLA breach alerts
+
+SCENARIO 10 — Student portal extras
+  1. /requests/history — all past requests with statuses
+  2. /guidance — RAG chat (needs OPENAI + PINECONE if configured)
+  3. Service detail chat — ask question about specific offering
+  4. /profile — view enrolled programme info
+
+SCENARIO 11 — Student handler + intake doc + revaluation (Service 9)
+  1. Login as arjun@testcollege.edu (enrolled student)
+  2. Apply for Paper Revaluation → upload intake form + marksheet + hall ticket
+  3. Pay ₹350 revaluation fee → submit
+  4. Complete the Student Confirmation step when it appears on dashboard
+  5. Staff → approve through AI step and Exam Cell review
+  6. (Separate test) Staff → Reject one application → student sees Rejected status
+
+SCENARIO 12 — Internship NOC reject + limited slots (Service 10)
+  1. Student applies with company offer letter + resume
+  2. Book appointment on a Tuesday or Thursday slot only
+  3. Staff at Step 1 → Reject with reason → verify student notification
+  4. (Separate test) Submit valid application → pass all 3 staff steps → Completed
+  5. Admin → duplicate offering → rename to "Internship NOC — Winter 2026" → activate
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  F. QUICK CHECKLIST — ALL SERVICES ACTIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [ ] 0. Enrollment (auto) — 3 programmes active
+  [ ] 1. Transcript & Marks Card — Official Transcript offering ACTIVE
+  [ ] 2. Fee & Finance — Duplicate Fee Receipt ACTIVE
+  [ ] 3. Career Counselling — 1-on-1 Session ACTIVE
+  [ ] 4. Hostel & Accommodation — Room Allocation ACTIVE
+  [ ] 5. Certificates & Letters — Bonafide Certificate ACTIVE
+  [ ] 6. Identity & ID Cards — ID Card Reissue ACTIVE
+  [ ] 7. Scholarships & Financial Aid — Merit Scholarship ACTIVE
+  [ ] 8. Library Services — Membership Renewal ACTIVE
+  [ ] 9. Exam & Revaluation — Paper Revaluation offering ACTIVE
+  [ ] 10. Internship & Industry Relations — Internship NOC offering ACTIVE
+
+  When all checked: every major portal feature is reachable for demo/testing.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  G. SAMPLE TEST FILES (keep in a folder like test-assets/)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  sample-marksheet.pdf      — any PDF (or rename any .pdf)
+  sample-id.jpg             — any JPG/PNG photo
+  sample-resume.pdf         — any PDF for counselling
+  sample-affidavit.pdf      — any PDF for ID reissue
+  sample-income-cert.pdf    — any PDF for scholarship
+  library-policy.pdf        — text PDF for knowledge extraction (Service 8)
+  sample-revaluation-form.pdf — signed form for intake upload (Service 9)
+  sample-offer-letter.pdf   — company internship letter (Service 10)
+  sample-hall-ticket.pdf    — exam hall ticket (Service 9)
+
+  Tip: You can use the same PDF/JPG file for all document uploads during testing.
+
+
+================================================================================
+  END OF TEST GUIDE
+================================================================================

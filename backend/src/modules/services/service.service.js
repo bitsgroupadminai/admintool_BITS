@@ -5,11 +5,13 @@ import { AppError } from '../../core/utils/AppError.js';
 import { SERVICE_STATUS } from '../../shared/enums/service.enums.js';
 import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import { deleteAllForService as deleteKnowledgeDocumentsForService } from '../knowledge-documents/knowledgeDocument.service.js';
+import { enqueueServiceReindex } from '../../core/queues/embedding.queue.js';
+import { isOfferingReadyForServiceActivation } from '../../shared/helpers/offeringCompleteness.helper.js';
+import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
+import { cacheNs } from '../../shared/constants/cacheKeys.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 
-/**
- * @param {string} instituteId
- */
-export async function listServices(instituteId) {
+async function loadServicesList(instituteId) {
   const services = await Service.find({ instituteId }).sort({ createdAt: -1 });
   if (services.length === 0) return [];
 
@@ -46,6 +48,13 @@ export async function listServices(instituteId) {
 
 /**
  * @param {string} instituteId
+ */
+export async function listServices(instituteId) {
+  return cachedRead(cacheNs.SERVICES_LIST, [instituteId], () => loadServicesList(instituteId));
+}
+
+/**
+ * @param {string} instituteId
  * @param {{ name: string, description?: string }} payload
  */
 export async function createService(instituteId, payload) {
@@ -63,6 +72,19 @@ export async function createService(instituteId, payload) {
     status: SERVICE_STATUS.DRAFT,
   });
 
+  await flushInstituteReadCache(instituteId);
+  return formatService(service);
+}
+
+/**
+ * @param {string} serviceId
+ * @param {string} instituteId
+ */
+async function loadServiceById(serviceId, instituteId) {
+  const service = await Service.findOne({ _id: serviceId, instituteId });
+  if (!service) {
+    throw new AppError('Service not found', 404);
+  }
   return formatService(service);
 }
 
@@ -71,11 +93,9 @@ export async function createService(instituteId, payload) {
  * @param {string} instituteId
  */
 export async function getServiceById(serviceId, instituteId) {
-  const service = await Service.findOne({ _id: serviceId, instituteId });
-  if (!service) {
-    throw new AppError('Service not found', 404);
-  }
-  return formatService(service);
+  return cachedRead(cacheNs.SERVICE_DETAIL, [instituteId, serviceId], () =>
+    loadServiceById(serviceId, instituteId),
+  );
 }
 
 /**
@@ -113,6 +133,8 @@ export async function updateService(serviceId, instituteId, payload) {
 
   await service.save();
   await syncServiceActiveStatus(serviceId, instituteId);
+  await enqueueServiceReindex(instituteId, serviceId, 'service-update');
+  await flushInstituteReadCache(instituteId);
   return formatService(service);
 }
 
@@ -140,29 +162,80 @@ export async function deleteService(serviceId, instituteId) {
 
   await deleteKnowledgeDocumentsForService(serviceId, instituteId);
   await Service.deleteOne({ _id: serviceId });
+  await flushInstituteReadCache(instituteId);
   return { id: serviceId };
 }
 
 /**
- * Promote service to active when it has at least one active offering.
+ * @param {string} serviceId
+ * @param {string} instituteId
+ */
+export async function countServiceReadyOfferings(serviceId, instituteId) {
+  const offerings = await Offering.find({ serviceId, instituteId });
+  return offerings.filter(isOfferingReadyForServiceActivation).length;
+}
+
+/**
+ * Keep service live while at least one offering is active or fully configured.
  * @param {string} serviceId
  * @param {string} instituteId
  */
 export async function syncServiceActiveStatus(serviceId, instituteId) {
-  const activeCount = await Offering.countDocuments({
-    serviceId,
-    instituteId,
-    status: OFFERING_STATUS.ACTIVE,
-  });
+  const service = await Service.findOne({ _id: serviceId, instituteId });
+  if (!service) return;
+
+  if (
+    service.status === SERVICE_STATUS.DISABLED ||
+    service.status === SERVICE_STATUS.ARCHIVED
+  ) {
+    return;
+  }
+
+  const readyCount = await countServiceReadyOfferings(serviceId, instituteId);
 
   await Service.updateOne(
     { _id: serviceId, instituteId },
     {
       $set: {
-        status: activeCount > 0 ? SERVICE_STATUS.ACTIVE : SERVICE_STATUS.DRAFT,
+        status: readyCount > 0 ? SERVICE_STATUS.ACTIVE : SERVICE_STATUS.DRAFT,
       },
     },
   );
+}
+
+/**
+ * @param {string} serviceId
+ * @param {string} instituteId
+ */
+export async function activateService(serviceId, instituteId) {
+  const service = await Service.findOne({ _id: serviceId, instituteId });
+  if (!service) {
+    throw new AppError('Service not found', 404);
+  }
+
+  if (service.status === SERVICE_STATUS.ACTIVE) {
+    return formatService(service);
+  }
+
+  if (
+    service.status === SERVICE_STATUS.DISABLED ||
+    service.status === SERVICE_STATUS.ARCHIVED
+  ) {
+    throw new AppError('This service cannot be activated in its current state', 400);
+  }
+
+  const readyCount = await countServiceReadyOfferings(serviceId, instituteId);
+  if (readyCount === 0) {
+    throw new AppError(
+      'At least one offering must be active or fully configured before activating this service',
+      400,
+    );
+  }
+
+  service.status = SERVICE_STATUS.ACTIVE;
+  await service.save();
+  await flushInstituteReadCache(instituteId);
+  return formatService(service);
 }
 
 /**

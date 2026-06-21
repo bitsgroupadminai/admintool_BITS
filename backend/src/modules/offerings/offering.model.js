@@ -6,7 +6,9 @@ import {
   RULE_OPERATOR,
   SLA_UNIT,
   DOCUMENT_FILE_TYPES,
+  APPLICANT_FIELD_TYPE,
 } from '../../shared/enums/offering.enums.js';
+import { offeringConfigSnapshotPlugin } from './offering.version.plugin.js';
 import {
   HANDLER_TYPE,
   OUTCOME_TYPE,
@@ -40,6 +42,21 @@ const documentRequirementSchema = new mongoose.Schema(
       type: [String],
       enum: DOCUMENT_FILE_TYPES,
       default: ['pdf'],
+    },
+    maxSizeMb: { type: Number, default: 5, min: 1, max: 25 },
+  },
+  { _id: true },
+);
+
+const intakeDocumentSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true, maxlength: 120, default: '' },
+    helpText: { type: String, trim: true, maxlength: 300, default: '' },
+    required: { type: Boolean, default: true },
+    allowedTypes: {
+      type: [String],
+      enum: DOCUMENT_FILE_TYPES,
+      default: ['pdf', 'jpg', 'jpeg', 'png'],
     },
     maxSizeMb: { type: Number, default: 5, min: 1, max: 25 },
   },
@@ -103,6 +120,24 @@ const workflowStepSchema = new mongoose.Schema(
   { _id: true },
 );
 
+const applicantFieldSchema = new mongoose.Schema(
+  {
+    fieldKey: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true, maxlength: 120 },
+    fieldType: {
+      type: String,
+      enum: Object.values(APPLICANT_FIELD_TYPE),
+      required: true,
+    },
+    required: { type: Boolean, default: true },
+    placeholder: { type: String, trim: true, default: '' },
+    helpText: { type: String, trim: true, default: '' },
+    options: { type: [String], default: [] },
+    order: { type: Number, default: 1 },
+  },
+  { _id: true },
+);
+
 const offeringSchema = new mongoose.Schema(
   {
     instituteId: {
@@ -128,6 +163,16 @@ const offeringSchema = new mongoose.Schema(
       trim: true,
       maxlength: 2000,
     },
+    visitLocation: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    visitInstructions: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
     status: {
       type: String,
       enum: Object.values(OFFERING_STATUS),
@@ -139,6 +184,8 @@ const offeringSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    applicantFields: [applicantFieldSchema],
+    intakeDocument: intakeDocumentSchema,
     eligibilityRules: [eligibilityRuleSchema],
     documentRequirements: [documentRequirementSchema],
     workflowSteps: [workflowStepSchema],
@@ -149,16 +196,56 @@ const offeringSchema = new mongoose.Schema(
     queueConfig: {
       capacity: { type: Number, min: 1 },
       processingRatePerHour: { type: Number, min: 1 },
+      avgServiceMinutes: { type: Number, min: 1 },
+      counters: {
+        type: [
+          {
+            id: { type: String, required: true },
+            label: { type: String, required: true, trim: true },
+            active: { type: Boolean, default: true },
+          },
+        ],
+        default: [],
+      },
     },
     appointmentConfig: {
       slotDurationMinutes: { type: Number, min: 5 },
       slotCapacity: { type: Number, min: 1 },
       operatingHoursStart: { type: String },
       operatingHoursEnd: { type: String },
+      operatingDays: {
+        type: [Number],
+        default: [1, 2, 3, 4, 5],
+      },
+      bookingHorizonDays: { type: Number, min: 1, max: 60 },
+      virtualAppointment: {
+        enabled: { type: Boolean, default: false },
+        allowedProviders: {
+          type: [String],
+          default: ['google_meet', 'zoom', 'manual'],
+        },
+        defaultProvider: { type: String, default: 'google_meet' },
+        autoGenerateLink: { type: Boolean, default: true },
+        autoSendLinkOnConfirm: { type: Boolean, default: true },
+        allowAdditionalRecipients: { type: Boolean, default: true },
+        maxAdditionalRecipients: { type: Number, min: 1, max: 500, default: 50 },
+      },
     },
     aiSuggestions: {
       type: mongoose.Schema.Types.Mixed,
       default: null,
+    },
+    paymentConfig: {
+      enabled: { type: Boolean, default: false },
+      amount: { type: Number, min: 1 },
+      currency: { type: String, default: 'INR', trim: true },
+      label: { type: String, trim: true, maxlength: 120 },
+      timing: {
+        type: String,
+        enum: ['before_submit', 'workflow_step'],
+        default: 'before_submit',
+      },
+      workflowStepId: { type: String, trim: true },
     },
     activatedAt: { type: Date },
   },
@@ -166,6 +253,7 @@ const offeringSchema = new mongoose.Schema(
 );
 
 offeringSchema.index({ instituteId: 1, serviceId: 1, name: 1 });
+offeringSchema.plugin(offeringConfigSnapshotPlugin);
 
 /** @typedef {mongoose.InferSchemaType<typeof offeringSchema> & { _id: mongoose.Types.ObjectId }} OfferingDocument */
 

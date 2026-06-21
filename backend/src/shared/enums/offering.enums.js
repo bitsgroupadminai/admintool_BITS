@@ -42,3 +42,13 @@ export const WORKFLOW_ACTION = {
 };
 
 export const DOCUMENT_FILE_TYPES = ['pdf', 'jpg', 'jpeg', 'png'];
+
+export const APPLICANT_FIELD_TYPE = {
+  TEXT: 'text',
+  EMAIL: 'email',
+  PHONE: 'phone',
+  DATE: 'date',
+  NUMBER: 'number',
+  TEXTAREA: 'textarea',
+  SELECT: 'select',
+};

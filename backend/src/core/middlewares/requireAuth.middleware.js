@@ -1,14 +1,13 @@
 import { AppError } from '../utils/AppError.js';
 import { getSession, touchSession } from '../services/session.service.js';
-
-const SESSION_COOKIE = 'sid';
+import { SESSION_COOKIE, setSessionCookie } from './sessionCookie.js';
 
 /**
  * @param {import('express').Request} req
- * @param {import('express').Response} _res
+ * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
-export async function requireAuth(req, _res, next) {
+export async function requireAuth(req, res, next) {
   try {
     const sessionId = req.cookies?.[SESSION_COOKIE];
     if (!sessionId) {
@@ -21,6 +20,7 @@ export async function requireAuth(req, _res, next) {
     }
 
     await touchSession(sessionId, session);
+    setSessionCookie(res, sessionId);
     req.sessionId = sessionId;
     req.user = session;
     next();
@@ -29,4 +29,4 @@ export async function requireAuth(req, _res, next) {
   }
 }
 
-export { SESSION_COOKIE };
+export { SESSION_COOKIE } from './sessionCookie.js';

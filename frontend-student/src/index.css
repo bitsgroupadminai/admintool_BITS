@@ -3,11 +3,28 @@
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
 
-  --color-background: #f4f6f5;
-  --color-foreground: #1f2a28;
-  --color-muted: #5f6f6b;
-  --color-border: #d7dfdb;
+  --color-background: #f4faf7;
+  --color-foreground: #052e1c;
+  --color-muted: #4b6358;
+  --color-border: #e2eee8;
   --color-surface: #ffffff;
+  --color-primary: #0a6640;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #d1fae5;
+
+  --scrollbar-size: 5px;
+  --scrollbar-brand-dark: #0a6640;
+  --scrollbar-brand-light: #10b981;
+  --scrollbar-thumb: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--scrollbar-brand-light) 62%, transparent),
+    color-mix(in srgb, var(--scrollbar-brand-dark) 62%, transparent)
+  );
+  --scrollbar-thumb-hover: linear-gradient(
+    180deg,
+    var(--scrollbar-brand-light),
+    var(--scrollbar-brand-dark)
+  );
 }
 
 @layer base {
@@ -15,7 +32,83 @@
     @apply border-border;
   }
 
+  html,
+  body {
+    height: 100%;
+  }
+
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
   }
+
+  ::selection {
+    background-color: #a7f3d0;
+    color: #052e1c;
+  }
+}
+
+/* Scrollbar — unlayered so native track styling is fully overridden (Windows) */
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-brand-dark) transparent;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent !important;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track,
+html::-webkit-scrollbar-track-piece,
+body::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-track-piece,
+html::-webkit-scrollbar-track-piece:start,
+body::-webkit-scrollbar-track-piece:start,
+*::-webkit-scrollbar-track-piece:start,
+html::-webkit-scrollbar-track-piece:end,
+body::-webkit-scrollbar-track-piece:end,
+*::-webkit-scrollbar-track-piece:end {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: none;
+  box-shadow: none;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button,
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner,
+html::-webkit-scrollbar-resizer,
+body::-webkit-scrollbar-resizer,
+*::-webkit-scrollbar-resizer {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent !important;
 }

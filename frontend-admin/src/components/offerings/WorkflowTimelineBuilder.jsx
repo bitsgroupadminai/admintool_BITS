@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 import {
   AI_HANDLERS,
   HANDLER_TYPE,
@@ -41,8 +42,13 @@ function OutcomeRouteEditor({ outcome, step, allSteps, docNames, onChange }) {
 
   const otherSteps = allSteps.filter((s) => s.stepId !== step.stepId);
 
-  const updateRoute = (patch) =>
-    onChange({ ...outcome, route: { ...route, ...patch } });
+  const updateRoute = (patch) => {
+    const next = { ...route, ...patch };
+    for (const key of ["nextStepId", "terminalState", "returnToStepId"]) {
+      if (next[key] == null) delete next[key];
+    }
+    onChange({ ...outcome, route: next });
+  };
 
   const borderColor =
     outcome.type === "rejected"
@@ -57,11 +63,10 @@ function OutcomeRouteEditor({ outcome, step, allSteps, docNames, onChange }) {
         {meta.emoji} {meta.label}
       </p>
 
-      <select
-        className="h-9 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-xs font-medium text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+      <Select
+        size="sm"
         value={route.action ?? ROUTE_ACTION.NEXT_STEP}
-        onChange={(e) => {
-          const action = e.target.value;
+        onChange={(action) => {
           if (action === ROUTE_ACTION.END_WORKFLOW) {
             updateRoute({
               action,
@@ -73,10 +78,7 @@ function OutcomeRouteEditor({ outcome, step, allSteps, docNames, onChange }) {
           } else if (action === ROUTE_ACTION.RETURN_TO_STUDENT) {
             updateRoute({
               action,
-              returnToStepId: route.returnToStepId ?? null,
               requireReupload: route.requireReupload ?? [],
-              nextStepId: undefined,
-              terminalState: undefined,
             });
           } else {
             const next = otherSteps[0];
@@ -88,27 +90,24 @@ function OutcomeRouteEditor({ outcome, step, allSteps, docNames, onChange }) {
             });
           }
         }}
-      >
-        <option value={ROUTE_ACTION.NEXT_STEP}>Go to next step</option>
-        <option value={ROUTE_ACTION.END_WORKFLOW}>End workflow</option>
-        <option value={ROUTE_ACTION.RETURN_TO_STUDENT}>
-          Return to student
-        </option>
-      </select>
+        options={[
+          { value: ROUTE_ACTION.NEXT_STEP, label: "Go to next step" },
+          { value: ROUTE_ACTION.END_WORKFLOW, label: "End workflow" },
+          { value: ROUTE_ACTION.RETURN_TO_STUDENT, label: "Return to student" },
+        ]}
+      />
 
       {route.action === ROUTE_ACTION.NEXT_STEP && (
-        <select
-          className="h-9 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-xs font-medium text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+        <Select
+          size="sm"
           value={route.nextStepId ?? ""}
-          onChange={(e) => updateRoute({ nextStepId: e.target.value })}
-        >
-          <option value="">Select step…</option>
-          {otherSteps.map((s) => (
-            <option key={s.stepId} value={s.stepId}>
-              Step {s.order}: {s.name}
-            </option>
-          ))}
-        </select>
+          onChange={(nextStepId) => updateRoute({ nextStepId })}
+          placeholder="Select step…"
+          options={otherSteps.map((step) => ({
+            value: step.stepId,
+            label: `Step ${step.order}: ${step.name}`,
+          }))}
+        />
       )}
 
       {route.action === ROUTE_ACTION.END_WORKFLOW && (
@@ -127,20 +126,18 @@ function OutcomeRouteEditor({ outcome, step, allSteps, docNames, onChange }) {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
               Return to step
             </p>
-            <select
-              className="h-9 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-xs font-medium text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+            <Select
+              size="sm"
               value={route.returnToStepId ?? ""}
-              onChange={(e) =>
-                updateRoute({ returnToStepId: e.target.value || null })
+              onChange={(returnToStepId) =>
+                updateRoute({ returnToStepId: returnToStepId || undefined })
               }
-            >
-              <option value="">Student dashboard (default)</option>
-              {allSteps.map((s) => (
-                <option key={s.stepId} value={s.stepId}>
-                  Step {s.order}: {s.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Student dashboard (default)"
+              options={allSteps.map((step) => ({
+                value: step.stepId,
+                label: `Step ${step.order}: ${step.name}`,
+              }))}
+            />
           </div>
           {docNames.length > 0 && (
             <div className="space-y-1.5">
@@ -322,36 +319,26 @@ function StepCard({
               </div>
 
               {step.handledBy?.type === HANDLER_TYPE.STAFF && (
-                <select
-                  className="h-10 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-sm text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                <Select
                   value={step.handledBy.assignee}
-                  onChange={(e) =>
-                    setHandler(HANDLER_TYPE.STAFF, e.target.value)
-                  }
-                >
-                  {staffRoles.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(assignee) => setHandler(HANDLER_TYPE.STAFF, assignee)}
+                  options={staffRoles.map((role) => ({
+                    value: role.value,
+                    label: role.label,
+                  }))}
+                />
               )}
 
               {step.handledBy?.type === HANDLER_TYPE.AI && (
                 <div className="space-y-2">
-                  <select
-                    className="h-10 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-sm text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                  <Select
                     value={step.handledBy.assignee}
-                    onChange={(e) =>
-                      setHandler(HANDLER_TYPE.AI, e.target.value)
-                    }
-                  >
-                    {AI_HANDLERS.map((h) => (
-                      <option key={h.value} value={h.value}>
-                        {h.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(assignee) => setHandler(HANDLER_TYPE.AI, assignee)}
+                    options={AI_HANDLERS.map((handler) => ({
+                      value: handler.value,
+                      label: handler.label,
+                    }))}
+                  />
                   <p className="text-xs text-[#6B7C69]">
                     {
                       AI_HANDLERS.find(
@@ -376,15 +363,16 @@ function StepCard({
                   value={step.slaValue ?? 24}
                   onChange={(e) => update({ slaValue: Number(e.target.value) })}
                 />
-                <select
-                  className="h-10 rounded-lg border border-[#E8EDE6] bg-white px-3 text-sm text-[#1A2E16] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                <Select
                   value={step.slaUnit ?? "hours"}
-                  onChange={(e) => update({ slaUnit: e.target.value })}
-                >
-                  <option value="minutes">minutes</option>
-                  <option value="hours">hours</option>
-                  <option value="days">days</option>
-                </select>
+                  onChange={(slaUnit) => update({ slaUnit })}
+                  className="w-auto"
+                  options={[
+                    { value: "minutes", label: "minutes" },
+                    { value: "hours", label: "hours" },
+                    { value: "days", label: "days" },
+                  ]}
+                />
               </div>
             </div>
 

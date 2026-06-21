@@ -7,10 +7,12 @@ import {
   updateDocumentsSchema,
   updateWorkflowSchema,
   updateQueueSchema,
+  updateOfferingDetailsSchema,
   applyAiSuggestionsSchema,
   generateAiSectionSchema,
   bulkOfferingActionSchema,
 } from './offering.validator.js';
+import { updatePaymentSchema } from '../payments/payment.validator.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 
 export async function list(req, res, next) {
@@ -56,6 +58,34 @@ export async function update(req, res, next) {
       payload,
     );
     sendSuccess(res, 200, 'Offering updated', { offering });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateDetails(req, res, next) {
+  try {
+    const payload = updateOfferingDetailsSchema.parse(req.body);
+    const offering = await offeringService.updateOfferingDetails(
+      req.params.id,
+      req.user.instituteId,
+      payload,
+    );
+    sendSuccess(res, 200, 'Offering details updated', { offering });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updatePayment(req, res, next) {
+  try {
+    const payload = updatePaymentSchema.parse(req.body);
+    const offering = await offeringService.updateOfferingPayment(
+      req.params.id,
+      req.user.instituteId,
+      payload.paymentConfig,
+    );
+    sendSuccess(res, 200, 'Payment settings updated', { offering });
   } catch (err) {
     next(err);
   }

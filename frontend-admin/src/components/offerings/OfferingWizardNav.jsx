@@ -1,39 +1,54 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isOfferingSectionComplete } from "@/constants/offeringCompleteness.constants";
 
 export const WIZARD_STEPS = [
+  { id: "details", label: "Details" },
   { id: "eligibility", label: "Eligibility" },
   { id: "documents", label: "Documents" },
   { id: "workflow", label: "Workflow" },
   { id: "queue", label: "Queue" },
+  { id: "payment", label: "Payment" },
   { id: "review", label: "Review" },
 ];
 
-export function OfferingWizardNav({ currentStep, completeness }) {
+export function OfferingWizardNav({ currentStep, completeness, onStepClick }) {
   const currentIndex = WIZARD_STEPS.findIndex((s) => s.id === currentStep);
 
   return (
-    <div className="mb-8">
-      <ol className="flex items-center gap-0">
-        {WIZARD_STEPS.map((step, index) => {
+    <div className="mb-8 overflow-x-auto pb-1">
+      <ol className="flex min-w-[640px] items-center gap-0">
+        {WIZARD_STEPS.map((wizardStep, index) => {
           const done = index < currentIndex;
           const active = index === currentIndex;
           const sectionKey = {
-            eligibility: "eligibility_rules",
-            documents: "document_requirements",
+            details: "details",
+            eligibility: "eligibility",
+            documents: "documents",
             workflow: "workflow",
-            queue: "queue_mode",
+            queue: "queue",
+            payment: "payment",
             review: null,
-          }[step.id];
+          }[wizardStep.id];
           const sectionDone =
             sectionKey && completeness?.missing
-              ? !completeness.missing.includes(sectionKey)
+              ? isOfferingSectionComplete(sectionKey, completeness.missing)
               : false;
           const completed = done || sectionDone;
+          const clickable = Boolean(onStepClick) && wizardStep.id !== currentStep;
 
           return (
-            <li key={step.id} className="flex flex-1 items-center">
-              <div className="flex flex-col items-center gap-1.5">
+            <li key={wizardStep.id} className="flex flex-1 items-center">
+              <button
+                type="button"
+                disabled={!clickable}
+                onClick={() => onStepClick?.(wizardStep.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-lg px-1 py-1 transition",
+                  clickable && "cursor-pointer hover:bg-[#F4F7F3]",
+                  !clickable && "cursor-default",
+                )}
+              >
                 <div
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200",
@@ -59,9 +74,9 @@ export function OfferingWizardNav({ currentStep, completeness }) {
                         : "text-[#9BAE99]",
                   )}
                 >
-                  {step.label}
+                  {wizardStep.label}
                 </span>
-              </div>
+              </button>
               {index < WIZARD_STEPS.length - 1 && (
                 <div
                   className={cn(

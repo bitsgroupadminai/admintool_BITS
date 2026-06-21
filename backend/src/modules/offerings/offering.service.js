@@ -1,30 +1,67 @@
 import { Offering } from './offering.model.js';
 import { Service } from '../services/service.model.js';
+import { Application } from '../applications/application.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import {
   deriveOfferingStatus,
   getOfferingCompleteness,
+  resolveOfferingDisplayStatus,
 } from '../../shared/helpers/offeringCompleteness.helper.js';
 import {
   normalizeWorkflowSteps,
   validateWorkflowSteps,
 } from '../../shared/helpers/workflow.helper.js';
 import { syncServiceActiveStatus } from '../services/service.service.js';
+import { enqueueServiceReindex } from '../../core/queues/embedding.queue.js';
+import { validateOperatingHoursWindow } from '../../shared/helpers/operatingHours.helper.js';
+import { ensureUniqueApplicantFieldKeys } from '../../shared/helpers/applicantFields.helper.js';
+import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
+import { cacheNs } from '../../shared/constants/cacheKeys.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+
+async function scheduleOfferingReindex(offering) {
+  await enqueueServiceReindex(
+    offering.instituteId.toString(),
+    offering.serviceId.toString(),
+    'offering-update',
+  );
+}
+
+function applyPaymentConfig(offering, paymentConfig) {
+  if (!paymentConfig?.enabled) {
+    offering.paymentConfig = { enabled: false };
+  } else {
+    offering.paymentConfig = {
+      enabled: true,
+      amount: paymentConfig.amount,
+      currency: paymentConfig.currency ?? 'INR',
+      label: paymentConfig.label?.trim() || 'Service fee',
+      timing: paymentConfig.timing ?? 'before_submit',
+      workflowStepId:
+        paymentConfig.timing === 'workflow_step'
+          ? paymentConfig.workflowStepId?.trim() || undefined
+          : undefined,
+    };
+  }
+  offering.markModified('paymentConfig');
+}
 
 /**
  * @param {import('./offering.model.js').Offering} doc
  */
 function formatOffering(doc) {
   const completeness = getOfferingCompleteness(doc);
-  const derivedStatus = deriveOfferingStatus(doc);
 
   return {
     id: doc._id.toString(),
     instituteId: doc.instituteId.toString(),
     serviceId: doc.serviceId.toString(),
     name: doc.name,
-    status: doc.status === OFFERING_STATUS.DRAFT ? derivedStatus : doc.status,
+    description: doc.description ?? '',
+    visitLocation: doc.visitLocation ?? '',
+    visitInstructions: doc.visitInstructions ?? '',
+    status: resolveOfferingDisplayStatus(doc),
     startDate: doc.startDate,
     endDate: doc.endDate,
     configurationVersion: doc.configurationVersion,
@@ -34,6 +71,27 @@ function formatOffering(doc) {
     queueMode: doc.queueMode ?? null,
     queueConfig: doc.queueConfig ?? null,
     appointmentConfig: doc.appointmentConfig ?? null,
+    applicantFields: doc.applicantFields ?? [],
+    intakeDocument: doc.intakeDocument?.label?.trim()
+      ? {
+          id: doc.intakeDocument._id.toString(),
+          label: doc.intakeDocument.label,
+          helpText: doc.intakeDocument.helpText ?? '',
+          required: doc.intakeDocument.required !== false,
+          allowedTypes: doc.intakeDocument.allowedTypes ?? ['pdf'],
+          maxSizeMb: doc.intakeDocument.maxSizeMb ?? 5,
+        }
+      : null,
+    paymentConfig: doc.paymentConfig?.enabled
+      ? {
+          enabled: true,
+          amount: doc.paymentConfig.amount,
+          currency: doc.paymentConfig.currency ?? 'INR',
+          label: doc.paymentConfig.label ?? 'Service fee',
+          timing: doc.paymentConfig.timing ?? 'before_submit',
+          workflowStepId: doc.paymentConfig.workflowStepId ?? null,
+        }
+      : { enabled: false },
     hasAiSuggestions: Boolean(doc.aiSuggestions),
     completeness,
     activatedAt: doc.activatedAt,
@@ -54,12 +112,22 @@ async function getOfferingDoc(offeringId, instituteId) {
  * @param {string} instituteId
  * @param {string} [serviceId]
  */
-export async function listOfferings(instituteId, serviceId) {
+async function loadOfferingsList(instituteId, serviceId) {
   const filter = { instituteId };
   if (serviceId) filter.serviceId = serviceId;
 
   const offerings = await Offering.find(filter).sort({ createdAt: -1 });
   return offerings.map(formatOffering);
+}
+
+/**
+ * @param {string} instituteId
+ * @param {string} [serviceId]
+ */
+export async function listOfferings(instituteId, serviceId) {
+  return cachedRead(cacheNs.OFFERINGS_LIST, [instituteId, serviceId ?? 'all'], () =>
+    loadOfferingsList(instituteId, serviceId),
+  );
 }
 
 /**
@@ -79,6 +147,8 @@ export async function createOffering(instituteId, payload) {
     status: OFFERING_STATUS.DRAFT,
   });
 
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -87,8 +157,9 @@ export async function createOffering(instituteId, payload) {
  * @param {string} instituteId
  */
 export async function getOfferingById(offeringId, instituteId) {
-  const offering = await getOfferingDoc(offeringId, instituteId);
-  return formatOffering(offering);
+  return cachedRead(cacheNs.OFFERING_DETAIL, [instituteId, offeringId], async () =>
+    formatOffering(await getOfferingDoc(offeringId, instituteId)),
+  );
 }
 
 /**
@@ -100,6 +171,15 @@ export async function updateOffering(offeringId, instituteId, payload) {
   const offering = await getOfferingDoc(offeringId, instituteId);
 
   if (payload.name) offering.name = payload.name.trim();
+  if (payload.description !== undefined) {
+    offering.description = payload.description?.trim() || '';
+  }
+  if (payload.visitLocation !== undefined) {
+    offering.visitLocation = payload.visitLocation?.trim() || '';
+  }
+  if (payload.visitInstructions !== undefined) {
+    offering.visitInstructions = payload.visitInstructions?.trim() || '';
+  }
   if (payload.startDate !== undefined) {
     offering.startDate = payload.startDate ? new Date(payload.startDate) : null;
   }
@@ -110,6 +190,85 @@ export async function updateOffering(offeringId, instituteId, payload) {
 
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
+  return formatOffering(offering);
+}
+
+/**
+ * @param {string} offeringId
+ * @param {string} instituteId
+ * @param {Object} payload
+ */
+export async function updateOfferingDetails(offeringId, instituteId, payload) {
+  const offering = await getOfferingDoc(offeringId, instituteId);
+
+  if (payload.name) offering.name = payload.name.trim();
+  if (payload.description !== undefined) {
+    offering.description = payload.description?.trim() || '';
+  }
+  if (payload.visitLocation !== undefined) {
+    offering.visitLocation = payload.visitLocation?.trim() || '';
+  }
+  if (payload.visitInstructions !== undefined) {
+    offering.visitInstructions = payload.visitInstructions?.trim() || '';
+  }
+  if (payload.startDate !== undefined) {
+    offering.startDate = payload.startDate ? new Date(payload.startDate) : null;
+  }
+  if (payload.endDate !== undefined) {
+    offering.endDate = payload.endDate ? new Date(payload.endDate) : null;
+  }
+  if (payload.applicantFields !== undefined) {
+    const labels = payload.applicantFields.map((field) => field.label.trim().toLowerCase());
+    if (new Set(labels).size !== labels.length) {
+      throw new AppError('Duplicate applicant field labels are not allowed', 400);
+    }
+    offering.applicantFields = ensureUniqueApplicantFieldKeys(payload.applicantFields);
+  }
+  if (payload.intakeDocument !== undefined) {
+    const label = payload.intakeDocument?.label?.trim() ?? '';
+    if (!label) {
+      offering.intakeDocument = undefined;
+    } else {
+      if (!offering.intakeDocument) {
+        offering.intakeDocument = {};
+      }
+      offering.intakeDocument.label = label;
+      offering.intakeDocument.helpText = payload.intakeDocument.helpText?.trim() ?? '';
+      offering.intakeDocument.required = payload.intakeDocument.required !== false;
+      offering.intakeDocument.allowedTypes = payload.intakeDocument.allowedTypes?.length
+        ? payload.intakeDocument.allowedTypes
+        : ['pdf'];
+      offering.intakeDocument.maxSizeMb = payload.intakeDocument.maxSizeMb ?? 5;
+      offering.markModified('intakeDocument');
+    }
+  }
+  if (payload.paymentConfig !== undefined) {
+    applyPaymentConfig(offering, payload.paymentConfig);
+  }
+
+  offering.configurationVersion += 1;
+  offering.status = deriveOfferingStatus(offering);
+  await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
+  return formatOffering(offering);
+}
+
+/**
+ * @param {string} offeringId
+ * @param {string} instituteId
+ * @param {Object} paymentConfig
+ */
+export async function updateOfferingPayment(offeringId, instituteId, paymentConfig) {
+  const offering = await getOfferingDoc(offeringId, instituteId);
+  applyPaymentConfig(offering, paymentConfig);
+  offering.configurationVersion += 1;
+  offering.status = deriveOfferingStatus(offering);
+  await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -123,6 +282,8 @@ export async function updateEligibilityRules(offeringId, instituteId, rules) {
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -141,6 +302,8 @@ export async function updateDocumentRequirements(offeringId, instituteId, requir
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -154,6 +317,8 @@ export async function updateWorkflow(offeringId, instituteId, steps) {
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -165,10 +330,26 @@ export async function updateQueueConfig(offeringId, instituteId, payload) {
   const offering = await getOfferingDoc(offeringId, instituteId);
   offering.queueMode = payload.queueMode;
   offering.queueConfig = payload.queueConfig ?? undefined;
-  offering.appointmentConfig = payload.appointmentConfig ?? undefined;
+
+  if (payload.appointmentConfig) {
+    const hours = validateOperatingHoursWindow(
+      payload.appointmentConfig.operatingHoursStart,
+      payload.appointmentConfig.operatingHoursEnd,
+    );
+    offering.appointmentConfig = {
+      ...payload.appointmentConfig,
+      operatingHoursStart: hours.start ?? payload.appointmentConfig.operatingHoursStart,
+      operatingHoursEnd: hours.end ?? payload.appointmentConfig.operatingHoursEnd,
+    };
+  } else {
+    offering.appointmentConfig = undefined;
+  }
+
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -194,6 +375,8 @@ export async function activateOffering(offeringId, instituteId) {
   offering.activatedAt = new Date();
   await offering.save();
   await syncServiceActiveStatus(offering.serviceId.toString(), instituteId);
+  await scheduleOfferingReindex(offering);
+  await flushInstituteReadCache(instituteId);
   return formatOffering(offering);
 }
 
@@ -219,6 +402,7 @@ export async function duplicateOffering(offeringId, instituteId) {
 
   copy.status = deriveOfferingStatus(copy);
   await copy.save();
+  await flushInstituteReadCache(instituteId);
   return formatOffering(copy);
 }
 
@@ -257,6 +441,7 @@ export async function bulkOfferingAction(instituteId, payload) {
     results.push({ id, success: true });
   }
 
+  await flushInstituteReadCache(instituteId);
   return { results };
 }
 
@@ -266,8 +451,16 @@ export async function bulkOfferingAction(instituteId, payload) {
  */
 export async function deleteOffering(offeringId, instituteId) {
   const offering = await getOfferingDoc(offeringId, instituteId);
+  const requestCount = await Application.countDocuments({ offeringId: offering._id });
+  if (requestCount > 0) {
+    throw new AppError(
+      'This service option cannot be deleted because students have already submitted requests for it',
+      400,
+    );
+  }
   const serviceId = offering.serviceId.toString();
   await Offering.deleteOne({ _id: offeringId });
   await syncServiceActiveStatus(serviceId, instituteId);
+  await flushInstituteReadCache(instituteId);
   return { id: offeringId };
 }

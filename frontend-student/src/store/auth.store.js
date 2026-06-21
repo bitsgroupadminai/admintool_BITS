@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import { authApi } from '@/api/student.api';
+import { bootstrapSession } from '@/utils/authBootstrap';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  authError: null,
 
   setUser: (user) =>
     set({
       user,
       isAuthenticated: Boolean(user),
       isLoading: false,
+      authError: null,
     }),
 
   clearUser: () =>
@@ -18,22 +21,36 @@ export const useAuthStore = create((set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      authError: null,
     }),
 
-  fetchMe: async () => {
-    set({ isLoading: true });
+  fetchMe: async ({ silent = false } = {}) => {
+    if (!silent) {
+      set({ isLoading: true, authError: null });
+    }
+
     try {
-      const { data } = await authApi.me();
-      const user = data.data.user;
-      if (user.role !== 'student') {
-        set({ user: null, isAuthenticated: false, isLoading: false });
-        return null;
-      }
-      set({ user, isAuthenticated: true, isLoading: false });
-      return user;
+      const result = await bootstrapSession(
+        () => authApi.me(),
+        (user) => user.role === 'student',
+      );
+      set({
+        user: result.user,
+        isAuthenticated: result.isAuthenticated,
+        isLoading: false,
+        authError: null,
+      });
+      return result.user;
     } catch {
-      set({ user: null, isAuthenticated: false, isLoading: false });
-      return null;
+      const current = get();
+      set({
+        user: current.user,
+        isAuthenticated: current.isAuthenticated && Boolean(current.user),
+        isLoading: false,
+        authError:
+          'We could not verify your session right now. Check your connection and refresh the page.',
+      });
+      return current.user;
     }
   },
 
@@ -41,7 +58,12 @@ export const useAuthStore = create((set) => ({
     try {
       await authApi.logout();
     } finally {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        authError: null,
+      });
     }
   },
 }));

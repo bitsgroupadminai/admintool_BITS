@@ -26,6 +26,39 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(2).max(120).optional(),
+    currentPassword: z.string().min(1).optional(),
+    newPassword: passwordSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.newPassword && !data.currentPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Current password is required to set a new password',
+        path: ['currentPassword'],
+      });
+    }
+
+    if (!data.name?.trim() && !data.newPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide a name or new password to update',
+        path: ['name'],
+      });
+    }
+  });
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: passwordSchema,
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
 export const createStaffSchema = z.object({
   name: z.string().min(2).max(120),
   email: z.string().email(),

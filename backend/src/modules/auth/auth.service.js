@@ -6,6 +6,7 @@ import { env } from '../../core/config/env.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { createSession, destroySession, getSession, touchSession } from '../../core/services/session.service.js';
 import { toAuthUserDto } from './auth.dto.js';
+import { deleteAvatarFile } from '../../shared/helpers/avatar.helper.js';
 
 const INVALID_CREDENTIALS_MSG = 'Invalid email or password';
 const SALT_ROUNDS = 12;
@@ -131,6 +132,92 @@ export async function getCurrentUser(userId) {
   if (!user || !user.isActive) {
     throw new AppError('User not found', 404);
   }
+  const institute = await Institute.findById(user.instituteId);
+  return toAuthUserDto(user, institute);
+}
+
+/**
+ * @param {string} userId
+ * @param {import('./auth.validator.js').updateProfileSchema['_output']} payload
+ * @param {string} [sessionId]
+ */
+export async function updateCurrentUserProfile(userId, payload, sessionId) {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user || !user.isActive) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (payload.name?.trim()) {
+    user.name = payload.name.trim();
+  }
+
+  if (payload.newPassword) {
+    if (!payload.currentPassword) {
+      throw new AppError('Current password is required to set a new password', 400);
+    }
+
+    const valid = await verifyPassword(payload.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new AppError('Current password is incorrect', 401);
+    }
+
+    user.passwordHash = await hashPassword(payload.newPassword);
+    user.mustChangePassword = false;
+  }
+
+  await user.save();
+
+  if (sessionId) {
+    const session = await getSession(sessionId);
+    if (session?.userId === userId) {
+      await touchSession(sessionId, {
+        ...session,
+        name: user.name,
+        mustChangePassword: Boolean(user.mustChangePassword),
+      });
+    }
+  }
+
+  const institute = await Institute.findById(user.instituteId);
+  return toAuthUserDto(user, institute);
+}
+
+/**
+ * @param {string} userId
+ * @param {Express.Multer.File} file
+ */
+export async function uploadUserAvatar(userId, file) {
+  const user = await User.findById(userId);
+  if (!user || !user.isActive) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (user.avatarUrl) {
+    await deleteAvatarFile(user.avatarUrl);
+  }
+
+  user.avatarUrl = `/uploads/avatars/${file.filename}`;
+  await user.save();
+
+  const institute = await Institute.findById(user.instituteId);
+  return toAuthUserDto(user, institute);
+}
+
+/**
+ * @param {string} userId
+ */
+export async function removeUserAvatar(userId) {
+  const user = await User.findById(userId);
+  if (!user || !user.isActive) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (user.avatarUrl) {
+    await deleteAvatarFile(user.avatarUrl);
+    user.avatarUrl = undefined;
+    await user.save();
+  }
+
   const institute = await Institute.findById(user.instituteId);
   return toAuthUserDto(user, institute);
 }

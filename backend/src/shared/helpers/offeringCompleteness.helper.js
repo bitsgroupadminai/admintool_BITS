@@ -1,5 +1,15 @@
-import { QUEUE_MODE } from '../enums/offering.enums.js';
+import { QUEUE_MODE, OFFERING_STATUS } from '../enums/offering.enums.js';
 import { normalizeWorkflowSteps } from './workflow.helper.js';
+import { validateOperatingHoursWindow } from './operatingHours.helper.js';
+
+function hasValidAppointmentConfig(config) {
+  if (!config?.slotDurationMinutes) return false;
+  const hours = validateOperatingHoursWindow(
+    config.operatingHoursStart,
+    config.operatingHoursEnd,
+  );
+  return hours.valid;
+}
 
 /**
  * @param {import('../../modules/offerings/offering.model.js').OfferingDocument} offering
@@ -41,9 +51,11 @@ export function getOfferingCompleteness(offering) {
   } else if (offering.queueMode === QUEUE_MODE.QUEUE_ONLY) {
     if (!offering.queueConfig?.capacity) missing.push('queue_config');
   } else if (offering.queueMode === QUEUE_MODE.APPOINTMENT_ONLY) {
-    if (!offering.appointmentConfig?.slotDurationMinutes) missing.push('appointment_config');
+    if (!hasValidAppointmentConfig(offering.appointmentConfig)) {
+      missing.push('appointment_config');
+    }
   } else if (offering.queueMode === QUEUE_MODE.HYBRID) {
-    if (!offering.queueConfig?.capacity || !offering.appointmentConfig?.slotDurationMinutes) {
+    if (!offering.queueConfig?.capacity || !hasValidAppointmentConfig(offering.appointmentConfig)) {
       missing.push('hybrid_config');
     }
   }
@@ -52,6 +64,49 @@ export function getOfferingCompleteness(offering) {
     isComplete: missing.length === 0,
     missing,
   };
+}
+
+/**
+ * An offering counts toward service activation when it is live or fully configured.
+ * @param {import('../../modules/offerings/offering.model.js').OfferingDocument} offering
+ */
+export function isOfferingReadyForServiceActivation(offering) {
+  if (offering.status === OFFERING_STATUS.ACTIVE) return true;
+  if (
+    offering.status === OFFERING_STATUS.DISABLED ||
+    offering.status === OFFERING_STATUS.ARCHIVED ||
+    offering.status === OFFERING_STATUS.EXPIRED
+  ) {
+    return false;
+  }
+  return getOfferingCompleteness(offering).isComplete;
+}
+
+export const OFFERING_MISSING_LABELS = {
+  eligibility_rules: 'Eligibility rules',
+  document_requirements: 'At least one required document',
+  workflow: 'Workflow steps',
+  sla: 'Workflow SLA on every step',
+  workflow_handlers: 'Who handles each workflow step',
+  workflow_outcomes: 'Outcomes on every workflow step',
+  queue_mode: 'Queue mode',
+  queue_config: 'Queue capacity',
+  appointment_config: 'Appointment settings',
+  hybrid_config: 'Queue and appointment settings',
+};
+
+/**
+ * @param {string[]} missing
+ */
+export function formatOfferingMissing(missing) {
+  return (missing ?? []).map((key) => OFFERING_MISSING_LABELS[key] ?? key.replace(/_/g, ' '));
+}
+
+/**
+ * @param {import('../../modules/offerings/offering.model.js').OfferingDocument} offering
+ */
+export function resolveOfferingDisplayStatus(offering) {
+  return deriveOfferingStatus(offering);
 }
 
 /**

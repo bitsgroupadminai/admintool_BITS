@@ -112,7 +112,7 @@ export function LoginPage() {
         <div className="flex justify-end -mt-2">
           <Link
             to="/forgot-password"
-            className="text-[0.75rem] text-[#0A6640] font-semibold hover:text-[#052E1C] transition-colors"
+            className="rounded-full px-2 py-1 text-[0.75rem] font-semibold text-[#0A6640] transition-colors hover:bg-[#E6F7EF] hover:text-[#052E1C]"
           >
             Forgot password?
           </Link>

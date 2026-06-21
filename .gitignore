@@ -5,3 +5,5 @@ dist/
 .DS_Store
 coverage/
 uploads/
+study-project-*.json
+backend/credentials/

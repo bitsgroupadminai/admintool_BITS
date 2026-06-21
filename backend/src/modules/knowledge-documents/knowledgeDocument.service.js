@@ -4,6 +4,10 @@ import { Service } from '../services/service.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { env } from '../../core/config/env.js';
 import { extractTextFromDocument } from '../../shared/services/document-text.service.js';
+import { enqueueServiceReindex, enqueueServicePurge } from '../../core/queues/embedding.queue.js';
+import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
+import { cacheNs } from '../../shared/constants/cacheKeys.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 
 /**
  * @param {string} serviceId
@@ -17,6 +21,8 @@ export async function deleteAllForService(serviceId, instituteId) {
     }
   }
   await KnowledgeDocument.deleteMany({ serviceId, instituteId });
+  await enqueueServicePurge(instituteId, serviceId);
+  await flushInstituteReadCache(instituteId);
 }
 
 /**
@@ -24,6 +30,7 @@ export async function deleteAllForService(serviceId, instituteId) {
  * @param {string} serviceId
  */
 export async function listDocuments(instituteId, serviceId) {
+  return cachedRead(cacheNs.KNOWLEDGE_DOCS, [instituteId, serviceId], async () => {
   const service = await Service.findOne({ _id: serviceId, instituteId });
   if (!service) {
     throw new AppError('Service not found', 404);
@@ -41,8 +48,12 @@ export async function listDocuments(instituteId, serviceId) {
     mimeType: d.mimeType,
     sizeBytes: d.sizeBytes,
     hasExtractedText: Boolean(d.extractedText),
+    indexStatus: d.indexStatus ?? 'pending',
+    chunkCount: d.chunkCount ?? 0,
+    indexedAt: d.indexedAt ?? null,
     createdAt: d.createdAt,
   }));
+  });
 }
 
 /**
@@ -72,14 +83,19 @@ export async function uploadDocument(instituteId, serviceId, file) {
     sizeBytes: file.size,
     filePath: file.path,
     extractedText,
+    indexStatus: 'pending',
   });
 
+  await enqueueServiceReindex(instituteId, serviceId, 'document-upload');
+
+  await flushInstituteReadCache(instituteId);
   return {
     id: doc._id.toString(),
     originalName: doc.originalName,
     mimeType: doc.mimeType,
     sizeBytes: doc.sizeBytes,
     hasExtractedText: Boolean(extractedText),
+    indexStatus: doc.indexStatus,
     createdAt: doc.createdAt,
   };
 }
@@ -99,5 +115,7 @@ export async function deleteDocument(docId, instituteId) {
   }
 
   await KnowledgeDocument.deleteOne({ _id: docId });
+  await enqueueServiceReindex(instituteId, doc.serviceId.toString(), 'document-delete');
+  await flushInstituteReadCache(instituteId);
   return { id: docId };
 }

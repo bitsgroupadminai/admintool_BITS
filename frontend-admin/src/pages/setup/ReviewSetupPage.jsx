@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { SetupShell } from '@/components/setup/SetupShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GlobalLoader } from '@/components/ui/GlobalLoader';
+import { SetupSummarySkeleton } from '@/components/skeletons';
 import { instituteApi } from '@/api/institute.api';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -56,7 +56,7 @@ export function ReviewSetupPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {!summary ? (
-            <GlobalLoader label="Loading setup summary..." variant="inline" size="sm" />
+            <SetupSummarySkeleton />
           ) : (
             <dl className="space-y-4 rounded-xl border border-border bg-background p-4">
               <div className="flex justify-between gap-4">

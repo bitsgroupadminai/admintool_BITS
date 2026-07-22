@@ -28,7 +28,11 @@ export async function handleChatSocketMessage(user, socket, payload) {
 
   socket.join(`chat:${session.sessionId}`);
 
-  const userMessage = await chatService.persistUserMessage(session.sessionId, data.message);
+  const userMessage = await chatService.persistUserMessage(
+    instituteId,
+    session.sessionId,
+    data.message,
+  );
   emitToChatSession(session.sessionId, WS_EVENTS.CHAT_MESSAGE, userMessage);
 
   const streamChunk = (chunk) => {

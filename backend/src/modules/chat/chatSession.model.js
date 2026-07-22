@@ -28,7 +28,10 @@ const chatSessionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-chatSessionSchema.index({ serviceId: 1, studentEmail: 1 }, { unique: true, sparse: true });
-chatSessionSchema.index({ serviceId: 1, createdAt: -1 });
+chatSessionSchema.index(
+  { instituteId: 1, serviceId: 1, studentEmail: 1 },
+  { unique: true, sparse: true },
+);
+chatSessionSchema.index({ instituteId: 1, serviceId: 1, createdAt: -1 });
 
 export const ChatSession = mongoose.model('ChatSession', chatSessionSchema);

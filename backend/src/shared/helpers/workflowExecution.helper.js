@@ -66,13 +66,20 @@ export function findStepOutcome(step, outcomeType) {
 /**
  * @param {{ role: string, staffRole?: string | null }} user
  * @param {Object} step
+ * @param {{ allowAiStep?: boolean }} [options] When an AI step has been escalated
+ *   for human review, staff/admin are allowed to act on it despite it being AI-handled.
  */
-export function canUserActOnWorkflowStep(user, step) {
+export function canUserActOnWorkflowStep(user, step, options = {}) {
   if (!step) return false;
   if (user.role === ROLES.ADMIN) return true;
   if (user.role !== ROLES.STAFF) return false;
-  if (step.handledBy?.type === HANDLER_TYPE.AI) return false;
   if (step.handledBy?.type === HANDLER_TYPE.STUDENT) return false;
+
+  if (step.handledBy?.type === HANDLER_TYPE.AI) {
+    if (!options.allowAiStep) return false;
+    return true;
+  }
+
   if (step.handledBy?.type !== HANDLER_TYPE.STAFF) return false;
 
   const assignee = step.handledBy.assignee ?? 'general';
@@ -82,9 +89,11 @@ export function canUserActOnWorkflowStep(user, step) {
 
 /**
  * @param {Object} step
+ * @param {{ role: string, staffRole?: string | null }} user
+ * @param {{ allowAiStep?: boolean }} [options]
  */
-export function getAvailableWorkflowActions(step, user) {
-  if (!canUserActOnWorkflowStep(user, step)) return [];
+export function getAvailableWorkflowActions(step, user, options = {}) {
+  if (!canUserActOnWorkflowStep(user, step, options)) return [];
 
   const actions = [];
   if (findStepOutcome(step, OUTCOME_TYPE.APPROVED)) {
@@ -196,6 +205,7 @@ export function autoAdvanceAiSteps(application, actor) {
 export function formatWorkflowForClient(application, user) {
   const steps = getWorkflowSteps(application);
   const currentStep = getCurrentWorkflowStep(application);
+  const escalated = application.status === APPLICATION_STATUS.PENDING_AI_REVIEW;
 
   return {
     configurationVersion: application.configurationVersion ?? null,
@@ -228,7 +238,9 @@ export function formatWorkflowForClient(application, user) {
               ? 'complete'
               : 'upcoming',
     })),
-    availableActions: currentStep ? getAvailableWorkflowActions(currentStep, user) : [],
+    availableActions: currentStep
+      ? getAvailableWorkflowActions(currentStep, user, { allowAiStep: escalated })
+      : [],
     history: (application.workflowHistory ?? []).map((entry) => ({
       stepId: entry.stepId,
       stepName: entry.stepName,

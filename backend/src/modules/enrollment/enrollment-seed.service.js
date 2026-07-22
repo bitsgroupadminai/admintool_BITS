@@ -172,10 +172,8 @@ export async function ensureEnrollmentServiceForInstitute(instituteId) {
     logger.info({ instituteId }, 'Created system Enrollment service');
   }
 
-  for (const template of PROGRAMME_TEMPLATES) {
-    await createProgrammeOffering(instituteId, service._id.toString(), template);
-  }
-
+  // Do not auto-seed demo programmes (B.E. CS / EE / M.Sc.).
+  // Institutes configure real offerings under Admission (or Enrollment) from knowledge docs.
   return service;
 }
 

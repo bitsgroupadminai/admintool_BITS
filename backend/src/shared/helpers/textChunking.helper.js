@@ -1,5 +1,6 @@
 /**
  * Split long text into overlapping chunks for embedding.
+ * Prefers paragraph, then line, then sentence boundaries so programme lists stay coherent.
  * @param {string} text
  * @param {{ chunkSize?: number, overlap?: number }} [options]
  * @returns {string[]}
@@ -22,9 +23,14 @@ export function chunkText(text, options = {}) {
 
     if (end < normalized.length) {
       const slice = normalized.slice(start, end);
-      const breakAt = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('. '));
-      if (breakAt > chunkSize * 0.5) {
-        end = start + breakAt + (slice[breakAt] === '.' ? 2 : 2);
+      const breakAt = Math.max(
+        slice.lastIndexOf('\n\n'),
+        slice.lastIndexOf('\n'),
+        slice.lastIndexOf('. '),
+      );
+      if (breakAt > chunkSize * 0.4) {
+        const isSentence = slice[breakAt] === '.';
+        end = start + breakAt + (isSentence ? 2 : 1);
       }
     }
 

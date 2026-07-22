@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -194,6 +194,10 @@ export function EnrollmentIntakeDetailPage() {
               )}
             </div>
 
+            {intake.aiRecommendation ? (
+              <IntakeAiRecommendation recommendation={intake.aiRecommendation} />
+            ) : null}
+
             {isPending && (
               <div className="rounded-2xl border border-[#E2EEE8] bg-[#F9FCFB] p-6">
                 <h2 className="text-lg font-semibold text-[#052E1C]">Authorization decision</h2>
@@ -244,5 +248,54 @@ export function EnrollmentIntakeDetailPage() {
         ) : null}
       </div>
     </AdminLayout>
+  );
+}
+
+const INTAKE_RECOMMENDATION_META = {
+  approve: { label: 'AI suggests: Authorize', variant: 'active' },
+  reject: { label: 'AI suggests: Reject', variant: 'disabled' },
+  manual_review: { label: 'AI suggests: Manual review', variant: 'incomplete' },
+};
+
+function IntakeAiRecommendation({ recommendation }) {
+  const meta =
+    INTAKE_RECOMMENDATION_META[recommendation.recommendation] ??
+    INTAKE_RECOMMENDATION_META.manual_review;
+  const confidence =
+    recommendation.confidence != null
+      ? `${Math.round(recommendation.confidence * 100)}% confidence`
+      : null;
+
+  return (
+    <div className="rounded-2xl border border-[#D4E5D0] bg-[#F6FAF5] p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-[#10B981]" />
+          <h2 className="text-lg font-semibold text-[#052E1C]">AI pre-screen</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={meta.variant}>{meta.label}</Badge>
+          {confidence ? (
+            <span className="text-xs font-medium text-[#4B6358]">{confidence}</span>
+          ) : null}
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-[#4B6358]">
+        Advisory only. Review the documents and make the final authorization decision yourself.
+      </p>
+      {recommendation.summary ? (
+        <p className="mt-3 text-sm text-[#334155]">{recommendation.summary}</p>
+      ) : null}
+      {(recommendation.issues ?? []).length > 0 ? (
+        <div className="mt-3 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] p-3">
+          <p className="text-xs font-bold text-[#92400E]">Concerns</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-[#92400E]">
+            {recommendation.issues.map((issue, index) => (
+              <li key={index}>{issue}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }

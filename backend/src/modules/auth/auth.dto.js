@@ -8,7 +8,10 @@ import { Offering } from '../offerings/offering.model.js';
 export async function toAuthUserDto(user, institute) {
   let enrolledProgramme = null;
   if (user.enrolledOfferingId) {
-    const offering = await Offering.findById(user.enrolledOfferingId).select('name');
+    const offering = await Offering.findOne({
+      _id: user.enrolledOfferingId,
+      instituteId: user.instituteId,
+    }).select('name');
     if (offering) {
       enrolledProgramme = {
         id: offering._id.toString(),

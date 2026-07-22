@@ -40,3 +40,12 @@ export {
   buildOfferingWorkflowOutcomesUserPrompt,
   buildOfferingQueueUserPrompt,
 } from './offering-config.prompt.js';
+
+export {
+  DOCUMENT_VERIFICATION_SYSTEM_PROMPT,
+  ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT,
+  INTAKE_VERIFICATION_SYSTEM_PROMPT,
+  buildDocumentVerificationUserPrompt,
+  buildEligibilityVerificationUserPrompt,
+  buildIntakeVerificationUserPrompt,
+} from './verification.prompt.js';

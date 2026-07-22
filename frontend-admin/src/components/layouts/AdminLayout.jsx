@@ -18,6 +18,7 @@ import {
   Ticket,
   CalendarDays,
   CreditCard,
+  Activity,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navItems = [
   { to: "/admin/students", label: "Students", icon: Users },
   { to: "/admin/staff", label: "Staff", icon: UserCog },
   { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin/system-health", label: "System health", icon: Activity },
   { to: "/admin/notifications", label: "Notifications", icon: Bell },
   { to: "/admin/profile", label: "Profile", icon: UserCircle },
 ];

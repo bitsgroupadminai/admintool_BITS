@@ -46,6 +46,15 @@ const instituteSchema = new mongoose.Schema(
         default: [],
       },
     },
+    erpSync: {
+      enabled: { type: Boolean, default: false },
+      /** SHA-256 hash of the issued API key (raw key is shown once at generation). */
+      apiKeyHash: { type: String, default: null, index: true },
+      /** Non-secret prefix for display, e.g. "erp_ab12cd34". */
+      apiKeyPrefix: { type: String, default: null },
+      keyGeneratedAt: { type: Date, default: null },
+      lastSyncAt: { type: Date, default: null },
+    },
   },
   { timestamps: true },
 );

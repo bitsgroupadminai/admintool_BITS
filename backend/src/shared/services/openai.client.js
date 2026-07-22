@@ -20,13 +20,21 @@ function getClient() {
 }
 
 /**
- * @param {{ system: string, user: string, schema: z.ZodType, normalize?: (raw: unknown) => unknown }} params
+ * @param {{
+ *   system: string,
+ *   user: string,
+ *   schema: z.ZodType,
+ *   normalize?: (raw: unknown) => unknown,
+ *   timeoutMs?: number,
+ * }} params
  */
-export async function chatJson({ system, user, schema, normalize }) {
+export async function chatJson({ system, user, schema, normalize, timeoutMs }) {
   const openai = getClient();
   if (!openai) {
     throw new Error('OpenAI API key is not configured');
   }
+
+  const waitMs = timeoutMs ?? env.OPENAI_TIMEOUT_MS;
 
   const response = await Promise.race([
     openai.chat.completions.create({
@@ -39,11 +47,69 @@ export async function chatJson({ system, user, schema, normalize }) {
       ],
     }),
     new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI request timed out')), 12_000);
+      setTimeout(() => reject(new Error('OpenAI request timed out')), waitMs);
     }),
   ]);
 
   const raw = response.choices[0]?.message?.content;
+  return parseAndValidate(raw, normalize, schema);
+}
+
+/**
+ * Vision-capable structured completion. Accepts image attachments (as data URLs)
+ * alongside a text prompt and returns Zod-validated JSON, mirroring `chatJson`.
+ *
+ * @param {{
+ *   system: string,
+ *   user: string,
+ *   images?: Array<{ dataUrl: string, detail?: 'auto' | 'low' | 'high' }>,
+ *   schema: z.ZodType,
+ *   normalize?: (raw: unknown) => unknown,
+ *   timeoutMs?: number,
+ * }} params
+ */
+export async function chatVisionJson({ system, user, images = [], schema, normalize, timeoutMs }) {
+  const openai = getClient();
+  if (!openai) {
+    throw new Error('OpenAI API key is not configured');
+  }
+
+  const waitMs = timeoutMs ?? env.OPENAI_INSIGHTS_TIMEOUT_MS;
+
+  const userContent = [{ type: 'text', text: user }];
+  for (const image of images) {
+    if (!image?.dataUrl) continue;
+    userContent.push({
+      type: 'image_url',
+      image_url: { url: image.dataUrl, detail: image.detail ?? 'auto' },
+    });
+  }
+
+  const response = await Promise.race([
+    openai.chat.completions.create({
+      model: env.OPENAI_VISION_MODEL,
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ],
+    }),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI vision request timed out')), waitMs);
+    }),
+  ]);
+
+  const raw = response.choices[0]?.message?.content;
+  return parseAndValidate(raw, normalize, schema);
+}
+
+/**
+ * @param {string | undefined | null} raw
+ * @param {((raw: unknown) => unknown) | undefined} normalize
+ * @param {z.ZodType} schema
+ */
+function parseAndValidate(raw, normalize, schema) {
   if (!raw) {
     throw new Error('Empty response from OpenAI');
   }

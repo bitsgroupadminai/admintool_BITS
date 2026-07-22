@@ -394,7 +394,7 @@ export function ServiceDetailPage() {
                     ? "Start by uploading your first PDF or DOCX"
                     : `${documents.length} document${documents.length > 1 ? "s" : ""} uploaded`}
                 </p>
-                <p className="mt-1 text-xs text-[#4B6358]">PDF or DOCX only</p>
+                <p className="mt-1 text-xs text-[#4B6358]">PDF, DOCX, TXT, or MD only</p>
                 <label
                   htmlFor="doc-upload"
                   className="mt-4 inline-block cursor-pointer"
@@ -416,7 +416,7 @@ export function ServiceDetailPage() {
                 <input
                   id="doc-upload"
                   type="file"
-                  accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,.md,text/plain,text/markdown"
                   className="hidden"
                   onChange={handleUpload}
                   disabled={uploading}

@@ -10,9 +10,10 @@ export const suggestedOfferingSchema = z.object({
 export const serviceInsightsResponseSchema = z.object({
   understandingSummary: z.string().min(1).max(4000),
   chatbotReadinessSummary: z.string().min(1).max(4000),
-  chatbotCanAnswer: z.array(z.string().min(1).max(500)).max(20),
-  gaps: z.array(z.string().min(1).max(500)).max(15),
-  suggestedOfferings: z.array(suggestedOfferingSchema).max(20),
+  chatbotCanAnswer: z.array(z.string().min(1).max(500)).max(25),
+  gaps: z.array(z.string().min(1).max(500)).max(20),
+  // Real university catalogues often list 40–80+ programmes under one admissions service.
+  suggestedOfferings: z.array(suggestedOfferingSchema).max(80),
 });
 
 const eligibilityRuleSchema = z.object({

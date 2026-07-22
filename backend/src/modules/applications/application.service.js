@@ -27,13 +27,15 @@ import {
 } from '../../shared/helpers/applicationDocument.helper.js';
 import {
   applyWorkflowOutcome,
-  autoAdvanceAiSteps,
   canUserActOnWorkflowStep,
   findStepOutcome,
   formatWorkflowForClient,
   getCurrentWorkflowStep,
   getWorkflowSteps,
 } from '../../shared/helpers/workflowExecution.helper.js';
+import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
+import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
+import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
 import { OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
 
@@ -49,6 +51,7 @@ const STATUS_TRANSITIONS = {
 const WORKFLOW_ACTION_STATUSES = new Set([
   APPLICATION_STATUS.SUBMITTED,
   APPLICATION_STATUS.IN_REVIEW,
+  APPLICATION_STATUS.PENDING_AI_REVIEW,
 ]);
 
 function formatAssignee(user) {
@@ -132,6 +135,36 @@ async function getInstituteApplication(instituteId, applicationId) {
     throw new AppError('Application not found', 404);
   }
   return application;
+}
+
+/**
+ * Latest AI verification decisions per workflow step (excludes intake pre-screen),
+ * newest first, for staff/admin review context.
+ */
+async function loadApplicationAiDecisions(instituteId, applicationId) {
+  const decisions = await AiDecision.find({
+    instituteId,
+    applicationId,
+    handler: { $ne: AI_DECISION_HANDLER.INTAKE_AUTHORIZATION },
+  })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  return decisions.map((decision) => ({
+    id: decision._id.toString(),
+    stepId: decision.stepId ?? null,
+    stepName: decision.stepName ?? '',
+    handler: decision.handler,
+    action: decision.action,
+    verdict: decision.verdict ?? null,
+    confidence: decision.confidence ?? null,
+    summary: decision.summary ?? '',
+    issues: decision.issues ?? [],
+    perDocument: decision.perDocument ?? [],
+    extractedFields: decision.extractedFields ?? [],
+    createdAt: decision.createdAt,
+  }));
 }
 
 async function getAssignedApplication(instituteId, applicationId, staffUserId) {
@@ -327,18 +360,22 @@ export async function getApplicationDetail(instituteId, applicationId, user = nu
     [instituteId, applicationId, user?.userId, user?.role],
     async () => {
       const application = await getInstituteApplication(instituteId, applicationId);
-      const [context, assignee] = await Promise.all([
+      const [context, assignee, aiDecisions] = await Promise.all([
         loadApplicationContext(application, instituteId),
         loadAssignee(application),
+        loadApplicationAiDecisions(instituteId, applicationId),
       ]);
 
-      return formatApplicationDetail(
-        application,
-        context.service,
-        context.offering,
-        assignee,
-        user,
-      );
+      return {
+        ...formatApplicationDetail(
+          application,
+          context.service,
+          context.offering,
+          assignee,
+          user,
+        ),
+        aiDecisions,
+      };
     },
   );
 }
@@ -360,18 +397,22 @@ export async function getAssignedApplicationDetail(
     [instituteId, applicationId, staffUserId, user?.userId],
     async () => {
       const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
-      const [context, assignee] = await Promise.all([
+      const [context, assignee, aiDecisions] = await Promise.all([
         loadApplicationContext(application, instituteId),
         loadAssignee(application),
+        loadApplicationAiDecisions(instituteId, applicationId),
       ]);
 
-      return formatApplicationDetail(
-        application,
-        context.service,
-        context.offering,
-        assignee,
-        user,
-      );
+      return {
+        ...formatApplicationDetail(
+          application,
+          context.service,
+          context.offering,
+          assignee,
+          user,
+        ),
+        aiDecisions,
+      };
     },
   );
 }
@@ -449,7 +490,8 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
     throw new AppError('This action is not available for the current step', 400);
   }
 
-  if (!canUserActOnWorkflowStep(user, step)) {
+  const escalated = application.status === APPLICATION_STATUS.PENDING_AI_REVIEW;
+  if (!canUserActOnWorkflowStep(user, step, { allowAiStep: escalated })) {
     throw new AppError('You are not allowed to act on the current workflow step', 403);
   }
 
@@ -466,8 +508,9 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
     correctionRequiredDocuments: payload.correctionRequiredDocuments,
   });
 
+  let enqueueAiVerification = false;
   if (application.status === APPLICATION_STATUS.IN_REVIEW) {
-    autoAdvanceAiSteps(application, {
+    enqueueAiVerification = settleAiWorkflowSteps(application, {
       userId: user.userId,
       name: user.name,
       role: user.role,
@@ -476,6 +519,10 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
 
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
+
+  if (enqueueAiVerification) {
+    await enqueueApplicationAiVerification(instituteId, application._id.toString()).catch(() => {});
+  }
 
   const context = await loadApplicationContext(application, instituteId);
   const assignee = await loadAssignee(application);

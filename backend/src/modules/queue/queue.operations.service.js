@@ -25,12 +25,17 @@ export async function enqueueQueueLifecycle(payload) {
  * @param {{ action: string, ticketId: string, instituteId: string }} data
  */
 export async function processQueueLifecycleJob(data) {
-  const ticket = await QueueTicket.findById(data.ticketId);
+  const ticket = await QueueTicket.findOne({
+    _id: data.ticketId,
+    instituteId: data.instituteId,
+  });
   if (!ticket) return;
 
   const [institute, offering] = await Promise.all([
     Institute.findById(data.instituteId).select('name'),
-    Offering.findById(ticket.offeringId).select('name serviceId'),
+    Offering.findOne({ _id: ticket.offeringId, instituteId: data.instituteId }).select(
+      'name serviceId',
+    ),
   ]);
 
   const instituteName = institute?.name ?? 'Your institute';

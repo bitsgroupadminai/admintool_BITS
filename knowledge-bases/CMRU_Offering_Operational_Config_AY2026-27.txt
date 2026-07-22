@@ -1,0 +1,593 @@
+================================================================================
+CMR UNIVERSITY — OFFERING OPERATIONAL CONFIGURATION
+Academic Year: 2026-27
+Document Type: Eligibility + Documents + Workflow + Queue/Appointment/Virtual + Payment
+Template Version: 1.0
+================================================================================
+PURPOSE
+This document is the extractable source of truth for admin "Extract from documents"
+on every offering configuration step:
+  1) Eligibility
+  2) Documents
+  3) Workflow
+  4) Queue & appointment (walk-in queue, appointment slots, virtual meeting)
+  5) Payment
+
+HOW TO USE
+- Upload this file on the Admissions service knowledge documents.
+- Open an offering whose name matches an "Offering Name:" line below.
+- On each step, click "Extract from documents" and confirm suggestions.
+- For other colleges: keep the same headings and "Extractable …" line formats.
+
+
+================================================================================
+PART 0 — SERVICE CONTEXT
+================================================================================
+Service name: Undergraduate & Postgraduate Admissions AY 2026-27
+Institute: CMR University (CMRU), Bengaluru
+Admissions Helpline: +91 93429 00666
+Admissions Email: admissions@cmr.edu.in
+Website: www.cmr.edu.in
+
+
+================================================================================
+PART 1 — COMMON DEFAULTS (ALL OFFERINGS UNLESS OVERRIDDEN)
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 COMMON REQUIRED DOCUMENTS
+--------------------------------------------------------------------------------
+The following mandatory documents are required for every admissions application
+unless an offering section replaces them.
+
+Mandatory documents:
+- Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2
+- Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2
+
+Conditional documents:
+- Category certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Migration certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Transfer certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Passport | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Equivalence certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+
+Extractable documents (common):
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard is mandatory when admission channel is entrance-based"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+
+--------------------------------------------------------------------------------
+1.2 COMMON APPLICATION WORKFLOW (6 STEPS)
+--------------------------------------------------------------------------------
+Every programme offering under this admissions service follows these process stages
+in this exact order:
+
+Step 1: Document Verification
+order: 1
+name: Document Verification
+description: Verify uploaded documents are complete, authentic, and readable.
+handledByType: ai
+handledByAssignee: document_verification
+slaValue: 24
+slaUnit: hours
+documentExcerpt: "Step 1: Document Verification — Verify uploaded documents are complete, authentic, and readable."
+Outcomes:
+- approved (Documents Verified) → next_step order 2
+- needs_correction (Missing/Invalid Documents) → return_to_student, requireReupload: Class 10 marksheet, Class 12 marksheet, Entrance exam scorecard, Government-issued ID proof, Passport-size photograph, Signature image
+- rejected (Fraud/Serious Mismatch) → end_workflow rejected
+
+Step 2: Eligibility Validation
+order: 2
+name: Eligibility Validation
+description: Verify academic eligibility against programme rules (subjects, aggregate, qualification).
+handledByType: ai
+handledByAssignee: eligibility_screening
+slaValue: 24
+slaUnit: hours
+documentExcerpt: "Step 2: Eligibility Validation — Verify academic eligibility against programme rules."
+Outcomes:
+- approved (Eligible) → next_step order 3
+- needs_correction (Eligibility Clarification) → return_to_student
+- rejected (Not Eligible) → end_workflow rejected
+
+Step 3: Seat Allocation & Merit Processing
+order: 3
+name: Seat Allocation & Merit Processing
+description: Determine seat availability based on rank, qualifying marks, preferences, and campus capacity.
+handledByType: staff
+handledByAssignee: approver
+slaValue: 48
+slaUnit: hours
+documentExcerpt: "Step 3: Seat Allocation & Merit Processing — Determine seat availability based on rank and preferences."
+Outcomes:
+- approved (Seat Available) → next_step order 4
+- needs_correction (Clarification before seat decision) → return_to_student
+- rejected (No Seat Available OR Waitlisted) → end_workflow rejected
+
+Step 4: Offer Release
+order: 4
+name: Offer Release
+description: Generate admission offer for the selected programme and campus.
+handledByType: staff
+handledByAssignee: approver
+slaValue: 24
+slaUnit: hours
+documentExcerpt: "Step 4: Offer Release — Generate admission offer."
+Outcomes:
+- approved (Offer Generated) → next_step order 5
+- needs_correction → return_to_student
+- rejected (Offer Expired) → end_workflow rejected
+
+Step 5: Fee Payment
+order: 5
+name: Fee Payment
+description: Collect admission confirmation fee from student via online payment gateway.
+handledByType: student
+handledByAssignee: student
+slaValue: 7
+slaUnit: days
+documentExcerpt: "Step 5: Fee Payment — Collect admission confirmation fee from student."
+Outcomes:
+- approved (Fee Paid) → next_step order 6
+- needs_correction (Payment Pending) → return_to_student, returnToStepOrder: 5
+- rejected (Payment Deadline Missed / Offer Lapsed) → end_workflow rejected
+
+Step 6: Admission Confirmation
+order: 6
+name: Admission Confirmation
+description: Finalize admission after fee confirmation and final verification checks.
+handledByType: staff
+handledByAssignee: approver
+slaValue: 24
+slaUnit: hours
+documentExcerpt: "Step 6: Admission Confirmation — Finalize admission after fee confirmation."
+Outcomes:
+- approved (Admission Confirmed) → end_workflow completed
+- needs_correction (Document fix at final stage) → return_to_student, returnToStepOrder: 1
+- rejected (Final Verification Failure) → end_workflow rejected
+
+--------------------------------------------------------------------------------
+1.3 COMMON QUEUE, APPOINTMENT & VIRTUAL MEETING
+--------------------------------------------------------------------------------
+Visit / counselling mode for admissions service: hybrid
+Students may take a walk-in queue token OR book an appointment slot. Virtual
+appointments are enabled for counselling discussions.
+
+Extractable queue settings (common):
+queueMode: hybrid
+documentExcerpt: "Visit / counselling mode for admissions service: hybrid"
+
+queueConfig:
+- capacity: 120
+- processingRatePerHour: 20
+documentExcerpt: "Queue capacity during peak counselling: 120 tokens per campus per day. Processing rate: 20 applicants per hour per counselling desk."
+
+appointmentConfig:
+- slotDurationMinutes: 20
+- slotCapacity: 1
+- operatingHoursStart: 09:30
+- operatingHoursEnd: 17:30
+- operatingDays: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+- bookingHorizonDays: 14
+documentExcerpt: "Appointment slot duration: 20 minutes. Slot capacity: 1. Operating hours 09:30 to 17:30. Booking horizon 14 days."
+
+virtualAppointment:
+- enabled: true
+- allowedProviders: google_meet, zoom
+- defaultProvider: google_meet
+- autoGenerateLink: true
+- autoSendLinkOnConfirm: true
+- allowAdditionalRecipients: true
+- maxAdditionalRecipients: 5
+documentExcerpt: "Virtual appointments are enabled. Allowed providers: google_meet, zoom. Default provider: google_meet. Auto-generate link: true. Auto-send link on confirm: true."
+
+Counters (walk-in queue desks):
+- Counter A — Document verification desk — active: true
+- Counter B — Eligibility / counselling desk — active: true
+- Counter C — Fee / offer assistance desk — active: true
+
+Operational notes:
+- Walk-in tokens are issued until daily capacity is reached.
+- Appointment slots are recommended during peak periods (May–June).
+- AI chatbot should recommend early slot booking during peak periods.
+
+--------------------------------------------------------------------------------
+1.4 COMMON PAYMENT CONFIGURATION
+--------------------------------------------------------------------------------
+Payment is enabled for admissions offerings.
+
+Extractable payment settings (common):
+payment.enabled: true
+payment.amount: 1000
+payment.currency: INR
+payment.label: Application processing fee
+payment.timing: workflow_step
+payment.workflowStepName: Fee Payment
+documentExcerpt: "Application processing fee INR 1000. Payment timing is workflow_step at Fee Payment. Currency INR."
+
+Additional payment rules:
+- Admission confirmation / seat acceptance fee must be paid within 7 calendar days of offer release.
+- Fee payment methods: online payment gateway (UPI, net banking, debit/credit card).
+- Semester-wise tuition fee payments are supported after admission confirmation.
+- Exact tuition fee amounts vary by programme; confirm with admissions@cmr.edu.in before paying tuition.
+- PG application processing fee: INR 1500 (see PG offering blocks).
+- Ph.D. application processing fee: INR 2000 (see Ph.D. offering blocks).
+
+Important dates related to payment:
+- Applications open: 01 November 2025
+- Regular application window closes: 30 April 2026
+- Fee payment deadline after offer: within 7 calendar days of offer release
+
+
+================================================================================
+PART 2 — OFFERING-SPECIFIC BLOCKS
+================================================================================
+Each block includes eligibility, documents, workflow reference, queue reference,
+and payment reference so AI can extract for that offering name.
+
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Lakeside Campus) -----
+
+Programme Overview:
+Four-year undergraduate engineering programme covering software systems,
+algorithms, AI and ML fundamentals, distributed systems, operating systems, and
+data engineering. Campus: Lakeside Campus. Duration: 4 years.
+Admission Channel: KCET / COMEDK / JEE / CUET. CET Code E257. COMEDK Code E187.
+
+ELIGIBILITY RULES — Applicants must satisfy ALL of the following:
+Requirement                         Rule
+Qualification                       10+2 or equivalent from a recognised board
+Subjects                            Physics, Chemistry, Mathematics
+English Proficiency                 Mandatory
+Minimum Aggregate                   45% aggregate in PCM
+Reserved Minimum Aggregate          40% aggregate in PCM where applicable
+Individual Subject Requirement      Minimum 35% in Physics, Chemistry, and Mathematics individually
+
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification 10+2 or equivalent from a recognised board"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate 45% aggregate in PCM"
+- field: physics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: chemistry_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: mathematics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+
+REQUIRED DOCUMENTS for this offering:
+Mandatory documents:
+- Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Entrance exam scorecard (JEE / COMEDK / KCET / CUET) | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2
+- Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2
+Conditional documents:
+- Category certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Migration certificate | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+- Passport (international applicants) | required: false | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5
+
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory for B.Tech. Computer Science & Engineering"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory for B.Tech. Computer Science & Engineering"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard (JEE / COMEDK / KCET / CUET) is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+
+WORKFLOW for this offering:
+Use the COMMON APPLICATION WORKFLOW (6 STEPS) exactly:
+Document Verification → Eligibility Validation → Seat Allocation & Merit Processing → Offer Release → Fee Payment → Admission Confirmation
+documentExcerpt: "B.Tech. Computer Science & Engineering follows the common 6-step admissions workflow."
+
+QUEUE & APPOINTMENT for this offering:
+queueMode: hybrid
+queueConfig.capacity: 120
+queueConfig.processingRatePerHour: 20
+appointmentConfig.slotDurationMinutes: 20
+appointmentConfig.slotCapacity: 1
+appointmentConfig.operatingHoursStart: 09:30
+appointmentConfig.operatingHoursEnd: 17:30
+virtualAppointment.enabled: true
+virtualAppointment.allowedProviders: google_meet, zoom
+virtualAppointment.defaultProvider: google_meet
+virtualAppointment.autoGenerateLink: true
+virtualAppointment.autoSendLinkOnConfirm: true
+Visit location: Lakeside Campus Admissions Desk, Off Hennur, Bagalur Main Road, Chagalahatti, Bengaluru 562149
+Visit instructions: Carry original marksheets for verification. Arrive 15 minutes before appointment. Virtual Meet links are sent on confirmation.
+documentExcerpt: "B.Tech. CSE counselling uses hybrid mode with queue capacity 120, 20 applicants per hour, 20-minute appointment slots from 09:30 to 17:30, and virtual appointments enabled with Google Meet default."
+
+PAYMENT for this offering:
+payment.enabled: true
+payment.amount: 1000
+payment.currency: INR
+payment.label: Application processing fee
+payment.timing: workflow_step
+payment.workflowStepName: Fee Payment
+documentExcerpt: "For B.Tech. Computer Science & Engineering, application processing fee is INR 1000 collected at Fee Payment workflow step."
+
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Artificial Intelligence & Machine Learning) (Lakeside Campus) -----
+ELIGIBILITY RULES — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Individual Subject Requirement: Minimum 35% in Physics, Chemistry, and Mathematics individually
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+- field: mathematics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+REQUIRED DOCUMENTS: same as common B.Tech. mandatory list including Entrance exam scorecard
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: Use COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE & APPOINTMENT: queueMode hybrid; capacity 120; processingRatePerHour 20; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true; defaultProvider google_meet
+documentExcerpt: "Hybrid counselling with virtual appointments enabled for B.Tech. CSE AI & ML"
+PAYMENT: payment.enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+documentExcerpt: "Application processing fee INR 1000 at Fee Payment step"
+
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Data Science) (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 120; processingRatePerHour 20; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.Tech. Information Technology (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 120; processingRatePerHour 20; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true; defaultProvider google_meet
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.Tech. Artificial Intelligence & Data Science (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Entrance exam scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 120; processingRatePerHour 20; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.Arch. (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 with Mathematics or 10+3 Diploma with Mathematics | documentExcerpt: "Qualification: 10+2 or equivalent with Mathematics OR 10+3 Diploma with Mathematics"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination with Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: nata_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Valid NATA score is Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: NATA scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "NATA scorecard is mandatory for B.Arch."
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 80; processingRatePerHour 15; slotDurationMinutes 30; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.Des. Communication Design (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: portfolio_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Portfolio: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Portfolio | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 10 | documentExcerpt: "Portfolio is mandatory for B.Des."
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode appointment_only; slotDurationMinutes 30; slotCapacity 1; operatingHoursStart 10:00; operatingHoursEnd 16:00; virtualAppointment.enabled true; defaultProvider google_meet
+documentExcerpt: "B.Des. counselling is appointment_only with 30-minute slots and virtual appointments enabled"
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: MBA Dual Specialisation (City Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Degree marksheets | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree marksheets are mandatory for MBA"
+- name: Degree certificate or provisional degree certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree certificate or provisional degree certificate is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "PGCET / entrance exam scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 100; processingRatePerHour 18; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true; defaultProvider zoom
+Visit location: City Campus Admissions Desk, HRBR Layout, Kalyan Nagar, Bengaluru 560043
+PAYMENT: enabled true; amount 1500; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+documentExcerpt: "MBA Dual Specialisation City Campus application processing fee is INR 1500 at Fee Payment step. PGCET Code B150."
+
+
+----- Offering Name: MBA Dual Specialisation (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Degree marksheets | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree marksheets are mandatory"
+- name: Degree certificate or provisional degree certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree certificate or provisional degree certificate is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "PGCET scorecard is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 100; processingRatePerHour 18; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1500; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+documentExcerpt: "MBA Lakeside PGCET Code B395. Application processing fee INR 1500."
+
+
+----- Offering Name: MCA Artificial Intelligence & Machine Learning (Lakeside Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree with Mathematics | documentExcerpt: "Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Degree marksheets | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree marksheets are mandatory"
+- name: Degree certificate or provisional degree certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree certificate or provisional degree certificate is mandatory"
+- name: Entrance exam scorecard | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "PGCET scorecard is mandatory for MCA"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 90; processingRatePerHour 15; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1500; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+documentExcerpt: "MCA Lakeside PGCET Code C521. Application processing fee INR 1500."
+
+
+----- Offering Name: BCA Artificial Intelligence & Machine Learning (OMBR Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 100; processingRatePerHour 18; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:30; virtualAppointment.enabled true
+Visit location: OMBR Campus Admissions Desk, No.5, Bhuvanagiri, OMBR Layout, Bengaluru 560043
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.A.,LL.B. (Hons) (OMBR Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 80; processingRatePerHour 12; slotDurationMinutes 25; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 17:00; virtualAppointment.enabled true
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: B.Sc. Anaesthesia and Operation Theatre Technology (HRBR Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Biology | documentExcerpt: "Subjects: Physics, Chemistry, Biology"
+- field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCB"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Medical fitness certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Medical fitness certificate is mandatory for allied health programmes"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode hybrid; capacity 60; processingRatePerHour 10; slotDurationMinutes 20; slotCapacity 1; operatingHoursStart 09:30; operatingHoursEnd 16:30; virtualAppointment.enabled true
+Visit location: HRBR Campus Admissions Desk, Keshava Nagar, Kacharakanahalli, Bengaluru 560043
+PAYMENT: enabled true; amount 1000; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+----- Offering Name: Executive MBA Product Leadership (CMRIT Campus) -----
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: work_experience_years | fieldType: numeric | operator: gte | value: 2 | documentExcerpt: "Work Experience: Minimum 2 years of relevant professional work experience"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+Extractable documents:
+- name: Class 10 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 10 marksheet is mandatory"
+- name: Class 12 marksheet | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Class 12 marksheet is mandatory"
+- name: Degree marksheets | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree marksheets are mandatory"
+- name: Degree certificate or provisional degree certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Degree certificate or provisional degree certificate is mandatory"
+- name: Experience certificate | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Experience certificate is mandatory for Executive MBA"
+- name: Government-issued ID proof | required: true | allowedTypes: pdf,jpg,jpeg,png | maxSizeMb: 5 | documentExcerpt: "Government-issued ID proof is mandatory"
+- name: Passport-size photograph | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Passport-size photograph is mandatory"
+- name: Signature image | required: true | allowedTypes: jpg,jpeg,png | maxSizeMb: 2 | documentExcerpt: "Signature image is mandatory"
+WORKFLOW: COMMON APPLICATION WORKFLOW (6 STEPS)
+QUEUE: queueMode appointment_only; slotDurationMinutes 30; slotCapacity 1; operatingHoursStart 10:00; operatingHoursEnd 18:00; virtualAppointment.enabled true; defaultProvider zoom; autoGenerateLink true
+documentExcerpt: "Executive MBA uses appointment_only mode with virtual Zoom meetings enabled"
+PAYMENT: enabled true; amount 1500; currency INR; label Application processing fee; timing workflow_step; workflowStepName Fee Payment
+
+
+================================================================================
+PART 3 — FALLBACK MATCHING RULE
+================================================================================
+If an offering name is not listed above but belongs to:
+- B.Tech.* → use B.Tech. Computer Science & Engineering (Lakeside Campus) document/workflow/queue/payment pattern with PCM eligibility 45%
+- BBA.* / B.Com.* / BCA.* / B.A.* → UG common docs, aggregate 50%, fee INR 1000, hybrid queue
+- MBA.* / MCA.* / M.Tech.* / M.Com.* / M.Sc.* → PG docs + degree marksheets, fee INR 1500, hybrid queue
+- Ph.D.* → PG aggregate 55%, fee INR 2000, appointment_only recommended
+- Allied health B.Sc.* → PCB 45%, include Medical fitness certificate
+
+Always prefer an exact "Offering Name:" block when present.
+
+
+================================================================================
+PART 4 — TEMPLATE CHECKLIST FOR OTHER COLLEGES
+================================================================================
+For each offering keep these labelled sections:
+1. Offering Name:
+2. Extractable rules: (field | fieldType | operator | value | documentExcerpt)
+3. Extractable documents: (name | required | allowedTypes | maxSizeMb | documentExcerpt)
+4. WORKFLOW: numbered steps 1-6 with outcomes
+5. QUEUE: queueMode + queueConfig + appointmentConfig + virtualAppointment
+6. PAYMENT: enabled, amount, currency, label, timing, workflowStepName
+
+End of operational configuration document.
+================================================================================

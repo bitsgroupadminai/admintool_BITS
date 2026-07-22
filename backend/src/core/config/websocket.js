@@ -368,6 +368,38 @@ export function getIo() {
 
 
 
+/**
+
+ * Snapshot of live WebSocket connectivity, used by monitoring/metrics.
+
+ * @returns {{ initialized: boolean, connectedUsers: number, connectedSockets: number }}
+
+ */
+
+export function getWebsocketStats() {
+
+  let connectedSockets = 0;
+
+  for (const sockets of userSockets.values()) {
+
+    connectedSockets += sockets.size;
+
+  }
+
+  return {
+
+    initialized: io !== null,
+
+    connectedUsers: userSockets.size,
+
+    connectedSockets,
+
+  };
+
+}
+
+
+
 export async function closeWebSocket() {
 
   if (io) {

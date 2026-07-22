@@ -10,7 +10,7 @@ import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import { SERVICE_STATUS } from '../../shared/enums/service.enums.js';
 import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
-import { getOfferingCompleteness, isOfferingReadyForServiceActivation } from '../../shared/helpers/offeringCompleteness.helper.js';
+import { getOfferingCompleteness } from '../../shared/helpers/offeringCompleteness.helper.js';
 import { validateApplicantDetails } from '../../shared/helpers/applicantFields.helper.js';
 import { normalizeMobileNumber, formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import {
@@ -38,10 +38,15 @@ import {
 } from '../payments/payment.service.js';
 import { getVisitPlanningForStudent } from '../appointments/appointment.service.js';
 import {
-  autoAdvanceAiSteps,
   formatWorkflowForClient,
   snapshotOfferingWorkflow,
 } from '../../shared/helpers/workflowExecution.helper.js';
+import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
+import {
+  enqueueApplicationAiVerification,
+  enqueueIntakeAiPrescreen,
+} from '../../core/queues/ai-verification.queue.js';
+import { isAiVerificationEnabled } from '../ai-verification/ai-verification.config.js';
 import { refreshApplicationRuntime } from '../../shared/services/applicationRuntime.service.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import {
@@ -59,22 +64,47 @@ function isWithinOfferingDates(offering) {
 }
 
 function isStudentVisibleOffering(offering) {
-  return isOfferingReadyForServiceActivation(offering) && isWithinOfferingDates(offering);
+  // Student portal shows only Active offerings (within date window if set).
+  return offering.status === OFFERING_STATUS.ACTIVE && isWithinOfferingDates(offering);
 }
 
 function studentVisibleOfferingQuery(instituteId, serviceId) {
   const now = new Date();
   return {
     instituteId,
-    serviceId,
-    status: {
-      $nin: [OFFERING_STATUS.DISABLED, OFFERING_STATUS.ARCHIVED, OFFERING_STATUS.EXPIRED],
-    },
+    ...(serviceId ? { serviceId } : {}),
+    status: OFFERING_STATUS.ACTIVE,
     $and: [
       { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: { $lte: now } }] },
       { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: { $gte: now } }] },
     ],
   };
+}
+
+/**
+ * Public programme catalogue: every Active offering under Active services for this institute.
+ * @param {string} instituteId
+ * @returns {Promise<Array<{ offering: import('mongoose').Document, service: import('mongoose').Document }>>}
+ */
+async function loadPublicProgrammeRows(instituteId) {
+  const services = await Service.find({
+    instituteId,
+    status: SERVICE_STATUS.ACTIVE,
+  }).sort({ name: 1 });
+
+  if (!services.length) return [];
+
+  const serviceById = new Map(services.map((s) => [s._id.toString(), s]));
+  const offerings = await Offering.find(studentVisibleOfferingQuery(instituteId)).sort({ name: 1 });
+
+  return offerings
+    .filter(isStudentVisibleOffering)
+    .map((offering) => {
+      const service = serviceById.get(offering.serviceId.toString());
+      if (!service) return null;
+      return { offering, service };
+    })
+    .filter(Boolean);
 }
 
 function formatWorkflowStep(step) {
@@ -98,6 +128,9 @@ function formatStudentOffering(offering, options = {}) {
   const completeness = getOfferingCompleteness(offering);
   return {
     id: offering._id.toString(),
+    serviceId: offering.serviceId?.toString?.() ?? offering.serviceId ?? null,
+    serviceName: options.serviceName ?? null,
+    isEnrollmentService: options.isEnrollmentService === true,
     name: offering.name,
     description: offering.description ?? '',
     visitLocation: offering.visitLocation ?? '',
@@ -149,22 +182,13 @@ async function loadStudentPortalInstitutes(query = {}) {
   const formatted = await Promise.all(
     institutes.map(async (institute) => {
       const instituteId = institute._id.toString();
-      const service = await Service.findOne({
-        instituteId: institute._id,
-        systemKey: SYSTEM_SERVICE_KEYS.ENROLLMENT,
-      });
-
-      let openProgrammeCount = 0;
-      if (service) {
-        openProgrammeCount = await Offering.countDocuments(
-          studentVisibleOfferingQuery(institute._id, service._id),
-        );
-      }
+      const rows = await loadPublicProgrammeRows(institute._id);
+      const openProgrammeCount = rows.length;
 
       return {
         id: instituteId,
         name: institute.name,
-        hasEnrollment: Boolean(service),
+        hasEnrollment: rows.length > 0,
         openProgrammeCount,
       };
     }),
@@ -238,11 +262,13 @@ async function getEnrollmentService(instituteId) {
  * @param {string} instituteId
  */
 async function loadEnrollmentOfferings(instituteId) {
-  const service = await getEnrollmentService(instituteId);
-  const offerings = await Offering.find(studentVisibleOfferingQuery(instituteId, service._id))
-    .sort({ name: 1 });
-
-  return offerings.filter(isStudentVisibleOffering).map((offering) => formatStudentOffering(offering));
+  const rows = await loadPublicProgrammeRows(instituteId);
+  return rows.map(({ offering, service }) =>
+    formatStudentOffering(offering, {
+      serviceName: service.name,
+      isEnrollmentService: service.systemKey === SYSTEM_SERVICE_KEYS.ENROLLMENT,
+    }),
+  );
 }
 
 /**
@@ -260,17 +286,18 @@ export async function listEnrollmentOfferings(instituteId) {
  */
 export async function getEnrollmentOfferingDetail(offeringId, instituteId) {
   return cachedRead(cacheNs.STUDENT_OFFERING_DETAIL, [instituteId, offeringId], async () => {
-    const service = await getEnrollmentService(instituteId);
-    const offering = await Offering.findOne({
-      ...studentVisibleOfferingQuery(instituteId, service._id),
-      _id: offeringId,
-    });
+    await assertStudentPortalInstitute(instituteId);
+    const rows = await loadPublicProgrammeRows(instituteId);
+    const row = rows.find((item) => item.offering._id.toString() === offeringId);
 
-    if (!offering || !isStudentVisibleOffering(offering)) {
+    if (!row) {
       throw new AppError('Programme offering not found', 404);
     }
 
-    return formatStudentOffering(offering);
+    return formatStudentOffering(row.offering, {
+      serviceName: row.service.name,
+      isEnrollmentService: row.service.systemKey === SYSTEM_SERVICE_KEYS.ENROLLMENT,
+    });
   });
 }
 
@@ -357,6 +384,10 @@ async function recordEnrollmentIntake(application, offering, instituteId) {
 
   emitDashboardUpdated(instituteId);
 
+  if (isAiVerificationEnabled()) {
+    await enqueueIntakeAiPrescreen(instituteId, application._id.toString()).catch(() => {});
+  }
+
   return emailContext;
 }
 
@@ -414,9 +445,8 @@ async function attachIntakeDocumentToApplication(application, offering, file) {
  * @param {Express.Multer.File | undefined} intakeDocumentFile
  */
 export async function createEnrollmentApplication(instituteId, payload, intakeDocumentFile) {
-  const service = await getEnrollmentService(instituteId);
   const offering = await Offering.findOne({
-    ...studentVisibleOfferingQuery(instituteId, service._id),
+    ...studentVisibleOfferingQuery(instituteId),
     _id: payload.offeringId,
   });
 
@@ -425,6 +455,18 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
       await removeStoredApplicationFile(intakeDocumentFile.path);
     }
     throw new AppError('Programme offering not found', 404);
+  }
+
+  const service = await Service.findOne({
+    _id: offering.serviceId,
+    instituteId,
+    status: SERVICE_STATUS.ACTIVE,
+  });
+  if (!service) {
+    if (intakeDocumentFile) {
+      await removeStoredApplicationFile(intakeDocumentFile.path);
+    }
+    throw new AppError('Service not found for this programme', 404);
   }
 
   const mobileResult = normalizeMobileNumber(payload.applicantMobile);
@@ -526,11 +568,15 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
 export async function getEnrollmentIntakeStatus(instituteId, offeringId, email) {
   return cachedRead(cacheNs.STUDENT_INTAKE_STATUS, [instituteId, offeringId, email], async () => {
     await assertStudentPortalInstitute(instituteId);
-    const service = await getEnrollmentService(instituteId);
+
+    const offering = await Offering.findOne({
+      _id: offeringId,
+      instituteId,
+    }).select('serviceId');
 
     const application = await Application.findOne({
       instituteId,
-      serviceId: service._id,
+      ...(offering ? { serviceId: offering.serviceId } : {}),
       offeringId,
       applicantEmail: email.toLowerCase(),
     }).select('status applicantName createdAt updatedAt');
@@ -1184,10 +1230,11 @@ export async function submitStudentServiceApplication(instituteId, user, service
   application.correctionNote = undefined;
   application.correctionRequiredDocuments = [];
 
+  let enqueueAiVerification = false;
   if (workflowSnapshot.length > 0) {
     application.currentStepId = workflowSnapshot[0].stepId;
     application.status = APPLICATION_STATUS.IN_REVIEW;
-    autoAdvanceAiSteps(application, {
+    enqueueAiVerification = settleAiWorkflowSteps(application, {
       userId: user.userId ?? user._id?.toString?.() ?? 'system',
       name: user.name ?? 'Student',
       role: ROLES.STUDENT,
@@ -1198,6 +1245,10 @@ export async function submitStudentServiceApplication(instituteId, user, service
 
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
+
+  if (enqueueAiVerification) {
+    await enqueueApplicationAiVerification(instituteId, application._id.toString()).catch(() => {});
+  }
 
   const institute = await Institute.findById(instituteId).select('name');
   const emailContext = {
@@ -1256,7 +1307,7 @@ export async function resubmitStudentServiceApplication(instituteId, user, servi
   application.correctionNote = undefined;
   application.correctionRequiredDocuments = [];
 
-  autoAdvanceAiSteps(application, {
+  const enqueueAiVerification = settleAiWorkflowSteps(application, {
     userId: user.userId ?? user._id?.toString?.() ?? 'system',
     name: user.name ?? 'Student',
     role: ROLES.STUDENT,
@@ -1264,6 +1315,10 @@ export async function resubmitStudentServiceApplication(instituteId, user, servi
 
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
+
+  if (enqueueAiVerification) {
+    await enqueueApplicationAiVerification(instituteId, application._id.toString()).catch(() => {});
+  }
 
   const institute = await Institute.findById(instituteId).select('name');
   notifyApplicationStatusChange(application, {

@@ -1,0 +1,1861 @@
+================================================================================
+INSTITUTE ADMISSIONS KNOWLEDGE DOCUMENT
+Template Version: 1.0  |  Pattern: Multi-Campus University Admissions
+================================================================================
+PURPOSE
+This document is the single source of truth for:
+  (1) Student FAQ / chatbot grounding
+  (2) Admin "Extract Knowledge" offering suggestions
+  (3) Offering configuration: eligibility, required documents, workflow, queue/visit
+
+HOW TO REUSE FOR OTHER COLLEGES
+Keep the same section order and headings. Replace institute facts, programme
+catalogue, eligibility numbers, fees, codes, and campus addresses. Do not remove
+the operational sections (eligibility tables, mandatory documents, application
+process steps, fee payment, queue/visit, escalation) — the platform extracts from
+those headings.
+
+--------------------------------------------------------------------------------
+DOCUMENT CONTROL
+--------------------------------------------------------------------------------
+Document Title:        CMR University — Admissions Knowledge Document
+Academic Year:         2026-27
+Intake Label:          Admissions Open AY 2026-27
+Institute Legal Name:  CMR University
+Short Name:            CMRU
+Institute Type:        Private University
+City / State:          Bengaluru, Karnataka, India
+Recognition:           Recognised by University Grants Commission (UGC)
+Accreditation:         NAAC 'A' Grade
+Group Affiliation:     CMR Group of Educational Institutions
+Related Institute:     CMR Institute of Technology (CMRIT) — NAAC 'A++'
+Document Status:       Complete operational knowledge base for platform testing
+Primary Service Name:  Undergraduate & Postgraduate Admissions AY 2026-27
+Website:               www.cmr.edu.in
+Admissions Email:      admissions@cmr.edu.in
+Admissions Helpline:   +91 93429 00666
+
+
+================================================================================
+PART A — INSTITUTE PROFILE
+================================================================================
+
+A.1 Overview
+CMR University is a premier, NAAC 'A' grade accredited, private university located
+in Bengaluru, recognised by the University Grants Commission (UGC). It is backed
+by the CMR Group of Educational Institutions (which includes the NAAC 'A++'
+accredited CMR Institute of Technology).
+
+A.2 Legacy & Community
+- Legacy: Over 30 years of academic excellence.
+- Community: Students from more than 40 nationalities across 20+ institutions,
+  spanning K-12 to doctoral studies.
+- Learner strength: Over 20,000 learners.
+
+A.3 Vision
+To nurture creative thinkers who will drive positive global change. To provide
+students with a holistic learning experience to prepare them for successful
+careers or higher education and equip them to thrive in a VUCA (Volatility,
+Uncertainty, Complexity, and Ambiguity) world.
+
+A.4 Accreditation & Recognition
+- NAAC 'A' Grade
+- Recognised by UGC
+- Gold Grade in the Prestigious QS I-Gauge Indian University Rankings
+
+
+================================================================================
+PART B — RANKINGS & ACHIEVEMENTS
+================================================================================
+
+B.1 The Week - Hansa Research Survey 2025
+- Ranked 61 among Private and Deemed Multidisciplinary Universities, All India.
+- Ranked 26 among Emerging Multidisciplinary Universities, All India.
+
+B.2 Times All India Engineering Institutes Ranking Survey 2025
+- Ranked 69 among Top 175 Engineering Institutes in India.
+- Ranked 44 among Top 70 Private Institutes for Placements.
+
+B.3 Business World Best Engineering Colleges & Universities 2025
+- Ranked 18 among India's Best Private Engineering Institutions.
+- Ranked 14 among South India's Best Private Engineering Colleges & Universities.
+
+
+================================================================================
+PART C — ACADEMIC PEDAGOGY & CMR ADVANTAGE
+================================================================================
+
+C.1 Design Thinking Approach
+Embedded across all programmes. Students learn by doing through user-centric,
+interdisciplinary, and experiential learning. Develops empathy, creativity, and
+critical problem-solving skills.
+
+C.2 Future-Ready Pedagogy
+Blends interdisciplinary learning, Design Thinking, and experiential education.
+Involves hands-on projects, global exposure, research-led teaching, and
+personalised mentoring.
+
+C.3 LEAP (Learning, Engagement & Advancement Programme)
+A transformative journey beyond classrooms blending learning, engagement, and
+advancement through mentorship, leadership, collaboration, and real-world
+experiences.
+
+C.4 CCC (Common Core Curriculum)
+Anchors every CMR University programme (100% student participation). Builds
+strong foundations in communication, critical thinking, ethics, sustainability,
+and leadership.
+
+C.5 ACCP (Accelerated Credit Course Programme)
+Empowers higher secondary and PU students to explore future-ready disciplines
+online, earning recognised e-certificates and academic credits that carry into
+CMRU's undergraduate programmes.
+
+C.6 Global Immersion Programme (GIP)
+Broadens students' education by placing them in overseas academic settings
+(previously enabled collaborations in Malaysia and South Korea).
+
+C.7 Personalised Learning Pathways
+Flexible, interdisciplinary curricula with mentoring, certifications, and
+choice-driven progression.
+
+C.8 Experiential, Project-Based Learning
+Learning through live projects, simulations, internships, studios, labs, and
+community engagement.
+
+
+================================================================================
+PART D — INNOVATION & INFRASTRUCTURE
+================================================================================
+
+D.1 Maker Space
+A democratic building space for students to bring their ideas to life. Prototype
+designs and gain exposure to real-world tools through certificate courses.
+
+D.2 Design Thinking Lab
+An innovative environment to ideate, shape viable ideas, nurture start-ups, and
+support entrepreneurship.
+
+D.3 Incubation Cell
+A dynamic platform nurturing entrepreneurial thinking, supporting idea
+development, and connecting students with industry mentors for real-world
+validation.
+
+D.4 Vibrant Campus
+Holistic development and service internship opportunities. Peak Bengaluru
+Advantage provides unmatched exposure to startups, industry leaders, culture,
+and urban challenges.
+
+
+================================================================================
+PART E — PLACEMENTS & INDUSTRY INTEGRATION
+================================================================================
+
+E.1 Recruiters
+200+ recruiters including Bosch, Amazon, Flipkart, KPMG, EY, Zomato, Deloitte,
+Capgemini, IBM, and more.
+
+E.2 Training & Placements Cell
+Headed by a director and senior professor. Every school has a dedicated
+placement officer to liaison with corporates.
+
+E.3 Student Development Programme (SDP)
+- Structured Career Preparedness Programme (CPP) on Discover-Build-Deliver (DBD)
+  model from the first semester.
+- Industry-specific training and student support mechanisms.
+
+E.4 Pre-Placement Training Programme
+Soft skills, quantitative aptitude, logical reasoning, and verbal aptitude
+training.
+
+E.5 Internships
+Internships with corporates, accompanied by a stipend, are provided to all
+eligible students as per the programme curriculum.
+
+E.6 Industry-Integrated Curriculum
+Curricula co-shaped with industry partners for exposure to relevant tools,
+technologies, and professional expectations.
+
+
+================================================================================
+PART F — CAMPUSES & CONTACT INFORMATION
+================================================================================
+
+F.1 Admissions Contact
+- Admissions Helpline: +91 93429 00666
+- Email: admissions@cmr.edu.in
+- Website: www.cmr.edu.in
+
+F.2 Lakeside Campus
+Address: Off Hennur, Bagalur Main Road, Chagalahatti, Bengaluru 562149
+Primary schools: School of Engineering & Technology; School of Architecture;
+School of Design; School of Science & Computer Studies (selected programmes);
+School of Management (selected programmes); School of Liberal Studies (selected).
+
+F.3 City Campus
+Address: #2, 3rd 'C' Cross, 6th 'A' Main, 2nd Block, HRBR Layout, Kalyan Nagar,
+Bengaluru 560043
+Primary schools: School of Economics & Commerce (selected); School of Management
+(selected); School of Liberal Studies (selected).
+
+F.4 OMBR Campus
+Address: No.5, Bhuvanagiri, OMBR Layout, Bengaluru 560043
+Primary schools: School of Economics & Commerce (selected); School of Science &
+Computer Studies (selected); School of Management (selected); School of Legal
+Studies.
+
+F.5 HRBR Campus
+Address: HRBR Layout 3rd Block, Keshava Nagar, Kacharakanahalli, Bengaluru 560043
+Primary schools: School of Allied and Healthcare Sciences.
+
+F.6 CMRIT Campus (Executive programmes)
+Used for Executive MBA Product Leadership.
+
+F.7 Information Centre, Vijayawada
+Address: 65-3-16, NTR Circle, Patamata, Vijayawada 520 010 [above Ravi Sweets]
+Contact: +91 63669 82922, +91 63669 82923, +91 89519 93760, +91 89519 93761,
++91 89519 93762, +91 63649 37858
+
+
+================================================================================
+PART G — COMMON ADMISSIONS POLICY (ALL PROGRAMMES)
+================================================================================
+This section applies to every offering listed in PART I unless a programme
+section states a stricter or different rule.
+
+G.1 Admission Year & Service Scope
+Service covered by this document: Undergraduate & Postgraduate Admissions AY 2026-27.
+Admissions are open for Academic Year 2026-27 across eligible programmes listed
+in the programme catalogue.
+
+G.2 Entrance Exams & Admission Channels
+CMR University honours JEE, COMEDK, KCET, CUET, and other state or national-level
+entrance exam scores.
+Direct admission is available for CUET students.
+Additional channels (where a programme section allows):
+- University / institute counselling based on qualifying examination marks
+- Lateral entry (where programme section states eligibility)
+- International student admissions
+- NRI / OCI / PIO admissions (additional documents required)
+
+G.3 Official Entrance / Counselling Codes
+CET Codes:
+- B.Tech. (E257)
+- B.Arch. (E245)
+
+COMEDK Codes:
+- B.Tech. (E187)
+- B.Arch. (E187(A))
+
+PGCET Codes:
+- MBA City Campus (B150)
+- MBA OMBR Campus (B149)
+- MBA Lakeside Campus (B395)
+- MCA OMBR Campus (C527)
+- MCA Lakeside Campus (C521)
+- M.Tech. Lakeside Campus (T610)
+
+G.4 Common Applicant Eligibility Framework
+Unless a programme section overrides these values, applicants must satisfy ALL
+rules listed for that programme. Eligibility uses AND logic across listed rules.
+
+Common undergraduate minimum framework (where programme type is UG and no
+stricter rule is stated):
+- Qualification: 10+2 or equivalent from a recognised board
+- English Proficiency: Mandatory
+- Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable as per university norms)
+- Age: Applicant must meet minimum age requirements as per programme regulations
+
+Common postgraduate minimum framework (where programme type is PG and no
+stricter rule is stated):
+- Qualification: Bachelor's degree from a recognised university
+- Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved
+  categories where applicable as per university norms)
+
+G.5 Mandatory Documents (Common Checklist)
+The following mandatory documents are required for every admissions application
+under this service unless a programme section adds or replaces items:
+
+Mandatory documents:
+- Class 10 marksheet
+- Class 12 marksheet (or equivalent qualifying marksheet for UG; degree marksheets
+  for PG / Ph.D. as stated in programme section)
+- Entrance exam scorecard (JEE / COMEDK / KCET / CUET / PGCET / other applicable)
+  — required when the chosen admission channel is entrance-based
+- Government-issued ID proof
+- Passport-size photograph
+- Signature image
+- Recent passport-size colour photograph for ID card (jpg or png, max 2 MB)
+
+Conditional documents:
+- Category certificate (if claiming reserved category benefit)
+- Migration certificate
+- Transfer certificate
+- Character / conduct certificate
+- Passport (international applicants)
+- Equivalence certificate (foreign / other board applicants)
+- Experience certificate (Executive MBA and professional M.Tech. tracks)
+- Portfolio (B.Des. and selected Design programmes)
+- NATA scorecard (B.Arch.)
+- Degree certificate / provisional degree certificate (PG and Ph.D.)
+- Gate scorecard (where M.Tech. admission channel is GATE-based)
+
+Upload format rules for all documents unless otherwise stated:
+- allowedTypes: pdf, jpg, jpeg, png
+- maxSizeMb: 5
+- All marksheets and ID proof must be clear, complete, and readable
+- Name on documents must match the application profile; mismatches are escalated
+
+G.6 Application Process Steps (Standard Admissions Workflow)
+Every programme offering under this admissions service follows the same
+application process steps in this order:
+
+Step 1: Document Verification
+Handled by: AI + Admissions Verification Team
+Purpose: Verify uploaded documents are complete, authentic, and readable.
+Outcomes:
+- Documents Verified → proceed to Step 2
+- Missing / Invalid Documents → return to student for re-upload of mandatory
+  documents (Class 10 marksheet, Class 12 marksheet or degree marksheets,
+  entrance scorecard if applicable, Government-issued ID proof, Passport-size
+  photograph, Signature image)
+- Fraud / Serious Mismatch → end workflow rejected (forged marksheet, identity
+  mismatch, duplicate application)
+
+Step 2: Eligibility Validation
+Handled by: Admissions Officer / AI Rules Engine
+Purpose: Verify academic eligibility against programme rules.
+Outcomes:
+- Eligible → proceed to Step 3
+- Eligibility Clarification Required → return to student (foreign board
+  equivalency unclear, aggregate calculation dispute, marks conversion required)
+- Not Eligible → end workflow rejected (required subjects missing, aggregate
+  below threshold, individual subject below minimum)
+
+Step 3: Seat Allocation & Merit Processing
+Handled by: Admissions Counsellor / Approver
+Purpose: Determine seat availability based on rank, qualifying marks, preferences,
+and campus capacity.
+Outcomes:
+- Seat Available → proceed to Step 4
+- Waitlisted → end workflow rejected (waitlist recorded operationally; platform
+  terminal state rejected until seat opens)
+- No Seat Available → end workflow rejected
+
+Step 4: Offer Release
+Handled by: Admissions Approver
+Purpose: Generate admission offer for the selected programme and campus.
+Outcomes:
+- Offer Generated → proceed to Step 5
+- Offer Expired → end workflow rejected
+
+Step 5: Fee Payment
+Handled by: Student
+Purpose: Collect admission / confirmation fee from student.
+Outcomes:
+- Fee Paid → proceed to Step 6
+- Payment Pending → stay in current step; system sends reminders
+- Payment Deadline Missed / Offer Lapsed → end workflow rejected
+
+Step 6: Admission Confirmation
+Handled by: Admissions Approver
+Purpose: Finalize admission after fee confirmation and final checks.
+Outcomes:
+- Admission Confirmed → end workflow completed
+- Final Verification Failure → end workflow rejected
+- Document fix needed at final stage → return to student to Step 1
+
+G.7 Fee Payment & Financial Support
+- Scholarships worth ₹12 Crores are available.
+- Types of Scholarships: CMR Merit Scholarships, CMR Sports Scholarships,
+  CMR Defense Scholarships, Entrance Test Rank/Score Based Scholarships,
+  CMR Leadership Awards, and more.
+- Semester-wise fee payments are supported.
+- Education loan assistance is available.
+- Accommodation and transport services are available.
+- Application processing fee (non-refundable): INR 1,000 for UG programmes;
+  INR 1,500 for PG programmes; INR 2,000 for Ph.D. programmes.
+- Admission confirmation fee / seat acceptance fee must be paid within 7 calendar
+  days of offer release unless the offer letter states a different deadline.
+- Fee payment methods: online payment gateway (UPI, net banking, debit/credit card).
+- Exact tuition fee amounts vary by programme and campus; students must confirm
+  the current fee schedule with admissions@cmr.edu.in or the admissions helpline
+  before payment. Do not invent programme-wise tuition figures beyond what is
+  stated in an official fee schedule annexure.
+
+G.8 Important Dates (AY 2026-27 Admissions Cycle)
+- Applications open: 01 November 2025
+- Priority / early application window closes: 31 January 2026
+- Regular application window closes: 30 April 2026
+- Counselling / seat allocation windows: May 2026 – July 2026 (programme-wise)
+- Document verification peak period: May 2026 – June 2026
+- Fee payment deadline after offer: within 7 calendar days of offer release
+- Academic session commencement: as notified in the offer letter / academic calendar
+Note: Dates may be revised by the university; check www.cmr.edu.in for updates.
+
+G.9 Queue, Appointment & Campus Visit Settings
+Visit / counselling mode for admissions service: hybrid
+- queueMode: hybrid
+- Queue capacity during peak counselling: 120 tokens per campus per day
+- Processing rate: 20 applicants per hour per counselling desk
+- Appointment slot duration: 20 minutes
+- Appointment slot capacity: 1 applicant per slot
+- Operating hours start: 09:30
+- Operating hours end: 17:30
+- Operating days: Monday to Saturday (excluding university holidays)
+- Walk-in tokens are issued until capacity is reached; appointment slots are
+  recommended during peak periods.
+- AI chatbot should recommend early slot booking during peak periods.
+
+G.10 Common Applicant Errors
+Error Type                          Handling Rule
+Missing Class 10 / Class 12 sheet   Mark REUPLOAD REQUIRED
+Unreadable scan / cropped pages     Mark REUPLOAD REQUIRED
+Biology instead of Mathematics      Reject for ineligibility (engineering PCM tracks)
+Aggregate calculated incorrectly    Recompute using official normalization
+Marksheet mismatch across uploads   Escalate
+Provisional marksheet without seal  Mark REUPLOAD REQUIRED
+Name mismatch above threshold       Escalate
+Duplicate application               Escalate / reject for fraud if confirmed
+Wrong campus selected for programme Return for correction of programme preference
+Entrance scorecard for wrong exam   Mark REUPLOAD REQUIRED
+
+G.11 Escalation Conditions
+Escalate to senior admissions officer if:
+- Marks conversion requires manual interpretation
+- Foreign board equivalency unclear
+- Duplicate applications detected
+- Name mismatch exceeds permitted threshold
+- Category certificate authenticity is doubtful
+- International applicant document set incomplete after two clarification cycles
+
+
+================================================================================
+PART H — PROGRAMME CATALOGUE INDEX (OFFERING NAMES)
+================================================================================
+Each line below is a distinct offering / intake track that students apply to
+separately. Exact offering names are repeated in PART I with full operational
+detail. Prefer the most specific name (degree + specialisation + campus).
+
+School of Engineering & Technology (Lakeside Campus)
+1.  B.Tech. Computer Science & Engineering (Lakeside Campus)
+2.  B.Tech. Computer Science & Engineering (Artificial Intelligence & Machine Learning) (Lakeside Campus)
+3.  B.Tech. Computer Science & Engineering (Data Science) (Lakeside Campus)
+4.  B.Tech. Computer Engineering (AI & ML/IoT) (Lakeside Campus)
+5.  B.Tech. Computer Science & Technology (AI & ML/IoT) (Lakeside Campus)
+6.  B.Tech. Information Technology (Lakeside Campus)
+7.  B.Tech. Electronics & Communication Engineering (Lakeside Campus)
+8.  B.Tech. Artificial Intelligence & Data Science (Lakeside Campus) [NEW]
+9.  M.Tech. Computer Science & Engineering (Lakeside Campus)
+10. M.Tech. Artificial Intelligence (Lakeside Campus)
+11. Ph.D. Computer Science & Engineering (Lakeside Campus)
+12. Ph.D. ECE (Lakeside Campus)
+13. Ph.D. Mechanical Engineering (Lakeside Campus)
+
+School of Architecture (Lakeside Campus)
+14. B.Arch. (Lakeside Campus)
+
+School of Design (Lakeside Campus)
+15. B.Des. Communication Design (Lakeside Campus)
+16. B.Des. Product Design (Lakeside Campus)
+17. B.Des. Fashion Design (Lakeside Campus)
+18. B.Des. Interior Design (Lakeside Campus)
+19. B.Sc. Sound Engineering (Lakeside Campus)
+20. B.Sc. Visual Effects & Animation (Lakeside Campus)
+
+School of Economics & Commerce
+21. B.Com. International Accounting & Finance (ACCA, UK) (City Campus)
+22. B.Com. Professional - CA Integrated (OMBR Campus)
+23. B.Com. Data Science (OMBR Campus)
+24. B.Com. Certified Management Accountant (US CMA) (OMBR Campus)
+25. B.Com. Fintech (OMBR Campus) [NEW]
+26. M.Com. Fintech with AI & Taxation (OMBR Campus) [NEW]
+27. Ph.D. Economics
+28. Ph.D. Commerce
+
+School of Science & Computer Studies
+29. BCA Cloud Computing (OMBR Campus)
+30. BCA Data Science (Lakeside Campus)
+31. BCA Data Science (OMBR Campus)
+32. BCA Game Development (OMBR Campus)
+33. BCA Artificial Intelligence & Machine Learning (Lakeside Campus)
+34. BCA Artificial Intelligence & Machine Learning (OMBR Campus)
+35. B.Sc. Information Technology (OMBR Campus)
+36. M.Sc. Information Technology in Data Science (OMBR Campus)
+37. MCA Artificial Intelligence & Machine Learning (Lakeside Campus) [NEW]
+38. MCA Artificial Intelligence & Machine Learning (OMBR Campus) [NEW]
+39. Ph.D. Computer Application
+
+School of Management
+40. BBA Digital Marketing (City Campus)
+41. BBA Business Analytics (City Campus)
+42. BBA Fintech (Lakeside Campus)
+43. BBA Fintech (OMBR Campus)
+44. BBA Data Science & AI (City Campus)
+45. BBA Data Science & AI (OMBR Campus)
+46. BBA Logistics & Supply Chain Management (OMBR Campus)
+47. BBA Tourism & Hospitality Management (City Campus)
+48. MBA Dual Specialisation (City Campus)
+49. MBA Dual Specialisation (OMBR Campus)
+50. MBA Dual Specialisation (Lakeside Campus)
+51. MBA Fintech (All Campuses) [NEW]
+52. MBA Business Analytics & Business Intelligence (City Campus)
+53. MBA Technology Management (Lakeside Campus)
+54. Executive MBA Product Leadership (CMRIT Campus)
+55. Ph.D. Management
+
+School of Legal Studies (OMBR Campus)
+56. B.A.,LL.B. (Hons) (OMBR Campus)
+57. B.B.A.,LL.B. (Hons) (OMBR Campus)
+58. LL.B. (OMBR Campus)
+59. LL.M. Constitutional Law (OMBR Campus)
+60. LL.M. Commercial Law (OMBR Campus)
+61. LL.M. Criminal Law (OMBR Campus)
+62. Ph.D. Law (OMBR Campus)
+
+School of Liberal Studies
+63. B.A. (Major + Minor) (City Campus)
+64. B.A. (Major + Minor) (Lakeside Campus)
+65. B.Sc. Psychology (City Campus)
+66. B.Sc. Psychology (Lakeside Campus)
+67. M.Sc. Psychology (City Campus)
+68. Ph.D. Psychology
+
+School of Allied and Healthcare Sciences (HRBR Campus)
+69. B.Sc. Anaesthesia and Operation Theatre Technology (HRBR Campus)
+70. B.Sc. Medical Laboratory Technology (HRBR Campus)
+71. B.Sc. Optometry (HRBR Campus)
+72. B.Sc. Medical Radiology and Imaging Technology (HRBR Campus)
+73. Bachelor of Hospital Administration (HRBR Campus)
+
+College of Nursing [PROPOSED]
+74. B.Sc. Nursing [PROPOSED] — applications not open until programme approval is notified
+
+
+================================================================================
+PART I — PROGRAMME DETAILS (OFFERINGS)
+================================================================================
+Each subsection below is one offering. Extract suggestedOfferings using the
+exact "Offering Name" line. Eligibility rules, required documents, and workflow
+follow PART G unless overridden here.
+
+
+--------------------------------------------------------------------------------
+I.1 SCHOOL OF ENGINEERING & TECHNOLOGY (Lakeside Campus)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Lakeside Campus) -----
+Programme Overview:
+Four-year undergraduate engineering programme covering software systems,
+algorithms, AI and ML fundamentals, distributed systems, operating systems, and
+data engineering. This programme historically receives high applicant demand.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel:
+- Primary: KCET / COMEDK / JEE / CUET based admission
+- CET Code: E257 | COMEDK Code: E187
+- Direct admission available for CUET students
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Requirement                         Rule
+Qualification                       10+2 or equivalent
+Subjects                            Physics, Chemistry, Mathematics
+English Proficiency                 Mandatory
+Minimum Aggregate                   45% aggregate in PCM (40% for reserved categories
+                                    where applicable)
+Individual Subject Requirement      Pass in Physics, Chemistry, and Mathematics
+                                    individually
+Required Documents:
+Mandatory documents:
+- Class 10 marksheet
+- Class 12 marksheet
+- Entrance exam scorecard (JEE / COMEDK / KCET / CUET as applicable)
+- Government-issued ID proof
+- Passport-size photograph
+- Signature image
+Conditional documents:
+- Category certificate (if applicable)
+- Migration certificate
+- Passport (international applicants)
+Operational Notes:
+High ticket volume expected during counselling windows. Queue prioritization
+enabled during final counselling rounds.
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Artificial Intelligence & Machine Learning) (Lakeside Campus) -----
+Programme Overview:
+Four-year B.Tech. CSE programme with specialisation in Artificial Intelligence
+and Machine Learning, emphasising applied AI, ML pipelines, and intelligent systems.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187; CUET direct admission available
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+Conditional documents: Category certificate (if applicable); Migration certificate;
+Passport (international applicants)
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Data Science) (Lakeside Campus) -----
+Programme Overview:
+Four-year B.Tech. CSE programme with Data Science specialisation focusing on
+statistics, data engineering, analytics, and ML applications.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: B.Tech. Computer Engineering (AI & ML/IoT) (Lakeside Campus) -----
+Programme Overview:
+Four-year Computer Engineering programme with specialisation in AI & ML / IoT,
+bridging hardware-software systems and intelligent connected devices.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: B.Tech. Computer Science & Technology (AI & ML/IoT) (Lakeside Campus) -----
+Programme Overview:
+Four-year Computer Science & Technology programme with specialisation in AI & ML / IoT.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: B.Tech. Information Technology (Lakeside Campus) -----
+Programme Overview:
+Four-year undergraduate IT programme covering software engineering, networks,
+databases, cloud fundamentals, and enterprise systems.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: B.Tech. Electronics & Communication Engineering (Lakeside Campus) -----
+Programme Overview:
+Four-year ECE programme covering electronics, communication systems, embedded
+systems, signal processing, and related laboratory practice.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: B.Tech. Artificial Intelligence & Data Science (Lakeside Campus) -----
+Programme Overview:
+[NEW] Four-year undergraduate programme dedicated to Artificial Intelligence and
+Data Science with strong applied project components.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: KCET / COMEDK / JEE / CUET; CET E257; COMEDK E187
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Mathematics individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Entrance exam scorecard
+(JEE / COMEDK / KCET / CUET as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: M.Tech. Computer Science & Engineering (Lakeside Campus) -----
+Programme Overview:
+Postgraduate engineering programme in Computer Science & Engineering for regular
+and professional learners.
+Duration: 2 years (regular); professional track as notified
+Campus: Lakeside Campus
+Admission Channel: PGCET / GATE / university counselling; PGCET Code T610
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in Engineering / Technology in relevant discipline
+  from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets
+(all semesters / consolidated); Degree certificate or provisional degree certificate;
+Entrance exam scorecard (PGCET / GATE as applicable); Government-issued ID proof;
+Passport-size photograph; Signature image
+Conditional documents: Experience certificate (professional M.Tech. track);
+Category certificate (if applicable); Migration certificate
+
+----- Offering Name: M.Tech. Artificial Intelligence (Lakeside Campus) -----
+Programme Overview:
+Postgraduate programme in Artificial Intelligence for regular and professional learners.
+Duration: 2 years (regular); professional track as notified
+Campus: Lakeside Campus
+Admission Channel: PGCET / GATE / university counselling; PGCET Code T610
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in Engineering / Technology / relevant computing
+  discipline from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET / GATE as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: Ph.D. Computer Science & Engineering (Lakeside Campus) -----
+Programme Overview:
+Doctoral research programme in Computer Science & Engineering with focus areas
+including AI & ML, Networking & Cloud Computing, Data Analytics, Cyber Security,
+Data Science & IoT.
+Campus: Lakeside Campus
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: Master's degree in relevant discipline from a recognised university
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; UG degree marksheets
+and certificate; PG degree marksheets and certificate; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+Conditional documents: GATE / NET / SLET certificate (if applicable); Experience /
+publication list
+
+----- Offering Name: Ph.D. ECE (Lakeside Campus) -----
+Programme Overview:
+Doctoral research programme in Electronics & Communication Engineering.
+Campus: Lakeside Campus
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in relevant discipline from a recognised university
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; UG and PG degree
+marksheets and certificates; Research proposal summary; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: Ph.D. Mechanical Engineering (Lakeside Campus) -----
+Programme Overview:
+Doctoral research programme in Mechanical Engineering.
+Campus: Lakeside Campus
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in relevant discipline from a recognised university
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; UG and PG degree
+marksheets and certificates; Research proposal summary; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.2 SCHOOL OF ARCHITECTURE (Lakeside Campus)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Arch. (Lakeside Campus) -----
+Programme Overview:
+Undergraduate architecture programme preparing students for professional practice
+in architectural design, studio work, and built environment studies.
+Duration: 5 years
+Campus: Lakeside Campus
+Admission Channel: NATA / JEE Paper 2 / CET / COMEDK architecture counselling as applicable
+CET Code: E245 | COMEDK Code: E187(A)
+Eligibility Rules:
+Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Mathematics
+OR 10+3 Diploma with Mathematics as per Council of Architecture norms
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination with Mathematics
+  (as applicable under CoA / university norms)
+Entrance: Valid NATA score (or other accepted architecture entrance) as notified
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet (or diploma marksheets);
+NATA scorecard (or accepted architecture entrance scorecard); Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Portfolio (if requested during counselling); Category
+certificate (if applicable); Migration certificate
+
+
+--------------------------------------------------------------------------------
+I.3 SCHOOL OF DESIGN (Lakeside Campus)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Des. Communication Design (Lakeside Campus) -----
+Programme Overview:
+Undergraduate design programme focused on communication design, visual storytelling,
+and brand communication.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: University design admission process / CUET / portfolio evaluation
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image; Portfolio
+Conditional documents: Entrance scorecard (if applicable); Category certificate
+
+----- Offering Name: B.Des. Product Design (Lakeside Campus) -----
+Programme Overview:
+Undergraduate product design programme covering user-centred product development,
+prototyping, and design thinking studios.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: University design admission process / CUET / portfolio evaluation
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image; Portfolio
+
+----- Offering Name: B.Des. Fashion Design (Lakeside Campus) -----
+Programme Overview:
+Undergraduate fashion design programme covering apparel design, textiles, and
+fashion communication.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: University design admission process / CUET / portfolio evaluation
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image; Portfolio
+
+----- Offering Name: B.Des. Interior Design (Lakeside Campus) -----
+Programme Overview:
+Undergraduate interior design programme covering spatial design, materials, and
+interior studio practice.
+Duration: 4 years
+Campus: Lakeside Campus
+Admission Channel: University design admission process / CUET / portfolio evaluation
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image; Portfolio
+
+----- Offering Name: B.Sc. Sound Engineering (Lakeside Campus) -----
+Programme Overview:
+Undergraduate programme in sound engineering covering audio production, recording,
+and sound design fundamentals.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Sc. Visual Effects & Animation (Lakeside Campus) -----
+Programme Overview:
+Undergraduate programme in visual effects and animation covering digital content
+creation, VFX pipelines, and animation studios.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image; Portfolio (recommended)
+
+
+--------------------------------------------------------------------------------
+I.4 SCHOOL OF ECONOMICS & COMMERCE (City & OMBR Campuses)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Com. International Accounting & Finance (ACCA, UK) (City Campus) -----
+Programme Overview:
+Undergraduate commerce programme integrated with ACCA (UK) pathway for
+international accounting and finance careers.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Preferred subjects: Accountancy / Business Studies / Mathematics / Economics
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Com. Professional - CA Integrated (OMBR Campus) -----
+Programme Overview:
+Undergraduate commerce programme integrated with CA professional pathway.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Preferred subjects: Accountancy / Business Studies / Mathematics / Economics
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Com. Data Science (OMBR Campus) -----
+Programme Overview:
+Undergraduate commerce programme with Data Science focus combining business and
+analytics foundations.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Statistics / Computer Science preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Com. Certified Management Accountant (US CMA) (OMBR Campus) -----
+Programme Overview:
+Undergraduate commerce programme aligned with US CMA pathway.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Com. Fintech (OMBR Campus) -----
+Programme Overview:
+[NEW] Undergraduate commerce programme focused on financial technology,
+digital payments, and fintech applications.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: M.Com. Fintech with AI & Taxation (OMBR Campus) -----
+Programme Overview:
+[NEW] Postgraduate commerce programme combining fintech, AI applications, and taxation.
+Duration: 2 years
+Campus: OMBR Campus
+Admission Channel: University PG counselling / relevant entrance where notified
+Eligibility Rules:
+Qualification: B.Com. / BBA / equivalent bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: Ph.D. Economics -----
+Programme Overview:
+Doctoral research programme in Economics.
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in Economics or relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: UG and PG marksheets and certificates; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+
+----- Offering Name: Ph.D. Commerce -----
+Programme Overview:
+Doctoral research programme in Commerce.
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in Commerce or relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: UG and PG marksheets and certificates; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.5 SCHOOL OF SCIENCE & COMPUTER STUDIES (Lakeside & OMBR Campuses)
+--------------------------------------------------------------------------------
+
+----- Offering Name: BCA Cloud Computing (OMBR Campus) -----
+Programme Overview:
+Undergraduate computer applications programme with Cloud Computing specialisation.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Computer Science / Information Technology preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BCA Data Science (Lakeside Campus) -----
+Programme Overview:
+Undergraduate computer applications programme with Data Science specialisation.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Computer Science / Statistics preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BCA Data Science (OMBR Campus) -----
+Programme Overview:
+Undergraduate computer applications programme with Data Science specialisation.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Computer Science / Statistics preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BCA Game Development (OMBR Campus) -----
+Programme Overview:
+Undergraduate computer applications programme focused on game development.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Portfolio of game / creative work (recommended)
+
+----- Offering Name: BCA Artificial Intelligence & Machine Learning (Lakeside Campus) -----
+Programme Overview:
+Undergraduate computer applications programme in AI & Machine Learning.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Computer Science preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BCA Artificial Intelligence & Machine Learning (OMBR Campus) -----
+Programme Overview:
+Undergraduate computer applications programme in AI & Machine Learning.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+Mathematics / Computer Science preferred at 10+2
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Sc. Information Technology (OMBR Campus) -----
+Programme Overview:
+Undergraduate science programme in Information Technology.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: M.Sc. Information Technology in Data Science (OMBR Campus) -----
+Programme Overview:
+Postgraduate programme in Information Technology with Data Science focus.
+Duration: 2 years
+Campus: OMBR Campus
+Admission Channel: University PG counselling / relevant entrance where notified
+Eligibility Rules:
+Qualification: Bachelor's degree in IT / Computer Science / BCA / relevant discipline
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: MCA Artificial Intelligence & Machine Learning (Lakeside Campus) -----
+Programme Overview:
+[NEW] Master of Computer Applications programme with AI & Machine Learning focus.
+Duration: 2 years
+Campus: Lakeside Campus
+Admission Channel: PGCET / university counselling; PGCET Code C521
+Eligibility Rules:
+Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as
+  per university / AICTE norms for MCA
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MCA Artificial Intelligence & Machine Learning (OMBR Campus) -----
+Programme Overview:
+[NEW] Master of Computer Applications programme with AI & Machine Learning focus.
+Duration: 2 years
+Campus: OMBR Campus
+Admission Channel: PGCET / university counselling; PGCET Code C527
+Eligibility Rules:
+Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as
+  per university / AICTE norms for MCA
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: Ph.D. Computer Application -----
+Programme Overview:
+Doctoral research programme in Computer Application.
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in Computer Applications / Computer Science /
+  relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: UG and PG marksheets and certificates; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.6 SCHOOL OF MANAGEMENT (All Campuses)
+--------------------------------------------------------------------------------
+
+----- Offering Name: BBA Digital Marketing (City Campus) -----
+Programme Overview:
+Undergraduate management programme focused on digital marketing strategy, analytics,
+and campaign practice.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Business Analytics (City Campus) -----
+Programme Overview:
+Undergraduate management programme focused on business analytics.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Fintech (Lakeside Campus) -----
+Programme Overview:
+Undergraduate management programme focused on fintech.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Fintech (OMBR Campus) -----
+Programme Overview:
+Undergraduate management programme focused on fintech.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Data Science & AI (City Campus) -----
+Programme Overview:
+Undergraduate management programme combining data science and AI for business.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Data Science & AI (OMBR Campus) -----
+Programme Overview:
+Undergraduate management programme combining data science and AI for business.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Logistics & Supply Chain Management (OMBR Campus) -----
+Programme Overview:
+Undergraduate management programme in logistics and supply chain management.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: BBA Tourism & Hospitality Management (City Campus) -----
+Programme Overview:
+Undergraduate management programme in tourism and hospitality management.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: MBA Dual Specialisation (City Campus) -----
+Programme Overview:
+MBA with dual specialisation options including Marketing, HR, Finance, Digital
+Marketing, and Supply Chain Management.
+Duration: 2 years
+Campus: City Campus
+Admission Channel: PGCET / university counselling; PGCET Code B150
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MBA Dual Specialisation (OMBR Campus) -----
+Programme Overview:
+MBA with dual specialisation options including Marketing, HR, Finance, Digital
+Marketing, and Supply Chain Management.
+Duration: 2 years
+Campus: OMBR Campus
+Admission Channel: PGCET / university counselling; PGCET Code B149
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MBA Dual Specialisation (Lakeside Campus) -----
+Programme Overview:
+MBA with dual specialisation options including Marketing, HR, Finance, Digital
+Marketing, and Supply Chain Management.
+Duration: 2 years
+Campus: Lakeside Campus
+Admission Channel: PGCET / university counselling; PGCET Code B395
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MBA Fintech (All Campuses) -----
+Programme Overview:
+[NEW] MBA programme focused on Fintech.
+Duration: 2 years
+Campus: All Campuses (applicant selects preferred campus during application)
+Admission Channel: PGCET / university counselling (use campus-specific PGCET code
+  when applying to a specific campus: City B150, OMBR B149, Lakeside B395)
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MBA Business Analytics & Business Intelligence (City Campus) -----
+Programme Overview:
+MBA with specialisation in Business Analytics & Business Intelligence.
+Duration: 2 years
+Campus: City Campus
+Admission Channel: PGCET / university counselling; PGCET Code B150
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: MBA Technology Management (Lakeside Campus) -----
+Programme Overview:
+MBA focused on Technology Management for technology-led organisations.
+Duration: 2 years
+Campus: Lakeside Campus
+Admission Channel: PGCET / university counselling; PGCET Code B395
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Entrance exam scorecard
+(PGCET as applicable); Government-issued ID proof; Passport-size photograph;
+Signature image
+
+----- Offering Name: Executive MBA Product Leadership (CMRIT Campus) -----
+Programme Overview:
+Executive MBA in Product Leadership delivered at CMRIT Campus for working professionals.
+Duration: As notified for the executive cohort
+Campus: CMRIT Campus
+Admission Channel: University executive admissions / interview
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+Work Experience: Minimum 2 years of relevant professional work experience
+English Proficiency: Mandatory
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Experience certificate;
+Government-issued ID proof; Passport-size photograph; Signature image
+Conditional documents: Employer NOC (if required by applicant's organisation)
+
+----- Offering Name: Ph.D. Management -----
+Programme Overview:
+Doctoral research programme in Management.
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in Management or relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: UG and PG marksheets and certificates; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.7 SCHOOL OF LEGAL STUDIES (OMBR Campus)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.A.,LL.B. (Hons) (OMBR Campus) -----
+Programme Overview:
+Integrated five-year honours law programme combining arts and legal studies.
+Duration: 5 years
+Campus: OMBR Campus
+Admission Channel: University / CLAT / other accepted law entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in qualifying examination (40% for reserved
+  categories where applicable as per BCI / university norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Law entrance scorecard (if applicable); Category certificate
+
+----- Offering Name: B.B.A.,LL.B. (Hons) (OMBR Campus) -----
+Programme Overview:
+Integrated five-year honours law programme combining business administration and law.
+Duration: 5 years
+Campus: OMBR Campus
+Admission Channel: University / CLAT / other accepted law entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in qualifying examination (40% for reserved
+  categories where applicable as per BCI / university norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: LL.B. (OMBR Campus) -----
+Programme Overview:
+Three-year LL.B. programme for graduates.
+Duration: 3 years
+Campus: OMBR Campus
+Admission Channel: University / accepted law entrance where notified
+Eligibility Rules:
+Qualification: Bachelor's degree from a recognised university
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in qualifying degree (40% for reserved categories
+  where applicable as per BCI / university norms)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: LL.M. Constitutional Law (OMBR Campus) -----
+Programme Overview:
+Postgraduate law programme with specialisation in Constitutional Law.
+Duration: 1 year / as notified
+Campus: OMBR Campus
+Admission Channel: University PG law admissions / entrance where notified
+Eligibility Rules:
+Qualification: LL.B. or equivalent from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying law degree (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: LL.B. marksheets and degree certificate; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: LL.M. Commercial Law (OMBR Campus) -----
+Programme Overview:
+Postgraduate law programme with specialisation in Commercial Law.
+Duration: 1 year / as notified
+Campus: OMBR Campus
+Admission Channel: University PG law admissions / entrance where notified
+Eligibility Rules:
+Qualification: LL.B. or equivalent from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying law degree (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: LL.B. marksheets and degree certificate; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: LL.M. Criminal Law (OMBR Campus) -----
+Programme Overview:
+Postgraduate law programme with specialisation in Criminal Law.
+Duration: 1 year / as notified
+Campus: OMBR Campus
+Admission Channel: University PG law admissions / entrance where notified
+Eligibility Rules:
+Qualification: LL.B. or equivalent from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying law degree (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: LL.B. marksheets and degree certificate; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: Ph.D. Law (OMBR Campus) -----
+Programme Overview:
+Doctoral research programme in Law.
+Campus: OMBR Campus
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: LL.M. or equivalent from a recognised university
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: LL.B. and LL.M. marksheets and certificates; Research proposal
+summary; Government-issued ID proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.8 SCHOOL OF LIBERAL STUDIES
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.A. (Major + Minor) (City Campus) -----
+Programme Overview:
+Undergraduate arts programme with Major + Minor options. Available majors/minors
+include Psychology, English, Journalism, Economics, Political Science, History,
+Sociology, Media Studies, Travel & Tourism.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.A. (Major + Minor) (Lakeside Campus) -----
+Programme Overview:
+Undergraduate arts programme with Major + Minor options. Available majors/minors
+include Psychology, English, Journalism, Economics, Political Science, History,
+Sociology, Media Studies, Travel & Tourism.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Sc. Psychology (City Campus) -----
+Programme Overview:
+Undergraduate science programme in Psychology.
+Duration: 3 years
+Campus: City Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: B.Sc. Psychology (Lakeside Campus) -----
+Programme Overview:
+Undergraduate science programme in Psychology.
+Duration: 3 years
+Campus: Lakeside Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+----- Offering Name: M.Sc. Psychology (City Campus) -----
+Programme Overview:
+Postgraduate psychology programme with specialisations in Clinical, Counselling,
+and Human Resource Development & Management.
+Duration: 2 years
+Campus: City Campus
+Admission Channel: University PG counselling / relevant entrance where notified
+Eligibility Rules:
+Qualification: Bachelor's degree in Psychology or relevant discipline from a
+  recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree (45% for reserved categories
+  where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Degree marksheets;
+Degree certificate or provisional degree certificate; Government-issued ID proof;
+Passport-size photograph; Signature image
+
+----- Offering Name: Ph.D. Psychology -----
+Programme Overview:
+Doctoral research programme in Psychology.
+Admission Channel: University Ph.D. entrance / interview as notified
+Eligibility Rules:
+Qualification: Master's degree in Psychology or relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree (50% for reserved
+  categories where applicable as per UGC norms)
+Required Documents:
+Mandatory documents: UG and PG marksheets and certificates; Research proposal summary;
+Government-issued ID proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.9 SCHOOL OF ALLIED AND HEALTHCARE SCIENCES (HRBR Campus)
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Sc. Anaesthesia and Operation Theatre Technology (HRBR Campus) -----
+Programme Overview:
+Undergraduate allied health programme in Anaesthesia and Operation Theatre Technology.
+Duration: 3 / 4 years as per B.Sc. / B.Sc. (Hons) pathway notified
+Campus: HRBR Campus
+Admission Channel: University counselling / relevant health sciences entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCB (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Biology individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Entrance scorecard (if applicable); Medical fitness certificate
+
+----- Offering Name: B.Sc. Medical Laboratory Technology (HRBR Campus) -----
+Programme Overview:
+Undergraduate allied health programme in Medical Laboratory Technology.
+Duration: 3 / 4 years as per B.Sc. / B.Sc. (Hons) pathway notified
+Campus: HRBR Campus
+Admission Channel: University counselling / relevant health sciences entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCB (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Biology individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Medical fitness certificate
+
+----- Offering Name: B.Sc. Optometry (HRBR Campus) -----
+Programme Overview:
+Undergraduate allied health programme in Optometry.
+Duration: 3 / 4 years as per B.Sc. / B.Sc. (Hons) pathway notified
+Campus: HRBR Campus
+Admission Channel: University counselling / relevant health sciences entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCB (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Biology individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Medical fitness certificate
+
+----- Offering Name: B.Sc. Medical Radiology and Imaging Technology (HRBR Campus) -----
+Programme Overview:
+Undergraduate allied health programme in Medical Radiology and Imaging Technology.
+Duration: 3 / 4 years as per B.Sc. / B.Sc. (Hons) pathway notified
+Campus: HRBR Campus
+Admission Channel: University counselling / relevant health sciences entrance where notified
+Eligibility Rules:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCB (40% for reserved categories where applicable)
+Individual Subject Requirement: Pass in Physics, Chemistry, and Biology individually
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+Conditional documents: Medical fitness certificate
+
+----- Offering Name: Bachelor of Hospital Administration (HRBR Campus) -----
+Programme Overview:
+Undergraduate programme in Hospital Administration.
+Duration: 3 / 4 years as notified
+Campus: HRBR Campus
+Admission Channel: University counselling / CUET where applicable
+Eligibility Rules:
+Qualification: 10+2 or equivalent from a recognised board
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination (45% for reserved
+  categories where applicable)
+Required Documents:
+Mandatory documents: Class 10 marksheet; Class 12 marksheet; Government-issued ID
+proof; Passport-size photograph; Signature image
+
+
+--------------------------------------------------------------------------------
+I.10 COLLEGE OF NURSING [PROPOSED]
+--------------------------------------------------------------------------------
+
+----- Offering Name: B.Sc. Nursing [PROPOSED] -----
+Programme Overview:
+Proposed undergraduate nursing programme. Applications are not open until
+programme approval is officially notified by the university.
+Duration: As per INC / university norms after approval
+Campus: To be notified
+Admission Channel: Not open for AY 2026-27 until approval notice is published
+Eligibility Rules:
+Qualification: To be notified after programme approval
+Required Documents:
+Not applicable until admissions open
+Operational Notes:
+Do not create an active offering for B.Sc. Nursing [PROPOSED] until the university
+publishes an approval and admissions-open notice.
+
+
+================================================================================
+PART J — STUDENT FAQ GROUNDING (CHATBOT)
+================================================================================
+The future student chatbot can answer questions grounded in this document, such as:
+- What programmes are offered for AY 2026-27?
+- Which campus hosts B.Tech. / MBA / BCA / Law / Allied Health programmes?
+- What are CET / COMEDK / PGCET codes?
+- What documents are required for admission?
+- What is the application process / workflow?
+- What are eligibility criteria for a named programme?
+- What scholarships and student support options exist?
+- What are admissions contact details and campus addresses?
+- What are application and fee payment deadlines?
+- How do queue / appointment / counselling visits work?
+
+Gaps the chatbot should NOT invent:
+- Exact tuition fee amounts not listed in an official fee schedule annexure
+- Guaranteed placement packages or recruiter shortlists for an individual student
+- Seat availability counts at a point in time (unless published in a live notice)
+- Unannounced date changes after document publication
+
+
+================================================================================
+PART K — TEMPLATE CHECKLIST FOR OTHER COLLEGES (REUSE PATTERN)
+================================================================================
+When creating the next college knowledge document, keep these headings:
+1. DOCUMENT CONTROL
+2. PART A — INSTITUTE PROFILE
+3. PART B — RANKINGS (optional)
+4. PART C — ACADEMIC DIFFERENTIATORS (optional)
+5. PART D/E — INFRASTRUCTURE / PLACEMENTS (optional)
+6. PART F — CAMPUSES & CONTACT
+7. PART G — COMMON ADMISSIONS POLICY
+     G must include: channels, codes, common eligibility, mandatory documents,
+     numbered application process steps (1-6), fees/dates, queue/visit,
+     common errors, escalation
+8. PART H — PROGRAMME CATALOGUE INDEX (exact offering names)
+9. PART I — PROGRAMME DETAILS
+     Each offering must include: Offering Name, Programme Overview, Duration,
+     Campus, Admission Channel, Eligibility Rules, Required Documents
+10. PART J — STUDENT FAQ GROUNDING / GAPS
+11. PART K — TEMPLATE CHECKLIST
+
+Naming rule for offerings:
+  {Degree} {Specialisation} ({Campus})
+Example:
+  B.Tech. Computer Science & Engineering (Artificial Intelligence & Machine Learning) (Lakeside Campus)
+
+End of document.
+================================================================================
+END — CMR University Admissions Knowledge Document AY 2026-27
+================================================================================

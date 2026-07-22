@@ -14,11 +14,12 @@ import {
 } from '../../shared/services/razorpay.service.js';
 import {
   applyWorkflowOutcome,
-  autoAdvanceAiSteps,
   findStepOutcome,
   getCurrentWorkflowStep,
   getWorkflowSteps,
 } from '../../shared/helpers/workflowExecution.helper.js';
+import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
+import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
 import { OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
 import { ROLES } from '../../shared/constants/roles.js';
@@ -165,12 +166,12 @@ async function assertApplicationOwnership(application, userEmail) {
 async function advanceWorkflowAfterPayment(application, offering, user, instituteId) {
   const config = normalizePaymentConfig(offering.paymentConfig);
   if (config.timing !== PAYMENT_TIMING.WORKFLOW_STEP || !config.workflowStepId) {
-    return;
+    return { enqueueAiVerification: false };
   }
 
   const step = getCurrentWorkflowStep(application);
   if (!step || step.stepId !== config.workflowStepId) {
-    return;
+    return { enqueueAiVerification: false };
   }
 
   const outcome = findStepOutcome(step, OUTCOME_TYPE.APPROVED);
@@ -185,7 +186,7 @@ async function advanceWorkflowAfterPayment(application, offering, user, institut
   };
 
   const result = applyWorkflowOutcome(application, step, outcome, actor, 'Fee paid online');
-  autoAdvanceAiSteps(application, actor);
+  const enqueueAiVerification = settleAiWorkflowSteps(application, actor);
   await refreshApplicationRuntime(application, instituteId);
 
   if (result.terminal || result.autoAdvance) {
@@ -203,6 +204,8 @@ async function advanceWorkflowAfterPayment(application, offering, user, institut
       application.status,
     ).catch(() => {});
   }
+
+  return { enqueueAiVerification };
 }
 
 /**
@@ -423,16 +426,25 @@ export async function verifyServicePayment(
   await payment.save();
 
   const [application, offering] = await Promise.all([
-    Application.findById(payment.applicationId),
-    Offering.findById(payment.offeringId),
+    Application.findOne({ _id: payment.applicationId, instituteId }),
+    Offering.findOne({ _id: payment.offeringId, instituteId }),
   ]);
 
   if (!application || !offering) {
     throw new AppError('Application not found', 404);
   }
 
-  await advanceWorkflowAfterPayment(application, offering, user, instituteId);
+  const { enqueueAiVerification } = await advanceWorkflowAfterPayment(
+    application,
+    offering,
+    user,
+    instituteId,
+  );
   await application.save();
+
+  if (enqueueAiVerification) {
+    await enqueueApplicationAiVerification(instituteId, application._id.toString()).catch(() => {});
+  }
 
   const [service, institute] = await Promise.all([
     Service.findById(payment.serviceId).select('name'),

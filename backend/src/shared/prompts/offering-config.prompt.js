@@ -168,5 +168,8 @@ export function buildOfferingQueueUserPrompt({ baseContext }) {
   return `${baseContext}
 
 Return JSON: { "queueMode": "queue_only"|"appointment_only"|"hybrid"|null, "queueConfig": { "capacity", "processingRatePerHour" } | null, "appointmentConfig": { "slotDurationMinutes", "slotCapacity", "operatingHoursStart", "operatingHoursEnd" } | null, "documentExcerpt": "quote if queueMode is set, else null" }
-Extract only explicitly stated queue/appointment/counter arrangements. queueMode null if not described.`;
+Extract only explicitly stated queue/appointment/counter arrangements.
+Prefer lines like: queueMode: hybrid | capacity: 120 | processingRatePerHour: 20 | slotDurationMinutes: 20 | operatingHoursStart: 09:30 | operatingHoursEnd: 17:30.
+If virtual appointments are mentioned, note them in documentExcerpt (enabled providers / default provider).
+queueMode null if not described.`;
 }

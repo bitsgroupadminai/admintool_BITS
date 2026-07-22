@@ -52,3 +52,18 @@ export async function touchSession(sessionId, payload) {
 export async function destroySession(sessionId) {
   await redisClient.del(sessionKey(sessionId));
 }
+
+/**
+ * Count active sessions by scanning Redis. Used by monitoring/metrics.
+ * @returns {Promise<number>}
+ */
+export async function countActiveSessions() {
+  let count = 0;
+  for await (const _key of redisClient.scanIterator({
+    MATCH: `${SESSION_PREFIX}*`,
+    COUNT: 200,
+  })) {
+    count += 1;
+  }
+  return count;
+}

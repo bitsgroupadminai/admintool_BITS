@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { AdminListBuilder } from '@/components/ui/AdminListBuilder';
 import { Badge } from '@/components/ui/badge';
 import { applicationsApi } from '@/api/applications.api';
+import { exportsApi } from '@/api/exports.api';
 import { useSocketEvent } from '@/contexts/SocketContext';
 import { WS_EVENTS } from '@/lib/socket';
 import { servicesApi } from '@/api/services.api';
+import { downloadAxiosBlob } from '@/utils/fileDownload';
 import {
   APPLICATION_PAGE_SIZE_OPTIONS,
   APPLICATION_STATUS_BADGE_VARIANT,
@@ -32,6 +34,7 @@ export function ApplicationsListPage() {
   const [services, setServices] = useState([]);
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   const query = useMemo(() => {
     const page = Number.parseInt(searchParams.get('page') || '1', 10);
@@ -106,6 +109,24 @@ export function ApplicationsListPage() {
       sortOrder: query.sortBy === sortBy && query.sortOrder === 'asc' ? 'desc' : 'asc',
       page: 1,
     });
+  };
+
+  const handleExport = async (format) => {
+    setExporting(true);
+    try {
+      const filters = { format };
+      if (query.status) filters.status = query.status;
+      if (query.serviceId) filters.serviceId = query.serviceId;
+      if (query.offeringId) filters.offeringId = query.offeringId;
+
+      const response = await exportsApi.applications(filters);
+      downloadAxiosBlob(response, `service-requests.${format}`);
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to export requests');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const columns = [
@@ -190,10 +211,26 @@ export function ApplicationsListPage() {
 
         <AdminListBuilder
           title="Incoming requests"
-          description="Submitted and in-review requests appear here by default."
+          description="Submitted and in-review requests appear here by default. Export respects active status and service filters."
           searchValue={query.search}
           onSearchChange={(value) => updateQuery({ search: value, page: 1 })}
           searchPlaceholder="Search student name or email..."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {['csv', 'xlsx', 'json'].map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  disabled={exporting}
+                  onClick={() => handleExport(format)}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#C4E8D4] bg-white px-3 text-sm font-semibold text-[#0A6640] transition hover:bg-[#F0FAF5] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          }
           filters={[
             {
               key: 'status',

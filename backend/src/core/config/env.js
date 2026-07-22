@@ -22,6 +22,23 @@ const envSchema = z.object({
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+  /** Vision-capable model used to read image / scanned document uploads. */
+  OPENAI_VISION_MODEL: z.string().default('gpt-4o'),
+  /** Default chat JSON timeout (ms). Large knowledge docs need more than 12s. */
+  OPENAI_TIMEOUT_MS: z.coerce.number().default(60_000),
+  /** Service insights / catalogue extraction timeout (ms). */
+  OPENAI_INSIGHTS_TIMEOUT_MS: z.coerce.number().default(120_000),
+  /** Master switch for AI-driven verification of application documents & eligibility. */
+  AI_VERIFICATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  /** Confidence at/above which a passing AI verdict auto-approves the step. */
+  AI_VERIFY_AUTO_APPROVE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
+  /** Confidence at/above which a failing AI verdict auto-returns for correction. */
+  AI_VERIFY_AUTO_REJECT_THRESHOLD: z.coerce.number().min(0).max(1).default(0.8),
+  /** Concurrency for the AI verification worker. */
+  AI_VERIFICATION_QUEUE_CONCURRENCY: z.coerce.number().default(2),
   PINECONE_API_KEY: z
     .string()
     .optional()
@@ -31,7 +48,7 @@ const envSchema = z.object({
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
   EMBEDDING_QUEUE_CONCURRENCY: z.coerce.number().default(2),
-  RAG_TOP_K: z.coerce.number().default(8),
+  RAG_TOP_K: z.coerce.number().default(12),
   RAG_CHUNK_SIZE: z.coerce.number().default(900),
   RAG_CHUNK_OVERLAP: z.coerce.number().default(150),
   STUDENT_PORTAL_INSTITUTE_ID: z.string().optional(),
@@ -111,6 +128,22 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  /** Optional bearer token protecting the Prometheus /metrics endpoint. Open when unset. */
+  METRICS_TOKEN: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  /** Max rows returned in a single admin record export (CSV/XLSX/JSON). */
+  EXPORT_MAX_ROWS: z.coerce.number().min(1).default(10_000),
+  /** Max page size for the ERP incremental sync API. */
+  ERP_SYNC_MAX_PAGE_SIZE: z.coerce.number().min(1).max(1000).default(200),
+  /** Toggle the periodic dependency health monitor. */
+  HEALTH_MONITOR_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  /** Interval (ms) between background dependency health checks. */
+  HEALTH_MONITOR_INTERVAL_MS: z.coerce.number().min(5_000).default(60_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -57,9 +57,10 @@ INTERPRETIVE (AI-written, grounded in document):
 
 EXTRACTIVE (exact from document — empty array if none found):
 - suggestedOfferings: each { name, description, documentExcerpt }
-  - name: exact offering/intake/category name as written in the document
+  - name: exact programme/offering name as written (prefer "Degree + specialisation" lines; include campus in the name when the document attaches it)
   - description: only text explicitly tied to that offering in the document; else ""
   - documentExcerpt: required direct quote proving this offering; omit offerings you cannot quote
+  - For large programme catalogues, return ALL explicitly listed programmes (up to the schema limit), not a short sample
 
 Use exactly this JSON shape (arrays must be arrays, not strings or booleans):
 ${SERVICE_INSIGHTS_JSON_EXAMPLE}`;

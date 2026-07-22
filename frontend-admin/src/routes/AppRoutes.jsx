@@ -13,6 +13,7 @@ import { OfferingConfigurePage } from '@/pages/admin/offerings/OfferingConfigure
 import { StudentsListPage } from '@/pages/admin/StudentsListPage';
 import { StaffListPage } from '@/pages/admin/StaffListPage';
 import { InstituteSettingsPage } from '@/pages/admin/InstituteSettingsPage';
+import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { NotificationsCenterPage } from '@/pages/admin/NotificationsCenterPage';
 import { ApplicationsListPage } from '@/pages/admin/ApplicationsListPage';
 import { ApplicationDetailPage } from '@/pages/admin/ApplicationDetailPage';
@@ -214,6 +215,16 @@ export function AppRoutes() {
           <ProtectedRoute roles={['admin']}>
             <RequireSetupComplete>
               <InstituteSettingsPage />
+            </RequireSetupComplete>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/system-health"
+        element={
+          <ProtectedRoute roles={['admin']}>
+            <RequireSetupComplete>
+              <SystemHealthPage />
             </RequireSetupComplete>
           </ProtectedRoute>
         }

@@ -7,7 +7,6 @@ import { Institute } from '../institutes/institute.model.js';
 import { User } from '../users/user.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
-import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
@@ -25,33 +24,29 @@ import {
 import { findApplicationDocument } from '../../shared/helpers/applicationDocument.helper.js';
 import { formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import { streamDocumentFile } from '../applications/application.service.js';
+import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
 
 const SALT_ROUNDS = 10;
 
-async function getEnrollmentService(instituteId) {
-  const service = await Service.findOne({
-    instituteId,
-    systemKey: SYSTEM_SERVICE_KEYS.ENROLLMENT,
-  });
-  if (!service) {
-    throw new AppError('Enrollment service is not configured', 400);
-  }
-  return service;
-}
-
 async function loadIntakeContext(application) {
   const [service, offering, institute] = await Promise.all([
-    Service.findById(application.serviceId).select('name systemKey'),
-    Offering.findById(application.offeringId).select('name workflowSteps'),
+    Service.findOne({
+      _id: application.serviceId,
+      instituteId: application.instituteId,
+    }).select('name systemKey'),
+    Offering.findOne({
+      _id: application.offeringId,
+      instituteId: application.instituteId,
+    }).select('name workflowSteps'),
     Institute.findById(application.instituteId).select('name'),
   ]);
 
-  if (service?.systemKey !== SYSTEM_SERVICE_KEYS.ENROLLMENT) {
-    throw new AppError('This record is not an enrollment intake', 400);
+  if (!service) {
+    throw new AppError('Service not found for this intake', 404);
   }
 
   return {
-    serviceName: service?.name ?? 'Enrollment',
+    serviceName: service?.name ?? 'Admissions',
     offeringName: offering?.name ?? 'Programme',
     instituteName: institute?.name ?? 'Your institute',
     offering,
@@ -110,10 +105,8 @@ async function findEnrollmentIntake(instituteId, intakeId) {
  */
 export async function listEnrollmentIntakes(instituteId, query) {
   return cachedRead(cacheNs.ENROLLMENT_INTAKES_LIST, [instituteId, query], async () => {
-  const service = await getEnrollmentService(instituteId);
   const filter = {
     instituteId,
-    serviceId: service._id,
     status: APPLICATION_STATUS.PENDING_AUTHORIZATION,
   };
 
@@ -134,13 +127,18 @@ export async function listEnrollmentIntakes(instituteId, query) {
   ]);
 
   const offeringIds = [...new Set(applications.map((item) => item.offeringId.toString()))];
-  const offerings = await Offering.find({ _id: { $in: offeringIds } }).select('name');
+  const serviceIds = [...new Set(applications.map((item) => item.serviceId.toString()))];
+  const [offerings, services] = await Promise.all([
+    Offering.find({ _id: { $in: offeringIds }, instituteId }).select('name'),
+    Service.find({ _id: { $in: serviceIds }, instituteId }).select('name'),
+  ]);
   const offeringMap = new Map(offerings.map((item) => [item._id.toString(), item]));
+  const serviceMap = new Map(services.map((item) => [item._id.toString(), item]));
 
   const intakes = applications.map((application) =>
     formatIntake(application, {
       offeringName: offeringMap.get(application.offeringId.toString())?.name ?? 'Programme',
-      serviceName: service.name,
+      serviceName: serviceMap.get(application.serviceId.toString())?.name ?? 'Admissions',
     }),
   );
 
@@ -160,6 +158,27 @@ export async function listEnrollmentIntakes(instituteId, query) {
   });
 }
 
+async function loadIntakeAiRecommendation(instituteId, applicationId) {
+  const decision = await AiDecision.findOne({
+    instituteId,
+    applicationId,
+    handler: AI_DECISION_HANDLER.INTAKE_AUTHORIZATION,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!decision) return null;
+
+  return {
+    recommendation: decision.raw?.recommendation ?? null,
+    verdict: decision.verdict ?? null,
+    confidence: decision.confidence ?? null,
+    summary: decision.summary ?? '',
+    issues: decision.issues ?? [],
+    createdAt: decision.createdAt,
+  };
+}
+
 /**
  * @param {string} instituteId
  * @param {string} intakeId
@@ -167,7 +186,8 @@ export async function listEnrollmentIntakes(instituteId, query) {
 export async function getEnrollmentIntake(instituteId, intakeId) {
   return cachedRead(cacheNs.ENROLLMENT_INTAKE_DETAIL, [instituteId, intakeId], async () => {
   const { application, context } = await findEnrollmentIntake(instituteId, intakeId);
-  return formatIntake(application, context);
+  const aiRecommendation = await loadIntakeAiRecommendation(instituteId, application._id);
+  return { ...formatIntake(application, context), aiRecommendation };
   });
 }
 
@@ -189,7 +209,10 @@ export async function approveEnrollmentIntake(instituteId, intakeId, reviewer, p
     throw new AppError('Programme offering not found', 404);
   }
 
-  let studentUser = await User.findOne({ email: application.applicantEmail });
+  let studentUser = await User.findOne({
+    email: application.applicantEmail,
+    instituteId,
+  });
   let temporaryPassword;
 
   if (!studentUser) {
@@ -208,10 +231,7 @@ export async function approveEnrollmentIntake(instituteId, intakeId, reviewer, p
     });
   } else {
     if (studentUser.role !== ROLES.STUDENT) {
-      throw new AppError('This email is already used by a non-student account', 409);
-    }
-    if (studentUser.instituteId.toString() !== instituteId) {
-      throw new AppError('This email belongs to another institute', 409);
+      throw new AppError('This email is already used by a non-student account in this institute', 409);
     }
     studentUser.name = application.applicantName;
     studentUser.enrolledOfferingId = offering._id;

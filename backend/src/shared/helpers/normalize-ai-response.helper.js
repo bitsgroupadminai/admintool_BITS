@@ -49,6 +49,10 @@ export function normalizeServiceInsightsPayload(raw) {
     obj.suggestedOfferings = [];
   }
 
+  if (Array.isArray(obj.suggestedOfferings) && obj.suggestedOfferings.length > 80) {
+    obj.suggestedOfferings = obj.suggestedOfferings.slice(0, 80);
+  }
+
   if (typeof obj.understandingSummary !== 'string' || !obj.understandingSummary.trim()) {
     obj.understandingSummary = 'Summary could not be extracted from the model response.';
   }

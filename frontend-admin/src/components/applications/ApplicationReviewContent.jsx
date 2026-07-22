@@ -3,6 +3,7 @@ import { Download, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
+import { ApplicationAiDecisionsPanel } from '@/components/applications/ApplicationAiDecisionsPanel';
 import {
   APPLICATION_STATUS_BADGE_VARIANT,
   APPLICATION_STATUS_LABELS,
@@ -257,6 +258,8 @@ export function ApplicationReviewContent({
           ) : null}
         </section>
       ) : null}
+
+      <ApplicationAiDecisionsPanel decisions={application.aiDecisions ?? []} />
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <section className="rounded-2xl border border-[#E2EEE8] bg-white p-6 shadow-sm">

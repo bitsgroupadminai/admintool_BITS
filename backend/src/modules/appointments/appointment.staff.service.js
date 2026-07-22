@@ -37,9 +37,10 @@ async function getStaffAppointment(instituteId, appointmentId) {
 }
 
 async function notifyStudentAppointmentChange(appointment, title, body) {
-  const application = await Application.findById(appointment.applicationId).select(
-    'serviceId applicantEmail',
-  );
+  const application = await Application.findOne({
+    _id: appointment.applicationId,
+    instituteId: appointment.instituteId,
+  }).select('serviceId applicantEmail');
   if (!application) return;
 
   const student = await User.findOne({
@@ -72,7 +73,7 @@ export async function markAppointmentComplete(instituteId, appointmentId) {
   await appointment.save();
 
   const [application, offering] = await Promise.all([
-    Application.findById(appointment.applicationId),
+    Application.findOne({ _id: appointment.applicationId, instituteId }),
     Offering.findOne({ _id: appointment.offeringId, instituteId }),
   ]);
 

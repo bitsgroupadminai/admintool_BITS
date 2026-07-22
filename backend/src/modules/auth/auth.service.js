@@ -33,10 +33,6 @@ async function verifyPassword(password, hash) {
  */
 export async function signupAdmin(payload) {
   const email = payload.email.toLowerCase();
-  const existing = await User.findOne({ email });
-  if (existing) {
-    throw new AppError('An account with this email already exists', 409);
-  }
 
   const institute = await Institute.create({ name: payload.instituteName });
   const passwordHash = await hashPassword(payload.password);
@@ -68,9 +64,40 @@ export async function signupAdmin(payload) {
  */
 export async function loginUser(payload) {
   const email = payload.email.toLowerCase();
-  const user = await User.findOne({ email }).select('+passwordHash');
+  const candidates = await User.find({ email, isActive: true }).select('+passwordHash');
 
-  if (!user || !user.isActive) {
+  if (!candidates.length) {
+    throw new AppError(INVALID_CREDENTIALS_MSG, 401);
+  }
+
+  /** @type {typeof candidates[0] | null} */
+  let user = null;
+  for (const candidate of candidates) {
+    if (candidate.lockedUntil && candidate.lockedUntil > new Date()) {
+      continue;
+    }
+    const valid = await verifyPassword(payload.password, candidate.passwordHash);
+    if (valid) {
+      user = candidate;
+      break;
+    }
+  }
+
+  if (!user) {
+    // Increment failed attempts on all unlocked candidates with this email
+    const lockedMsg = candidates.some((c) => c.lockedUntil && c.lockedUntil > new Date());
+    for (const candidate of candidates) {
+      if (candidate.lockedUntil && candidate.lockedUntil > new Date()) continue;
+      candidate.failedLoginAttempts += 1;
+      if (candidate.failedLoginAttempts >= env.LOGIN_MAX_ATTEMPTS) {
+        candidate.lockedUntil = new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000);
+        candidate.failedLoginAttempts = 0;
+      }
+      await candidate.save();
+    }
+    if (lockedMsg && candidates.every((c) => c.lockedUntil && c.lockedUntil > new Date())) {
+      throw new AppError('Too many failed attempts. Please try again later.', 429);
+    }
     throw new AppError(INVALID_CREDENTIALS_MSG, 401);
   }
 
@@ -79,17 +106,6 @@ export async function loginUser(payload) {
       'Too many failed attempts. Please try again later.',
       429,
     );
-  }
-
-  const valid = await verifyPassword(payload.password, user.passwordHash);
-  if (!valid) {
-    user.failedLoginAttempts += 1;
-    if (user.failedLoginAttempts >= env.LOGIN_MAX_ATTEMPTS) {
-      user.lockedUntil = new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000);
-      user.failedLoginAttempts = 0;
-    }
-    await user.save();
-    throw new AppError(INVALID_CREDENTIALS_MSG, 401);
   }
 
   user.failedLoginAttempts = 0;

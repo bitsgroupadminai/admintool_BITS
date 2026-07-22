@@ -33,6 +33,11 @@ import enrollmentIntakeRouter, {
   staffRouter as staffEnrollmentIntakeRouter,
 } from './modules/enrollment-intakes/enrollment-intake.router.js';
 import adminPaymentRouter from './modules/payments/payment.admin.router.js';
+import exportRouter from './modules/exports/export.router.js';
+import erpAdminRouter, { apiRouter as erpApiRouter } from './modules/erp-sync/erp.router.js';
+import monitoringRouter from './modules/monitoring/monitoring.router.js';
+import { httpMetricsMiddleware } from './modules/monitoring/metrics.js';
+import { readiness, metrics } from './modules/monitoring/monitoring.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.resolve(__dirname, '../uploads');
@@ -45,6 +50,8 @@ app.use(
     autoLogging: env.NODE_ENV !== 'test',
   }),
 );
+
+app.use(httpMetricsMiddleware);
 
 app.use(helmet());
 app.use(
@@ -78,6 +85,10 @@ app.get('/api/v1/health', (_req, res) => {
   res.json({ success: true, message: 'OK', data: { status: 'healthy' } });
 });
 
+app.get('/api/v1/health/ready', readiness);
+
+app.get('/metrics', metrics);
+
 app.use('/uploads', express.static(uploadsDir));
 
 app.use('/api/v1/auth', authLimiter, authRouter);
@@ -101,6 +112,10 @@ app.use('/api/v1/student/appointments', appointmentRouter);
 app.use('/api/v1/staff/appointments', staffAppointmentRouter);
 app.use('/api/v1/admin/appointments', adminAppointmentRouter);
 app.use('/api/v1/student/services/:serviceId/chat', chatRouter);
+app.use('/api/v1/exports', exportRouter);
+app.use('/api/v1/admin/erp', erpAdminRouter);
+app.use('/api/v1/erp', erpApiRouter);
+app.use('/api/v1/monitoring', monitoringRouter);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);

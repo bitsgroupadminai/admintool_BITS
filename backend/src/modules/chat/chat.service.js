@@ -495,7 +495,10 @@ function streamTextChunks(text, onChunk) {
 export async function prepareChatSession(instituteId, serviceId, user, offeringId) {
   const { context } = await loadChatContext(instituteId, serviceId, user, offeringId);
   const session = await getOrCreateSession(instituteId, serviceId, user.email.toLowerCase());
-  const previousMessages = await ChatMessage.find({ sessionId: session._id })
+  const previousMessages = await ChatMessage.find({
+    instituteId,
+    sessionId: session._id,
+  })
     .sort({ createdAt: 1 })
     .limit(20);
 
@@ -506,8 +509,9 @@ export async function prepareChatSession(instituteId, serviceId, user, offeringI
   };
 }
 
-export async function persistUserMessage(sessionId, message) {
+export async function persistUserMessage(instituteId, sessionId, message) {
   const userMessage = await ChatMessage.create({
+    instituteId,
     sessionId,
     role: 'user',
     content: message,
@@ -536,6 +540,7 @@ export async function generateAssistantReply(
 
   const session = await getOrCreateSession(instituteId, serviceId, user.email.toLowerCase());
   const assistantMessage = await ChatMessage.create({
+    instituteId,
     sessionId: session._id,
     role: 'assistant',
     content: reply,
@@ -561,7 +566,12 @@ export async function getChatHistory(instituteId, serviceId, user) {
     return { sessionId: null, messages: [] };
   }
 
-  const messages = await ChatMessage.find({ sessionId: session._id }).sort({ createdAt: 1 }).limit(50);
+  const messages = await ChatMessage.find({
+    instituteId,
+    sessionId: session._id,
+  })
+    .sort({ createdAt: 1 })
+    .limit(50);
   return {
     sessionId: session._id.toString(),
     messages: messages.map(formatMessage),
@@ -578,7 +588,7 @@ export async function getChatHistory(instituteId, serviceId, user) {
 /** @deprecated Prefer WebSocket chat:send. Kept for backward compatibility. */
 export async function sendStudentChatMessage(instituteId, serviceId, user, message, offeringId) {
   const session = await prepareChatSession(instituteId, serviceId, user, offeringId);
-  const userMessage = await persistUserMessage(session.sessionId, message);
+  const userMessage = await persistUserMessage(instituteId, session.sessionId, message);
   const assistantMessage = await generateAssistantReply(
     instituteId,
     serviceId,

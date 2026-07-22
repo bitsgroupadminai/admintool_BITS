@@ -1,0 +1,177 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  INTERNAL_ACTION,
+  decideDocumentAction,
+  decideEligibilityAction,
+  buildProfileFromExtractedFields,
+} from '../src/modules/ai-verification/ai-verification.decision.js';
+import {
+  documentVerificationResponseSchema,
+  eligibilityVerificationResponseSchema,
+} from '../src/shared/schemas/verification.schemas.js';
+import { canUserActOnWorkflowStep } from '../src/shared/helpers/workflowExecution.helper.js';
+import { HANDLER_TYPE } from '../src/shared/enums/workflow.enums.js';
+import { ROLES } from '../src/shared/constants/roles.js';
+
+const thresholds = { autoApprove: 0.85, autoReject: 0.8 };
+
+test('decideDocumentAction: clear pass above threshold auto-approves', () => {
+  const action = decideDocumentAction({ verdict: 'pass', confidence: 0.95, thresholds });
+  assert.equal(action, INTERNAL_ACTION.APPROVE);
+});
+
+test('decideDocumentAction: clear fail above threshold returns for correction', () => {
+  const action = decideDocumentAction({ verdict: 'fail', confidence: 0.9, thresholds });
+  assert.equal(action, INTERNAL_ACTION.RETURN);
+});
+
+test('decideDocumentAction: low-confidence pass escalates', () => {
+  const action = decideDocumentAction({ verdict: 'pass', confidence: 0.6, thresholds });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('decideDocumentAction: uncertain verdict escalates', () => {
+  const action = decideDocumentAction({ verdict: 'uncertain', confidence: 0.99, thresholds });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('decideDocumentAction: unreadable pass forces escalation', () => {
+  const action = decideDocumentAction({
+    verdict: 'pass',
+    confidence: 0.99,
+    thresholds,
+    forceEscalate: true,
+  });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('buildProfileFromExtractedFields normalizes field keys', () => {
+  const profile = buildProfileFromExtractedFields([
+    { field: 'PCM Percentage', value: 82 },
+    { field: '  Marks ', value: 75 },
+  ]);
+  assert.equal(profile.customFields['pcm percentage'], 82);
+  assert.equal(profile.customFields['marks'], 75);
+});
+
+const marksRule = [{ field: 'Marks', fieldType: 'numeric', operator: 'gte', value: 60 }];
+
+test('decideEligibilityAction: meets rule with high confidence approves', () => {
+  const { action, evaluation } = decideEligibilityAction({
+    verdict: 'pass',
+    confidence: 0.95,
+    extractedFields: [{ field: 'Marks', value: 78 }],
+    eligibilityRules: marksRule,
+    thresholds,
+  });
+  assert.equal(action, INTERNAL_ACTION.APPROVE);
+  assert.equal(evaluation.eligible, true);
+});
+
+test('decideEligibilityAction: fails rule with high confidence returns for correction', () => {
+  const { action, evaluation } = decideEligibilityAction({
+    verdict: 'pass',
+    confidence: 0.95,
+    extractedFields: [{ field: 'Marks', value: 42 }],
+    eligibilityRules: marksRule,
+    thresholds,
+  });
+  assert.equal(action, INTERNAL_ACTION.RETURN);
+  assert.equal(evaluation.eligible, false);
+});
+
+test('decideEligibilityAction: missing value (unchecked) escalates', () => {
+  const { action } = decideEligibilityAction({
+    verdict: 'pass',
+    confidence: 0.95,
+    extractedFields: [],
+    eligibilityRules: marksRule,
+    thresholds,
+  });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('decideEligibilityAction: uncertain extraction escalates even when rule met', () => {
+  const { action } = decideEligibilityAction({
+    verdict: 'uncertain',
+    confidence: 0.95,
+    extractedFields: [{ field: 'Marks', value: 90 }],
+    eligibilityRules: marksRule,
+    thresholds,
+  });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('decideEligibilityAction: no rules configured approves', () => {
+  // With no rules the deterministic engine reports eligible with no unchecked entries.
+  const { action } = decideEligibilityAction({
+    verdict: 'pass',
+    confidence: 0.9,
+    extractedFields: [],
+    eligibilityRules: [],
+    thresholds,
+  });
+  assert.equal(action, INTERNAL_ACTION.APPROVE);
+});
+
+test('canUserActOnWorkflowStep: staff cannot act on AI step by default', () => {
+  const step = { handledBy: { type: HANDLER_TYPE.AI, assignee: 'document_verification' } };
+  assert.equal(canUserActOnWorkflowStep({ role: ROLES.STAFF, staffRole: 'general' }, step), false);
+});
+
+test('canUserActOnWorkflowStep: staff can act on escalated AI step', () => {
+  const step = { handledBy: { type: HANDLER_TYPE.AI, assignee: 'document_verification' } };
+  assert.equal(
+    canUserActOnWorkflowStep({ role: ROLES.STAFF, staffRole: 'general' }, step, {
+      allowAiStep: true,
+    }),
+    true,
+  );
+});
+
+test('canUserActOnWorkflowStep: admin can always act on AI step', () => {
+  const step = { handledBy: { type: HANDLER_TYPE.AI, assignee: 'document_verification' } };
+  assert.equal(canUserActOnWorkflowStep({ role: ROLES.ADMIN }, step), true);
+});
+
+test('canUserActOnWorkflowStep: nobody acts on student step via helper', () => {
+  const step = { handledBy: { type: HANDLER_TYPE.STUDENT, assignee: 'student' } };
+  assert.equal(
+    canUserActOnWorkflowStep({ role: ROLES.STAFF, staffRole: 'general' }, step, {
+      allowAiStep: true,
+    }),
+    false,
+  );
+});
+
+test('documentVerificationResponseSchema: valid payload parses and applies defaults', () => {
+  const parsed = documentVerificationResponseSchema.parse({
+    verdict: 'pass',
+    confidence: 0.9,
+    summary: 'All documents present and legible.',
+  });
+  assert.equal(parsed.verdict, 'pass');
+  assert.deepEqual(parsed.perDocument, []);
+  assert.deepEqual(parsed.issues, []);
+});
+
+test('documentVerificationResponseSchema: out-of-range confidence fails', () => {
+  const result = documentVerificationResponseSchema.safeParse({
+    verdict: 'pass',
+    confidence: 1.5,
+    summary: 'bad',
+  });
+  assert.equal(result.success, false);
+});
+
+test('eligibilityVerificationResponseSchema: extracted fields parse', () => {
+  const parsed = eligibilityVerificationResponseSchema.parse({
+    verdict: 'pass',
+    confidence: 0.88,
+    summary: 'Extracted marks from marksheet.',
+    extractedFields: [{ field: 'Marks', value: 78, documentExcerpt: 'Total: 78%' }],
+  });
+  assert.equal(parsed.extractedFields[0].value, 78);
+});

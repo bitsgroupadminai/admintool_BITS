@@ -1,0 +1,876 @@
+================================================================================
+CMR UNIVERSITY — ELIGIBILITY RULES KNOWLEDGE DOCUMENT
+Academic Year: 2026-27
+Document Type: Offering Eligibility (machine-extractable)
+Template Version: 1.0
+================================================================================
+PURPOSE
+This document states eligibility criteria for admissions offerings so the admin
+tool can extract structured rules:
+  { field, fieldType, operator, value, documentExcerpt }
+
+RULES FOR EXTRACTION
+- All listed rules for an offering use AND logic.
+- fieldType is one of: numeric | text | boolean
+- operator is one of: eq | neq | gte | lte | gt | lt
+- value for numeric fields is a number (percentage without the % sign in value)
+- documentExcerpt must be a short direct quote from this document
+- Extract ONLY rules listed under the matching Offering Name
+
+COMMON NOTE
+Reserved category relaxation (where stated): use the reserved value when the
+applicant claims an eligible reserved category with valid certificate.
+
+
+================================================================================
+SECTION A — PROGRAMME FAMILY DEFAULTS
+================================================================================
+
+A.1 B.Tech. programmes (Lakeside Campus) — default eligibility
+Applies to every B.Tech. offering at Lakeside Campus unless a programme block
+below states different values.
+
+Eligibility Rules (AND logic):
+1. field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent
+   documentExcerpt: "Qualification must be 10+2 or equivalent from a recognised board"
+2. field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics
+   documentExcerpt: "Required subjects are Physics, Chemistry, Mathematics (PCM)"
+3. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+4. field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Minimum Aggregate is 45% aggregate in PCM"
+5. field: reserved_pcm_aggregate | fieldType: numeric | operator: gte | value: 40
+   documentExcerpt: "Reserved category Minimum Aggregate is 40% aggregate in PCM where applicable"
+6. field: physics_marks | fieldType: numeric | operator: gte | value: 35
+   documentExcerpt: "Individual Subject Requirement: Pass in Physics with minimum 35%"
+7. field: chemistry_marks | fieldType: numeric | operator: gte | value: 35
+   documentExcerpt: "Individual Subject Requirement: Pass in Chemistry with minimum 35%"
+8. field: mathematics_marks | fieldType: numeric | operator: gte | value: 35
+   documentExcerpt: "Individual Subject Requirement: Pass in Mathematics with minimum 35%"
+
+A.2 M.Tech. programmes (Lakeside Campus) — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: Bachelor of Engineering or Technology
+   documentExcerpt: "Qualification must be a Bachelor's degree in Engineering or Technology in a relevant discipline"
+2. field: degree_aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying degree"
+3. field: reserved_degree_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% in the qualifying degree where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+A.3 Ph.D. programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: Master's degree in relevant discipline
+   documentExcerpt: "Qualification must be a Master's degree in the relevant discipline from a recognised university"
+2. field: pg_aggregate | fieldType: numeric | operator: gte | value: 55
+   documentExcerpt: "Minimum Aggregate is 55% aggregate in the qualifying postgraduate degree"
+3. field: reserved_pg_aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Reserved category Minimum Aggregate is 50% as per UGC norms where applicable"
+
+A.4 B.Des. programmes (Lakeside Campus) — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent
+   documentExcerpt: "Qualification must be 10+2 or equivalent from a recognised board"
+2. field: aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying examination"
+3. field: reserved_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+5. field: portfolio_required | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "Portfolio is Mandatory for B.Des. admissions"
+
+A.5 BCA / B.Sc. IT / BBA / B.Com. / B.A. undergraduate programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent
+   documentExcerpt: "Qualification must be 10+2 or equivalent from a recognised board"
+2. field: aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying examination"
+3. field: reserved_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+A.6 MBA programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: Bachelor's degree
+   documentExcerpt: "Qualification must be a Bachelor's degree from a recognised university"
+2. field: degree_aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying degree"
+3. field: reserved_degree_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+A.7 MCA programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: Bachelor's degree with Mathematics
+   documentExcerpt: "Qualification must be a Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms"
+2. field: degree_aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying degree"
+3. field: reserved_degree_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+A.8 Integrated Law (B.A.,LL.B. / B.B.A.,LL.B.) — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent
+   documentExcerpt: "Qualification must be 10+2 or equivalent from a recognised board"
+2. field: aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Minimum Aggregate is 45% aggregate in the qualifying examination"
+3. field: reserved_aggregate | fieldType: numeric | operator: gte | value: 40
+   documentExcerpt: "Reserved category Minimum Aggregate is 40% as per BCI / university norms where applicable"
+4. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+A.9 LL.B. (3-year) — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: Bachelor's degree
+   documentExcerpt: "Qualification must be a Bachelor's degree from a recognised university"
+2. field: degree_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Minimum Aggregate is 45% aggregate in the qualifying degree"
+3. field: reserved_degree_aggregate | fieldType: numeric | operator: gte | value: 40
+   documentExcerpt: "Reserved category Minimum Aggregate is 40% as per BCI / university norms where applicable"
+
+A.10 LL.M. programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: LL.B. or equivalent
+   documentExcerpt: "Qualification must be LL.B. or equivalent from a recognised university"
+2. field: law_aggregate | fieldType: numeric | operator: gte | value: 50
+   documentExcerpt: "Minimum Aggregate is 50% aggregate in the qualifying law degree"
+3. field: reserved_law_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Reserved category Minimum Aggregate is 45% where applicable"
+
+A.11 Allied Health B.Sc. (PCB) programmes — default eligibility
+1. field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent
+   documentExcerpt: "Qualification must be 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+2. field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Biology
+   documentExcerpt: "Required subjects are Physics, Chemistry, Biology (PCB)"
+3. field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45
+   documentExcerpt: "Minimum Aggregate is 45% aggregate in PCB"
+4. field: reserved_pcb_aggregate | fieldType: numeric | operator: gte | value: 40
+   documentExcerpt: "Reserved category Minimum Aggregate is 40% aggregate in PCB where applicable"
+5. field: english_proficiency | fieldType: boolean | operator: eq | value: true
+   documentExcerpt: "English Proficiency is Mandatory"
+
+
+================================================================================
+SECTION B — OFFERING-SPECIFIC ELIGIBILITY BLOCKS
+================================================================================
+Each block starts with "Offering Name:" so extractors can match the active offering.
+
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Requirement                         Rule
+Qualification                       10+2 or equivalent from a recognised board
+Subjects                            Physics, Chemistry, Mathematics
+English Proficiency                 Mandatory
+Minimum Aggregate                   45% aggregate in PCM
+Reserved Minimum Aggregate          40% aggregate in PCM where applicable
+Individual Subject Requirement      Minimum 35% in Physics, Chemistry, and Mathematics individually
+
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification 10+2 or equivalent from a recognised board"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate 45% aggregate in PCM"
+- field: physics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: chemistry_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: mathematics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Artificial Intelligence & Machine Learning) (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent from a recognised board
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Reserved Minimum Aggregate: 40% aggregate in PCM where applicable
+Individual Subject Requirement: Minimum 35% in Physics, Chemistry, and Mathematics individually
+
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent from a recognised board"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+- field: physics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: chemistry_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+- field: mathematics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+
+----- Offering Name: B.Tech. Computer Science & Engineering (Data Science) (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Individual Subject Requirement: Minimum 35% in Physics, Chemistry, and Mathematics individually
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+- field: mathematics_marks | fieldType: numeric | operator: gte | value: 35 | documentExcerpt: "Minimum 35% in Physics, Chemistry, and Mathematics individually"
+
+----- Offering Name: B.Tech. Computer Engineering (AI & ML/IoT) (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+
+----- Offering Name: B.Tech. Computer Science & Technology (AI & ML/IoT) (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+
+----- Offering Name: B.Tech. Information Technology (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+
+----- Offering Name: B.Tech. Electronics & Communication Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+
+----- Offering Name: B.Tech. Artificial Intelligence & Data Science (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Subjects: Physics, Chemistry, Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 45% aggregate in PCM
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Mathematics | documentExcerpt: "Subjects: Physics, Chemistry, Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: pcm_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCM"
+
+----- Offering Name: M.Tech. Computer Science & Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in Engineering / Technology in relevant discipline
+Minimum Aggregate: 50% aggregate in qualifying degree
+Reserved Minimum Aggregate: 45% where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor of Engineering or Technology | documentExcerpt: "Qualification: Bachelor's degree in Engineering / Technology in relevant discipline"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: M.Tech. Artificial Intelligence (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in Engineering / Technology / relevant computing discipline
+Minimum Aggregate: 50% aggregate in qualifying degree
+Reserved Minimum Aggregate: 45% where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor of Engineering or Technology | documentExcerpt: "Qualification: Bachelor's degree in Engineering / Technology / relevant computing discipline"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: Ph.D. Computer Science & Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Master's degree in relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree
+Reserved Minimum Aggregate: 50% as per UGC norms where applicable
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Master's degree in relevant discipline | documentExcerpt: "Qualification: Master's degree in relevant discipline"
+- field: pg_aggregate | fieldType: numeric | operator: gte | value: 55 | documentExcerpt: "Minimum Aggregate: 55% aggregate in qualifying postgraduate degree"
+
+----- Offering Name: Ph.D. ECE (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Master's degree in relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Master's degree in relevant discipline | documentExcerpt: "Qualification: Master's degree in relevant discipline"
+- field: pg_aggregate | fieldType: numeric | operator: gte | value: 55 | documentExcerpt: "Minimum Aggregate: 55% aggregate in qualifying postgraduate degree"
+
+----- Offering Name: Ph.D. Mechanical Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Master's degree in relevant discipline
+Minimum Aggregate: 55% aggregate in qualifying postgraduate degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Master's degree in relevant discipline | documentExcerpt: "Qualification: Master's degree in relevant discipline"
+- field: pg_aggregate | fieldType: numeric | operator: gte | value: 55 | documentExcerpt: "Minimum Aggregate: 55% aggregate in qualifying postgraduate degree"
+
+----- Offering Name: B.Arch. (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Mathematics OR 10+3 Diploma with Mathematics
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination with Mathematics
+Entrance: Valid NATA score (or other accepted architecture entrance) is Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 with Mathematics or 10+3 Diploma with Mathematics | documentExcerpt: "Qualification: 10+2 or equivalent with Mathematics OR 10+3 Diploma with Mathematics"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination with Mathematics"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: nata_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Valid NATA score (or other accepted architecture entrance) is Mandatory"
+
+----- Offering Name: B.Des. Communication Design (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+English Proficiency: Mandatory
+Minimum Aggregate: 50% aggregate in qualifying examination
+Reserved Minimum Aggregate: 45% where applicable
+Portfolio: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+- field: portfolio_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Portfolio: Mandatory"
+
+----- Offering Name: B.Des. Product Design (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Portfolio: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: portfolio_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Portfolio: Mandatory"
+
+----- Offering Name: B.Des. Fashion Design (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Portfolio: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: portfolio_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Portfolio: Mandatory"
+
+----- Offering Name: B.Des. Interior Design (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Portfolio: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: portfolio_required | fieldType: boolean | operator: eq | value: true | documentExcerpt: "Portfolio: Mandatory"
+
+----- Offering Name: B.Sc. Sound Engineering (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Visual Effects & Animation (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Com. International Accounting & Finance (ACCA, UK) (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Preferred subjects: Accountancy / Business Studies / Mathematics / Economics
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Com. Professional - CA Integrated (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Com. Data Science (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Mathematics / Statistics / Computer Science preferred at 10+2
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Com. Certified Management Accountant (US CMA) (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Com. Fintech (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: M.Com. Fintech with AI & Taxation (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: B.Com. / BBA / equivalent bachelor's degree
+Minimum Aggregate: 50% aggregate in qualifying degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: B.Com. or BBA or equivalent | documentExcerpt: "Qualification: B.Com. / BBA / equivalent bachelor's degree"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+
+----- Offering Name: BCA Cloud Computing (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Mathematics / Computer Science / Information Technology preferred at 10+2
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BCA Data Science (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BCA Data Science (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BCA Game Development (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BCA Artificial Intelligence & Machine Learning (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BCA Artificial Intelligence & Machine Learning (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Information Technology (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: M.Sc. Information Technology in Data Science (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in IT / Computer Science / BCA / relevant discipline
+Minimum Aggregate: 50% aggregate in qualifying degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's in IT or Computer Science or BCA | documentExcerpt: "Qualification: Bachelor's degree in IT / Computer Science / BCA / relevant discipline"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+
+----- Offering Name: MCA Artificial Intelligence & Machine Learning (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree with Mathematics | documentExcerpt: "Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MCA Artificial Intelligence & Machine Learning (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree with Mathematics | documentExcerpt: "Qualification: Bachelor's degree with Mathematics at 10+2 or graduation level as per MCA norms"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Digital Marketing (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Business Analytics (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Fintech (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Fintech (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Data Science & AI (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Data Science & AI (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Logistics & Supply Chain Management (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: BBA Tourism & Hospitality Management (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Dual Specialisation (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+Reserved Minimum Aggregate: 45% where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Dual Specialisation (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Dual Specialisation (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Fintech (All Campuses) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Business Analytics & Business Intelligence (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: MBA Technology Management (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: Executive MBA Product Leadership (CMRIT Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 50% aggregate in qualifying degree
+Work Experience: Minimum 2 years of relevant professional work experience
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+- field: work_experience_years | fieldType: numeric | operator: gte | value: 2 | documentExcerpt: "Work Experience: Minimum 2 years of relevant professional work experience"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.A.,LL.B. (Hons) (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 45% aggregate in qualifying examination
+Reserved Minimum Aggregate: 40% as per BCI / university norms where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.B.A.,LL.B. (Hons) (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 45% aggregate in qualifying examination
+Reserved Minimum Aggregate: 40% as per BCI / university norms where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: LL.B. (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree from a recognised university
+Minimum Aggregate: 45% aggregate in qualifying degree
+Reserved Minimum Aggregate: 40% as per BCI / university norms where applicable
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's degree | documentExcerpt: "Qualification: Bachelor's degree from a recognised university"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in qualifying degree"
+
+----- Offering Name: LL.M. Constitutional Law (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: LL.B. or equivalent
+Minimum Aggregate: 50% aggregate in qualifying law degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: LL.B. or equivalent | documentExcerpt: "Qualification: LL.B. or equivalent"
+- field: law_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in the qualifying law degree"
+
+----- Offering Name: LL.M. Commercial Law (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: LL.B. or equivalent
+Minimum Aggregate: 50% aggregate in qualifying law degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: LL.B. or equivalent | documentExcerpt: "Qualification: LL.B. or equivalent"
+- field: law_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in the qualifying law degree"
+
+----- Offering Name: LL.M. Criminal Law (OMBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: LL.B. or equivalent
+Minimum Aggregate: 50% aggregate in qualifying law degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: LL.B. or equivalent | documentExcerpt: "Qualification: LL.B. or equivalent"
+- field: law_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in the qualifying law degree"
+
+----- Offering Name: B.A. (Major + Minor) (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.A. (Major + Minor) (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Psychology (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Psychology (Lakeside Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: M.Sc. Psychology (City Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: Bachelor's degree in Psychology or relevant discipline
+Minimum Aggregate: 50% aggregate in qualifying degree
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: Bachelor's in Psychology or relevant | documentExcerpt: "Qualification: Bachelor's degree in Psychology or relevant discipline"
+- field: degree_aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying degree"
+
+----- Offering Name: B.Sc. Anaesthesia and Operation Theatre Technology (HRBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+Subjects: Physics, Chemistry, Biology
+Minimum Aggregate: 45% aggregate in PCB
+Reserved Minimum Aggregate: 40% where applicable
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Biology | documentExcerpt: "Subjects: Physics, Chemistry, Biology"
+- field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCB"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Medical Laboratory Technology (HRBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+Subjects: Physics, Chemistry, Biology
+Minimum Aggregate: 45% aggregate in PCB
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+- field: subjects | fieldType: text | operator: eq | value: Physics, Chemistry, Biology | documentExcerpt: "Subjects: Physics, Chemistry, Biology"
+- field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCB"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Optometry (HRBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+Subjects: Physics, Chemistry, Biology
+Minimum Aggregate: 45% aggregate in PCB
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+- field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCB"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: B.Sc. Medical Radiology and Imaging Technology (HRBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)
+Subjects: Physics, Chemistry, Biology
+Minimum Aggregate: 45% aggregate in PCB
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent with Physics, Chemistry, Biology (PCB)"
+- field: pcb_aggregate | fieldType: numeric | operator: gte | value: 45 | documentExcerpt: "Minimum Aggregate: 45% aggregate in PCB"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+----- Offering Name: Bachelor of Hospital Administration (HRBR Campus) -----
+Eligibility Rules — Applicants must satisfy ALL of the following:
+Qualification: 10+2 or equivalent
+Minimum Aggregate: 50% aggregate in qualifying examination
+English Proficiency: Mandatory
+Extractable rules:
+- field: qualification | fieldType: text | operator: eq | value: 10+2 or equivalent | documentExcerpt: "Qualification: 10+2 or equivalent"
+- field: aggregate | fieldType: numeric | operator: gte | value: 50 | documentExcerpt: "Minimum Aggregate: 50% aggregate in qualifying examination"
+- field: english_proficiency | fieldType: boolean | operator: eq | value: true | documentExcerpt: "English Proficiency: Mandatory"
+
+
+================================================================================
+SECTION C — HOW TO USE WITH THE PLATFORM
+================================================================================
+1. Upload this file as a knowledge document on the same Admissions service.
+2. Open the target offering (name must match an "Offering Name:" line above).
+3. On Eligibility step, click "Extract from documents".
+4. Confirm the suggested rules (field / type / operator / value).
+5. For other colleges: copy this template; keep "Offering Name:" + "Extractable rules:"
+   lines with field | fieldType | operator | value | documentExcerpt.
+
+END OF ELIGIBILITY RULES DOCUMENT
+================================================================================

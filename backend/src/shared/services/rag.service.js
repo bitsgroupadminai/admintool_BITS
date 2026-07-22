@@ -277,7 +277,9 @@ export async function retrieveRelevantChunks(instituteId, serviceId, query) {
     env.RAG_TOP_K,
   );
 
-  const minScore = 0.35;
+  // Slightly lower floor so niche facts (entrance codes, campus helplines) still retrieve
+  // on large multi-topic college corpora; chat prompts still forbid inventing missing facts.
+  const minScore = 0.28;
   return matches.filter((match) => match.score >= minScore);
 }
 

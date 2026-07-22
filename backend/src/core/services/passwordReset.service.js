@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { redisClient } from '../config/redis.js';
 import { env } from '../config/env.js';
 import { User } from '../../modules/users/user.model.js';
+import { Institute } from '../../modules/institutes/institute.model.js';
 import { AppError } from '../utils/AppError.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { buildPasswordResetEmail } from '../../shared/templates/emailLayout.js';
@@ -24,9 +25,9 @@ async function hashPassword(password) {
  */
 export async function requestPasswordReset(email) {
   const normalized = email.toLowerCase().trim();
-  const user = await User.findOne({ email: normalized, isActive: true });
+  const users = await User.find({ email: normalized, isActive: true });
 
-  if (user) {
+  for (const user of users) {
     const token = crypto.randomBytes(32).toString('hex');
     await redisClient.setEx(
       `${RESET_PREFIX}${token}`,
@@ -34,20 +35,22 @@ export async function requestPasswordReset(email) {
       JSON.stringify({ userId: user._id.toString(), email: normalized }),
     );
 
+    const institute = await Institute.findById(user.instituteId).select('name');
     const baseUrl =
       user.role === ROLES.STUDENT ? env.STUDENT_CLIENT_URL : env.ADMIN_CLIENT_URL;
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
     const portalLabel = user.role === ROLES.STUDENT ? 'EduPortal Student' : 'EduPortal Staff';
-    const email = buildPasswordResetEmail({
+    const instituteLabel = institute?.name ? ` (${institute.name})` : '';
+    const mail = buildPasswordResetEmail({
       recipientName: user.name,
       resetUrl,
-      portalLabel,
+      portalLabel: `${portalLabel}${instituteLabel}`,
     });
 
     await queueEmailNotification({
       to: normalized,
       type: 'password_reset',
-      ...email,
+      ...mail,
     });
   }
 

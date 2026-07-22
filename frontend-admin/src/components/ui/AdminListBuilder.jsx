@@ -17,6 +17,7 @@ export function AdminListBuilder({
   onSearchChange,
   searchPlaceholder = 'Search...',
   filters = [],
+  actions = null,
   columns,
   rows,
   getRowKey,
@@ -41,6 +42,7 @@ export function AdminListBuilder({
             {description && <p className="mt-1 text-sm text-[#4B6358]">{description}</p>}
           </div>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            {actions}
             <label className="relative block min-w-0 lg:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
               <input

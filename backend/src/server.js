@@ -8,28 +8,35 @@ import { verifyEmailTransport } from './core/services/email.service.js';
 import { startEmailWorker, stopEmailWorker } from './core/workers/email.worker.js';
 import { startSlaWorker, stopSlaWorker } from './core/workers/sla.worker.js';
 import { startEmbeddingWorker, stopEmbeddingWorker } from './core/workers/embedding.worker.js';
+import { startAiVerificationWorker, stopAiVerificationWorker } from './core/workers/ai-verification.worker.js';
 import { startOfferingExpiryJob, stopOfferingExpiryJob } from './core/workers/offeringExpiry.worker.js';
 import { startOperationsWorker, stopOperationsWorker } from './core/workers/operations.worker.js';
+import { startHealthMonitor, stopHealthMonitor } from './core/workers/healthMonitor.worker.js';
 import { closeOperationsQueue } from './core/queues/operations.queue.js';
 import { closeEmailQueue } from './core/queues/email.queue.js';
 import { closeSlaQueue } from './core/queues/sla.queue.js';
 import { closeEmbeddingQueue } from './core/queues/embedding.queue.js';
+import { closeAiVerificationQueue } from './core/queues/ai-verification.queue.js';
 import { closeQueueConnection } from './core/queues/connection.js';
 import { logger } from './core/logger/index.js';
 
 import { bootstrapEnrollmentServices } from './modules/enrollment/enrollment-seed.service.js';
+import { ensureTenantIndexes } from './shared/helpers/tenantIndexes.helper.js';
 
 async function shutdown() {
   logger.info('Shutting down server...');
   await stopEmailWorker();
   await stopSlaWorker();
   await stopEmbeddingWorker();
+  await stopAiVerificationWorker();
   stopOfferingExpiryJob();
+  stopHealthMonitor();
   await stopOperationsWorker();
   await closeOperationsQueue();
   await closeEmailQueue();
   await closeSlaQueue();
   await closeEmbeddingQueue();
+  await closeAiVerificationQueue();
   await closeWebSocket();
   await closeQueueConnection();
   process.exit(0);
@@ -37,17 +44,20 @@ async function shutdown() {
 
 async function start() {
   await connectDb();
+  await ensureTenantIndexes();
   await connectRedis();
   await bootstrapEnrollmentServices();
   startOperationsWorker();
   startEmailWorker();
   startSlaWorker();
   startEmbeddingWorker();
+  startAiVerificationWorker();
   startOfferingExpiryJob();
   await verifyEmailTransport();
 
   const server = http.createServer(app);
   initWebSocket(server);
+  startHealthMonitor();
 
   server.listen(env.PORT, () => {
     logger.info(`Server listening on port ${env.PORT}`);

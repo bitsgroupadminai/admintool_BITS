@@ -154,9 +154,11 @@ export async function getAdminPaymentDetail(instituteId, paymentId) {
   }
 
   const [application, service, offering] = await Promise.all([
-    Application.findById(payment.applicationId).select('applicantName applicantEmail status createdAt'),
-    Service.findById(payment.serviceId).select('name description'),
-    Offering.findById(payment.offeringId).select('name paymentConfig'),
+    Application.findOne({ _id: payment.applicationId, instituteId }).select(
+      'applicantName applicantEmail status createdAt',
+    ),
+    Service.findOne({ _id: payment.serviceId, instituteId }).select('name description'),
+    Offering.findOne({ _id: payment.offeringId, instituteId }).select('name paymentConfig'),
   ]);
 
   const [formatted] = await loadPaymentNames([payment]);

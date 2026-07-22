@@ -102,8 +102,12 @@ async function loadAppointmentContext(appointmentId, instituteId) {
 
   const [institute, offering, application] = await Promise.all([
     Institute.findById(instituteId).select('name'),
-    Offering.findById(appointment.offeringId).select('name serviceId appointmentConfig'),
-    Application.findById(appointment.applicationId).select('applicantName applicantEmail serviceId'),
+    Offering.findOne({ _id: appointment.offeringId, instituteId }).select(
+      'name serviceId appointmentConfig',
+    ),
+    Application.findOne({ _id: appointment.applicationId, instituteId }).select(
+      'applicantName applicantEmail serviceId',
+    ),
   ]);
 
   return { appointment, institute, offering, application };
@@ -448,7 +452,9 @@ export async function sendVirtualMeetingLink(instituteId, appointmentId, staffUs
     additionalRecipients: payload.additionalRecipients ?? [],
   });
 
-  return formatAppointmentRecord((await Appointment.findById(appointmentId)) ?? appointment);
+  return formatAppointmentRecord(
+    (await Appointment.findOne({ _id: appointmentId, instituteId })) ?? appointment,
+  );
 }
 
 /** @deprecated Use sendVirtualMeetingLink */

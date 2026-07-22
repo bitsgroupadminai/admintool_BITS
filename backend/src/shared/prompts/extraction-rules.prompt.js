@@ -18,11 +18,21 @@ export const DOCUMENT_EXTRACTION_RULES = `EXTRACTIVE OUTPUT (verbatim from the d
 - Every extracted item MUST include documentExcerpt: a direct quote from the document (≤300 characters) proving it.
 - Preserve document order for lists (offerings, steps, documents, rules).`;
 
-export const OFFERING_DEFINITION = `An "offering" is a distinct operational intake track under a parent service that students apply to separately (e.g. separate application categories, quotas, batches, or programs with their own stated process).
+export const OFFERING_DEFINITION = `An "offering" is a distinct programme / course / intake track under a parent service that students apply to separately.
+
+INCLUDE as offerings when explicitly listed:
+- Degree programmes and specialisations (e.g. "B.Tech. Computer Science & Engineering", "MBA Fintech", "BCA Data Science")
+- Named application categories, quotas, batches, or campuses when the document presents them as separate apply-to options
+- Prefer the most specific named programme line (degree + specialisation + campus if stated together)
+
+DO NOT treat as offerings:
+- Marketing section headings alone (e.g. "Rankings", "Placements", "Vision")
+- Workflow steps, document checklist titles, or generic labels like "Undergraduate" with no programme name
+- Years, survey names, or ranking positions
 
 EXTRACTION RULES FOR OFFERINGS:
-- List ONLY offerings explicitly named or labeled in the document (exact titles/headings/category names).
-- Do NOT create offerings from years, examples, or patterns unless the document uses that exact label.
-- Do NOT treat workflow steps, document names, or section headings as offerings.
+- List ONLY offerings explicitly named in the document (exact titles as written; light cleanup of line breaks OK).
+- For nested catalogues (School → Degree → Specialisation), emit one offering per specialisation/programme line, not only the school name.
 - If the document describes a single intake only, return exactly one offering with its exact name from the document.
-- If no distinct offering is explicitly named, return an empty suggestedOfferings array.`;
+- If no distinct offering is explicitly named, return an empty suggestedOfferings array.
+- Return as many valid offerings as the document lists (do not stop early at an arbitrary small count).`;

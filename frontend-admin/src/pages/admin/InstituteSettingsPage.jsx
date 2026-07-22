@@ -3,13 +3,24 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Building2, Globe, Settings, RefreshCw, CalendarDays } from 'lucide-react';
+import {
+  Building2,
+  Globe,
+  Settings,
+  RefreshCw,
+  CalendarDays,
+  KeyRound,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { instituteApi } from '@/api/institute.api';
 import { settingsApi } from '@/api/settings.api';
+import { erpApi } from '@/api/erp.api';
 import { useAuthStore } from '@/store/auth.store';
+import { useConfirm } from '@/components/ui/confirm-context';
 
 const inputClass =
   'w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 py-2.5 text-sm text-[#052E1C] placeholder-[#A8BDB5] outline-none transition-all duration-200 hover:border-[#6EE7B7] hover:bg-[#EDFAF3] focus:border-[#6EE7B7] focus:bg-white focus:ring-2 focus:ring-[#6EE7B7]/20';
@@ -18,9 +29,18 @@ const instituteSchema = z.object({
   name: z.string().min(2, 'Institute name is required'),
 });
 
+const EMPTY_ERP = {
+  enabled: false,
+  hasKey: false,
+  apiKeyPrefix: null,
+  keyGeneratedAt: null,
+  lastSyncAt: null,
+};
+
 export function InstituteSettingsPage() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [portalSubmitting, setPortalSubmitting] = useState(false);
@@ -39,6 +59,10 @@ export function InstituteSettingsPage() {
     operatingHoursStart: '09:00',
     operatingHoursEnd: '13:00',
   });
+  const [erpSync, setErpSync] = useState(EMPTY_ERP);
+  const [erpBusy, setErpBusy] = useState(false);
+  const [revealedApiKey, setRevealedApiKey] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const {
     register,
@@ -51,10 +75,11 @@ export function InstituteSettingsPage() {
     async function load() {
       if (!user?.instituteId) return;
       try {
-        const [instituteRes, autoAssignRes, calendarRes] = await Promise.all([
+        const [instituteRes, autoAssignRes, calendarRes, erpRes] = await Promise.all([
           instituteApi.get(user.instituteId),
           settingsApi.getAutoAssignment(user.instituteId).catch(() => null),
           settingsApi.getOperationsCalendar(user.instituteId).catch(() => null),
+          erpApi.getStatus().catch(() => null),
         ]);
         const inst = instituteRes.data.data.institute;
         setInstitute(inst);
@@ -64,6 +89,9 @@ export function InstituteSettingsPage() {
         }
         if (calendarRes?.data?.data?.operationsCalendar) {
           setOperationsCalendar(calendarRes.data.data.operationsCalendar);
+        }
+        if (erpRes?.data?.data?.erpSync) {
+          setErpSync(erpRes.data.data.erpSync);
         }
       } catch (err) {
         toast.error(err.message || 'Failed to load institute settings');
@@ -151,6 +179,71 @@ export function InstituteSettingsPage() {
     });
   };
 
+  const onGenerateErpKey = async () => {
+    const ok = await confirm({
+      title: erpSync.hasKey ? 'Rotate ERP API key?' : 'Generate ERP API key?',
+      description: erpSync.hasKey
+        ? 'The current key will stop working immediately. Copy the new key now — it is shown only once.'
+        : 'A new API key will be created for machine-to-machine ERP sync. Copy it now — it is shown only once.',
+      confirmLabel: erpSync.hasKey ? 'Rotate key' : 'Generate key',
+    });
+    if (!ok) return;
+
+    setErpBusy(true);
+    try {
+      const { data } = await erpApi.generateApiKey();
+      setRevealedApiKey(data.data.apiKey);
+      setCopied(false);
+      setErpSync({
+        enabled: true,
+        hasKey: true,
+        apiKeyPrefix: data.data.apiKeyPrefix,
+        keyGeneratedAt: data.data.keyGeneratedAt,
+        lastSyncAt: erpSync.lastSyncAt,
+      });
+      toast.success('API key generated — copy it now');
+    } catch (err) {
+      toast.error(err.message || 'Failed to generate ERP API key');
+    } finally {
+      setErpBusy(false);
+    }
+  };
+
+  const onRevokeErpKey = async () => {
+    const ok = await confirm({
+      title: 'Revoke ERP API key?',
+      description: 'ERP sync will be disabled and any existing key will stop working immediately.',
+      confirmLabel: 'Revoke key',
+    });
+    if (!ok) return;
+
+    setErpBusy(true);
+    try {
+      const { data } = await erpApi.revokeApiKey();
+      setErpSync(data.data.erpSync ?? EMPTY_ERP);
+      setRevealedApiKey(null);
+      setCopied(false);
+      toast.success('ERP API key revoked');
+    } catch (err) {
+      toast.error(err.message || 'Failed to revoke ERP API key');
+    } finally {
+      setErpBusy(false);
+    }
+  };
+
+  const copyApiKey = async () => {
+    if (!revealedApiKey) return;
+    try {
+      await navigator.clipboard.writeText(revealedApiKey);
+      setCopied(true);
+      toast.success('API key copied');
+    } catch {
+      toast.error('Could not copy to clipboard');
+    }
+  };
+
+  const erpListUrl = `${window.location.origin}/api/v1/erp/applications`;
+
   return (
     <AdminLayout>
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
@@ -162,7 +255,7 @@ export function InstituteSettingsPage() {
             Institute settings
           </h1>
           <p className="mt-1.5 text-sm text-[#4B6358]">
-            Manage institute details, student portal host, and assignment rules
+            Manage institute details, student portal host, assignment rules, and ERP sync
           </p>
         </div>
 
@@ -424,6 +517,114 @@ export function InstituteSettingsPage() {
                 >
                   {calendarSaving ? 'Saving...' : 'Save operations calendar'}
                 </button>
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_4px_24px_rgba(10,102,64,0.07)]">
+              <div className="flex items-center gap-3 border-b border-[#E2EEE8] px-6 py-5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F0FAF5] text-[#0A6640]">
+                  <KeyRound className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#052E1C]">ERP data sync</h2>
+                  <p className="text-xs text-[#4B6358]">
+                    Machine-to-machine feed of completed and in-progress service requests
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4 px-6 py-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge variant={erpSync.enabled ? 'active' : 'draft'}>
+                    {erpSync.enabled ? 'Sync enabled' : 'Sync disabled'}
+                  </Badge>
+                  {erpSync.apiKeyPrefix ? (
+                    <span className="text-xs text-[#4B6358]">
+                      Key prefix{' '}
+                      <code className="rounded bg-[#F0FAF5] px-1.5 py-0.5 font-mono text-[#052E1C]">
+                        {erpSync.apiKeyPrefix}…
+                      </code>
+                    </span>
+                  ) : null}
+                </div>
+
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-[#4B6358]">
+                      Key generated
+                    </dt>
+                    <dd className="mt-1 text-[#052E1C]">
+                      {erpSync.keyGeneratedAt
+                        ? new Date(erpSync.keyGeneratedAt).toLocaleString()
+                        : '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-[#4B6358]">
+                      Last sync poll
+                    </dt>
+                    <dd className="mt-1 text-[#052E1C]">
+                      {erpSync.lastSyncAt
+                        ? new Date(erpSync.lastSyncAt).toLocaleString()
+                        : 'Never'}
+                    </dd>
+                  </div>
+                </dl>
+
+                {revealedApiKey ? (
+                  <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] p-4">
+                    <p className="text-sm font-semibold text-[#92400E]">
+                      Copy this API key now — it will not be shown again
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <code className="block flex-1 break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-[#052E1C]">
+                        {revealedApiKey}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={copyApiKey}
+                        className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#FCD34D] bg-white px-4 text-sm font-semibold text-[#92400E] hover:bg-[#FEF3C7]"
+                      >
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4 text-sm text-[#4B6358]">
+                  <p className="font-semibold text-[#052E1C]">Sync endpoint</p>
+                  <code className="mt-2 block break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-[#052E1C]">
+                    GET {erpListUrl}
+                  </code>
+                  <p className="mt-2 text-xs">
+                    Authenticate with header{' '}
+                    <code className="rounded bg-white px-1 py-0.5">x-api-key: &lt;key&gt;</code> or{' '}
+                    <code className="rounded bg-white px-1 py-0.5">Authorization: Bearer &lt;key&gt;</code>.
+                    Use <code className="rounded bg-white px-1 py-0.5">updatedSince</code> and{' '}
+                    <code className="rounded bg-white px-1 py-0.5">cursor</code> for incremental sync.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={onGenerateErpKey}
+                    disabled={erpBusy}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0A6640] to-[#084F31] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_2px_10px_rgba(10,102,64,0.28)] disabled:opacity-60"
+                  >
+                    {erpBusy ? 'Working...' : erpSync.hasKey ? 'Rotate API key' : 'Generate API key'}
+                  </button>
+                  {erpSync.hasKey ? (
+                    <button
+                      type="button"
+                      onClick={onRevokeErpKey}
+                      disabled={erpBusy}
+                      className="inline-flex items-center gap-2 rounded-xl border border-[#FECACA] bg-white px-5 py-2.5 text-sm font-semibold text-[#B91C1C] hover:bg-[#FEF2F2] disabled:opacity-60"
+                    >
+                      Revoke key
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </section>
           </div>

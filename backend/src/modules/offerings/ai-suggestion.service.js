@@ -34,7 +34,7 @@ export async function generateSuggestions(offeringId, instituteId, section) {
     throw new AppError('Offering not found', 404);
   }
 
-  const service = await Service.findById(offering.serviceId);
+  const service = await Service.findOne({ _id: offering.serviceId, instituteId });
   const documents = await KnowledgeDocument.find({
     serviceId: offering.serviceId,
     instituteId,

@@ -14,4 +14,4 @@ Runs at http://localhost:5174 and proxies `/api` to the backend at http://localh
 ## Related
 
 - Admin/staff portal: `../frontend-admin` (http://localhost:5173)
-- Backend API: `../backend` (http://localhost:5000/api/v1)
+- Backend API: `../backend` (http://localhost:5001/api/v1)

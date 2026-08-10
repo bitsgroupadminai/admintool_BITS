@@ -103,15 +103,15 @@ counter” can reduce confusion and make campus admin work more structured.
 
 ## List of Figures
 
-- Figure 1.1  High-level system architecture
-- Figure 2.1  Data flow for student application lifecycle
-- Figure 2.2  Component interaction (Admin → Backend → Student → Staff)
-- Figure 2.3  Offering configuration wizard flow
-- Figure 2.4  AI verification decision flow
-- Figure 2.5  Queue and appointment hybrid flow
-- Figure 4.1  Local deployment / demo environment
+- Figure 1.1  High-level system architecture — `final-submission-doc/figures/fig-1.1-system-architecture.png`
+- Figure 2.1  Data flow for student application lifecycle — `final-submission-doc/figures/fig-2.1-data-flow.png`
+- Figure 2.2  Component interaction (Admin → Backend → Student → Staff) — generate from PlantUML in §2.1 or draw from architecture figure
+- Figure 2.3  Offering configuration wizard flow — `final-submission-doc/figures/fig-2.3-offering-configuration.png`
+- Figure 2.4  AI verification decision flow — `final-submission-doc/figures/fig-2.4-verification-decision.png`
+- Figure 2.5  Queue and appointment hybrid flow — `final-submission-doc/figures/fig-2.5-hybrid-queue-appointment.png`
+- Figure 4.1  Local deployment / demo environment — generate from PlantUML in §4.2 (or screenshot Docker + three terminals)
 
-*(Generate these later from the PlantUML blocks in this file.)*
+*(PNG figures are ready under `final-submission-doc/figures/`. Remaining PlantUML blocks can be rendered at plantuml.com if needed.)*
 
 ## List of Tables
 
@@ -1095,7 +1095,7 @@ chat → AI verification → monitoring/exports/ERP)
 - Workers, prompts, schemas, and tests added over time
 
 **Branch used for development:**
-[Write your working branch name, e.g. main / develop]
+`release/portal-testing-v1-bhupeshb7` (feature/integration branch for portal testing; also sync/merge to `main` as required by your centre)
 
 ### 5.2 Weekly Progress Summary
 
@@ -1247,6 +1247,9 @@ Software Architectures,” Ph.D. dissertation, UC Irvine, 2000.
 
 ## Appendix A: User Manual (short)
 
+> Full standalone User Manual for separate submission:  
+> `final-submission-doc/04-User_Manual/User_Manual.md`
+
 ### A.1 Admin
 
 1. Open http://localhost:5173/signup and create institute admin.
@@ -1275,6 +1278,9 @@ notifications, and system health from admin menu.
 7. Resubmit if returned for correction.
 
 ## Appendix B: Installation Guide
+
+> Full standalone Installation Guide for separate submission:  
+> `final-submission-doc/05-Installation_Guide/Installation_Guide.md`
 
 Prerequisites: Node.js 20+, Docker Desktop, Git.
 

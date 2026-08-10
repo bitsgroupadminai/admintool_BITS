@@ -1,63 +1,112 @@
-# BITS Platform
+# BITS Platform — Smart Workflow-Based Queue & Administrative Service Management System
 
-Workflow-first educational administration platform with two separate frontends:
+Workflow-first educational administration platform with three runnable parts:
 
-- **Admin & staff portal** — institute setup, services, offerings, workflow configuration
-- **Student portal** — separate domain (in development)
+- **Backend API** (`backend/`) — Express modular monolith (auth, services, offerings, applications, queue, appointments, AI verification, chat, payments, monitoring)
+- **Admin & staff portal** (`frontend-admin/`) — institute setup, service/offering configuration, review, operations
+- **Student portal** (`frontend-student/`) — enrollment, applications, guidance chat, queue/appointments
 
 ## Prerequisites
 
-- Node.js 20+
-- Docker (for MongoDB + Redis)
+- Node.js **20+**
+- npm
+- Docker Desktop (for MongoDB + Redis)
+- Git
+- Modern browser (Chrome / Edge)
 
 ## Quick start
 
 ```bash
-# Start databases
+# 1) Start databases
 docker compose up -d
 
-# Backend
+# 2) Backend
 cd backend
-cp .env.example .env   # if needed
+copy .env.example .env    # Windows
+# cp .env.example .env    # macOS / Linux
+# Edit .env — at least SESSION_SECRET, MONGODB_URI, REDIS_URL
 npm install
 npm run dev
 
-# Admin & staff portal (new terminal)
+# 3) Admin & staff portal (new terminal)
 cd frontend-admin
 npm install
 npm run dev
 
-# Student portal (new terminal)
+# 4) Student portal (new terminal)
 cd frontend-student
 npm install
 npm run dev
 ```
 
-- Admin portal: http://localhost:5173
-- Student portal: http://localhost:5174
-- API: http://localhost:5001/api/v1
+| App | URL |
+| --- | --- |
+| Admin / Staff portal | http://localhost:5173 |
+| Student portal | http://localhost:5174 |
+| Backend API | http://localhost:5001/api/v1 |
+| Health check | http://localhost:5001/api/v1/health |
 
-## Test flow (admin portal)
+## Environment variables (backend)
 
-1. Open `/signup` — create institute + first admin
-2. Complete setup wizard (institute name → optional staff → review)
-3. Land on admin dashboard → **Manage services**
-4. Set `OPENAI_API_KEY` in `backend/.env` for document-aware AI (optional; falls back to heuristics)
-5. Create a service → upload PDF/DOCX knowledge docs → **Generate understanding** → review suggested offerings → create an offering
-6. Configure offering (Eligibility → Documents → Workflow → Queue → Review → Activate) with per-step AI assist
-7. Add staff from setup or log in as staff with credentials set by admin
+Copy `backend/.env.example` → `backend/.env`. Never commit `.env`.
+
+| Variable | Required for demo? | Purpose |
+| --- | --- | --- |
+| `MONGODB_URI` | Yes | MongoDB connection |
+| `REDIS_URL` | Yes | Sessions + BullMQ workers |
+| `SESSION_SECRET` | Yes | Session signing |
+| `ADMIN_CLIENT_URL` | Yes | CORS / cookies for admin UI |
+| `STUDENT_CLIENT_URL` | Yes | CORS / cookies for student UI |
+| `OPENAI_API_KEY` | Optional | AI extraction, verification, chat |
+| `PINECONE_API_KEY` | Optional | RAG vector search for chatbot |
+| `SMTP_*` | Optional | Email notifications / password reset |
+| `RAZORPAY_*` | Optional | Fee payments |
+| `GOOGLE_OAUTH_*` | Optional | Google Meet for virtual appointments |
+| `AI_VERIFICATION_ENABLED` | Optional | Enable AI document/eligibility worker |
+
+Without OpenAI/Pinecone/SMTP/Razorpay the core workflow still runs; AI/email/payment features degrade gracefully.
+
+## Tests
+
+```bash
+cd backend
+npm test
+```
+
+Unit tests cover AI verification decision thresholds, eligibility decision helpers, workflow step permissions, and verification schemas.
+
+Manual end-to-end flows: see `APP_TEST_GUIDE.txt` and `final-submission-doc/02-Test_Cases.md`.
 
 ## Project structure
 
-- `backend/` — Express modular monolith (auth, users, institutes, services, offerings)
-- `frontend-admin/` — React + Vite + Tailwind admin/staff portal
-- `frontend-student/` — React + Vite + Tailwind student portal (separate domain)
+```text
+backend/                 API + workers
+frontend-admin/          Admin & staff React app
+frontend-student/        Student React app
+docker-compose.yml       MongoDB 7 + Redis 7
+knowledge-bases/         Sample institute policy texts (demo)
+final-submission-doc/    Capstone submission documents
+```
 
-## Environment
+## Security notes for packaging / zip
 
-Backend CORS allows both portal origins via:
+Do **not** include in any submission zip:
 
-- `ADMIN_CLIENT_URL` (default: http://localhost:5173)
-- `STUDENT_CLIENT_URL` (default: http://localhost:5174)
+- `**/node_modules/`
+- `backend/.env` or any real secrets
+- `backend/uploads/`
+- `study-project-*.json` (Google service-account keys)
+- `backend/credentials/`
 
-See `tech stack and project guidelines.md` and `PRD Admin Tool NEW.md` for full product scope.
+See `final-submission-doc/09-Code_Zip_Instructions.md`.
+
+## Documentation
+
+Full submission pack: `final-submission-doc/`
+
+- Project report draft, test cases, validation report
+- User manual, installation guide
+- Presentation outline, demo script, GitHub/demo links
+- Plagiarism compliance declaration
+
+Product/PRD references: `PRD Admin Tool NEW.md`, `tech stack and project guidelines.md`.

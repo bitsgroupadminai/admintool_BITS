@@ -1,112 +1,224 @@
-# BITS Platform — Smart Workflow-Based Queue & Administrative Service Management System
+# BITS Edu Admin Platform
 
-Workflow-first educational administration platform with three runnable parts:
+**Smart Workflow-Based Queue and Administrative Service Management System for Educational Institutions**
 
-- **Backend API** (`backend/`) — Express modular monolith (auth, services, offerings, applications, queue, appointments, AI verification, chat, payments, monitoring)
-- **Admin & staff portal** (`frontend-admin/`) — institute setup, service/offering configuration, review, operations
-- **Student portal** (`frontend-student/`) — enrollment, applications, guidance chat, queue/appointments
+A workflow-first campus admin platform. Institutes configure services (admissions, certificates, counselling, etc.), students apply with guidance, and staff/AI process requests step by step — with queue and appointment support for visits.
+
+---
+
+## Who this README is for
+
+- New juniors joining the project  
+- Evaluators who need to run a local demo  
+- Anyone cloning the GitHub repo for the first time  
+
+**Read order for juniors**
+
+1. This README (overview + quick start)  
+2. [`docs/INSTALLATION.md`](docs/INSTALLATION.md) (detailed setup)  
+3. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (how code is organized)  
+4. [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) (how to use Admin / Staff / Student)  
+5. [`APP_TEST_GUIDE.txt`](APP_TEST_GUIDE.txt) (full end-to-end test script)
+
+---
+
+## What you get (3 apps)
+
+| App | Folder | Local URL | Purpose |
+| --- | --- | --- | --- |
+| Backend API | `backend/` | http://localhost:5001 | Auth, services, offerings, applications, AI, queue, chat |
+| Admin & Staff portal | `frontend-admin/` | http://localhost:5173 | Setup, configure services, review, operations |
+| Student portal | `frontend-student/` | http://localhost:5174 | Enroll, apply, track status, queue/appointments, chat |
+
+Databases (via Docker):
+
+- **MongoDB** → stores institute/service/application data  
+- **Redis** → sessions, BullMQ workers, cache  
+
+Health check: http://localhost:5001/api/v1/health
+
+---
 
 ## Prerequisites
 
 - Node.js **20+**
 - npm
-- Docker Desktop (for MongoDB + Redis)
+- Docker Desktop
 - Git
-- Modern browser (Chrome / Edge)
+- Chrome / Edge
 
-## Quick start
+---
+
+## Quick start (copy-paste)
 
 ```bash
-# 1) Start databases
+# 1) Clone
+git clone https://github.com/bitsgroupadminai/admintool_BITS.git
+cd admintool_BITS
+
+# 2) Start MongoDB + Redis
 docker compose up -d
 
-# 2) Backend
+# 3) Backend
 cd backend
-copy .env.example .env    # Windows
-# cp .env.example .env    # macOS / Linux
-# Edit .env — at least SESSION_SECRET, MONGODB_URI, REDIS_URL
+copy .env.example .env
+# then edit .env → set SESSION_SECRET at minimum
 npm install
 npm run dev
+```
 
-# 3) Admin & staff portal (new terminal)
+New terminal:
+
+```bash
 cd frontend-admin
 npm install
 npm run dev
+```
 
-# 4) Student portal (new terminal)
+New terminal:
+
+```bash
 cd frontend-student
 npm install
 npm run dev
 ```
 
-| App | URL |
-| --- | --- |
-| Admin / Staff portal | http://localhost:5173 |
-| Student portal | http://localhost:5174 |
-| Backend API | http://localhost:5001/api/v1 |
-| Health check | http://localhost:5001/api/v1/health |
+Open:
 
-## Environment variables (backend)
+1. Admin signup → http://localhost:5173/signup  
+2. Student portal → http://localhost:5174  
 
-Copy `backend/.env.example` → `backend/.env`. Never commit `.env`.
+macOS/Linux: use `cp .env.example .env` instead of `copy`.
 
-| Variable | Required for demo? | Purpose |
-| --- | --- | --- |
-| `MONGODB_URI` | Yes | MongoDB connection |
-| `REDIS_URL` | Yes | Sessions + BullMQ workers |
-| `SESSION_SECRET` | Yes | Session signing |
-| `ADMIN_CLIENT_URL` | Yes | CORS / cookies for admin UI |
-| `STUDENT_CLIENT_URL` | Yes | CORS / cookies for student UI |
-| `OPENAI_API_KEY` | Optional | AI extraction, verification, chat |
-| `PINECONE_API_KEY` | Optional | RAG vector search for chatbot |
-| `SMTP_*` | Optional | Email notifications / password reset |
-| `RAZORPAY_*` | Optional | Fee payments |
-| `GOOGLE_OAUTH_*` | Optional | Google Meet for virtual appointments |
-| `AI_VERIFICATION_ENABLED` | Optional | Enable AI document/eligibility worker |
+---
 
-Without OpenAI/Pinecone/SMTP/Razorpay the core workflow still runs; AI/email/payment features degrade gracefully.
+## Minimum `.env` values
 
-## Tests
+File: `backend/.env` (created from `.env.example`)
 
-```bash
-cd backend
-npm test
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/admintool
+REDIS_URL=redis://127.0.0.1:6379
+SESSION_SECRET=change-me-to-a-long-random-string
+ADMIN_CLIENT_URL=http://localhost:5173
+STUDENT_CLIENT_URL=http://localhost:5174
 ```
 
-Unit tests cover AI verification decision thresholds, eligibility decision helpers, workflow step permissions, and verification schemas.
+### Optional (enable richer features)
 
-Manual end-to-end flows: see `APP_TEST_GUIDE.txt` and `final-submission-doc/02-Test_Cases.md`.
+| Feature | Env vars |
+| --- | --- |
+| AI extraction / verification / chat | `OPENAI_API_KEY` |
+| Stronger chatbot (RAG) | `PINECONE_API_KEY`, `PINECONE_INDEX` |
+| Email notifications | `SMTP_*` |
+| Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
+| Google Meet appointments | `GOOGLE_OAUTH_*` |
+| Turn on AI verification worker | `AI_VERIFICATION_ENABLED=true` |
 
-## Project structure
+Without optional keys, the core workflow still runs. AI/email/payment features are limited or skipped.
+
+**Never commit `backend/.env`.** Only placeholders belong in `.env.example`.
+
+---
+
+## First demo path (10 minutes)
+
+1. Admin signup → create institute  
+2. Setup wizard: institute → add staff → finish  
+3. **Services** → create service → upload a knowledge PDF/DOCX  
+4. Create offering → complete wizard → **Activate**  
+5. Student portal → apply + upload docs  
+6. Staff login → approve / return request  
+7. Optional: student joins queue or books appointment  
+
+Details: [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md)
+
+---
+
+## Project structure (simple)
 
 ```text
-backend/                 API + workers
-frontend-admin/          Admin & staff React app
+backend/                 Express API + workers (feature modules)
+frontend-admin/          Admin + Staff React app
 frontend-student/        Student React app
-docker-compose.yml       MongoDB 7 + Redis 7
-knowledge-bases/         Sample institute policy texts (demo)
-final-submission-doc/    Capstone submission documents
+docs/                    Installation, User Manual, Architecture
+docker-compose.yml       MongoDB + Redis
+APP_TEST_GUIDE.txt       Manual E2E testing script
+README.md                You are here
 ```
 
-## Security notes for packaging / zip
+How modules connect: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
-Do **not** include in any submission zip:
+---
 
-- `**/node_modules/`
-- `backend/.env` or any real secrets
-- `backend/uploads/`
-- `study-project-*.json` (Google service-account keys)
-- `backend/credentials/`
+## Common commands
 
-See `final-submission-doc/09-Code_Zip_Instructions.md`.
+| Task | Command |
+| --- | --- |
+| Start DB | `docker compose up -d` |
+| Stop DB | `docker compose down` |
+| Backend dev | `cd backend && npm run dev` |
+| Admin UI | `cd frontend-admin && npm run dev` |
+| Student UI | `cd frontend-student && npm run dev` |
+| Backend unit tests | `cd backend && npm test` |
 
-## Documentation
+---
 
-Full submission pack: `final-submission-doc/`
+## Roles in one sentence each
 
-- Project report draft, test cases, validation report
-- User manual, installation guide
-- Presentation outline, demo script, GitHub/demo links
-- Plagiarism compliance declaration
+- **Admin** configures institute, services, offerings, students, and monitors operations  
+- **Staff** reviews applications, handles AI escalations, runs queue/appointments  
+- **Student** applies, uploads documents, tracks status, chats, joins queue/books slot  
 
-Product/PRD references: `PRD Admin Tool NEW.md`, `tech stack and project guidelines.md`.
+---
+
+## Troubleshooting
+
+| Symptom | Likely fix |
+| --- | --- |
+| Backend fails at start | Run `docker compose up -d` (Mongo/Redis required) |
+| Login cookie / CORS errors | Match `ADMIN_CLIENT_URL` / `STUDENT_CLIENT_URL` to real UI URLs |
+| Port already used | Free ports 5001 / 5173 / 5174 |
+| AI features do nothing | Add `OPENAI_API_KEY` or keep using manual staff flow |
+| Offering not visible to students | Offering must be **Activated** |
+| `npm install` errors | Use Node 20+ |
+
+More help: [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+
+---
+
+## Security notes
+
+- Real secrets stay only in local `backend/.env` (gitignored)  
+- `backend/.env.example` must contain **placeholders only**  
+- Do not commit Google service-account JSON (`study-project-*.json` is ignored)  
+- If any key was ever pushed accidentally, **rotate it** in OpenAI / Google / Razorpay / Gmail  
+
+---
+
+## Docs index
+
+| Doc | Purpose |
+| --- | --- |
+| [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Full install & run guide |
+| [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) | Admin / Staff / Student usage |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Codebase map for developers |
+| [`APP_TEST_GUIDE.txt`](APP_TEST_GUIDE.txt) | Deep manual test scenarios |
+| [`backend/README.md`](backend/README.md) | Backend-only notes |
+
+---
+
+## Tech stack (short)
+
+- **Frontend:** React, Vite, Tailwind, TanStack Query, Zustand, Socket.IO client  
+- **Backend:** Node.js, Express, Mongoose, Zod, BullMQ, Socket.IO, Pino  
+- **Data:** MongoDB 7, Redis 7  
+- **AI (optional):** OpenAI + Pinecone RAG  
+
+---
+
+## License / academic use
+
+Capstone / academic project for BITS. Keep evaluator access available on the GitHub repository:
+
+https://github.com/bitsgroupadminai/admintool_BITS.git

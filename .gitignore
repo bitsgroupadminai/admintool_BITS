@@ -1,21 +1,27 @@
+# Dependencies & build
 node_modules/
 dist/
+coverage/
+
+# Secrets & local env (never commit real keys)
 .env
 .env.*
 !.env.example
 backend/.env
 backend/.env.*
 !backend/.env.example
+backend/credentials/
+study-project-*.json
+**/*service-account*.json
+
+# Runtime / uploads / logs
+uploads/
+backend/uploads/
 *.log
 .DS_Store
-coverage/
-uploads/
-study-project-*.json
-backend/credentials/
 
-# Capstone/report submission documents
+# Large / personal submission packs (use docs/ for tracked guides)
 Capstone_Report_Answers.md
 Capstone_Report_Answers.txt
 Document-format (1).docx
-backend/README.md
 final-submission-doc/

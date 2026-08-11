@@ -44,6 +44,9 @@ const uploadsDir = path.resolve(__dirname, '../uploads');
 
 const app = express();
 
+// Railway / reverse proxies terminate TLS; required for secure cookies.
+app.set('trust proxy', 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -53,7 +56,11 @@ app.use(
 
 app.use(httpMetricsMiddleware);
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 app.use(
   cors({
     origin(origin, callback) {

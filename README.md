@@ -203,8 +203,18 @@ More help: [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
 | [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Full install & run guide |
 | [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) | Admin / Staff / Student usage |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Codebase map for developers |
+| [`deploy/DEPLOY.md`](deploy/DEPLOY.md) | Vercel + Railway production deploy |
+| [`deploy/railway.env.example`](deploy/railway.env.example) | Backend env vars for Railway |
 | [`APP_TEST_GUIDE.txt`](APP_TEST_GUIDE.txt) | Deep manual test scenarios |
 | [`backend/README.md`](backend/README.md) | Backend-only notes |
+
+## Production deploy (summary)
+
+- Admin UI → Vercel (`eduportal-admin.vercel.app`)
+- Student UI → Vercel (`eduportal-student.vercel.app`)
+- Backend → Railway (Docker) + MongoDB Atlas + Redis Cloud
+
+See [`deploy/DEPLOY.md`](deploy/DEPLOY.md) for step-by-step.
 
 ---
 

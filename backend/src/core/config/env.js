@@ -11,6 +11,24 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16),
   ADMIN_CLIENT_URL: z.string().url(),
   STUDENT_CLIENT_URL: z.string().url(),
+  /** Comma-separated extra browser origins allowed by CORS (e.g. Vercel preview URLs). */
+  EXTRA_CORS_ORIGINS: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value
+        ? value
+            .split(',')
+            .map((origin) => origin.trim())
+            .filter(Boolean)
+        : [],
+    ),
+  /** Public API base used in logs/docs; optional. Railway provides PORT automatically. */
+  PUBLIC_API_URL: z
+    .string()
+    .url()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   SESSION_INACTIVITY_HOURS: z.coerce.number().default(24),
@@ -154,4 +172,8 @@ if (!parsed.success) {
 
 export const env = parsed.data;
 
-export const CLIENT_ORIGINS = [env.ADMIN_CLIENT_URL, env.STUDENT_CLIENT_URL];
+export const CLIENT_ORIGINS = [
+  env.ADMIN_CLIENT_URL.replace(/\/$/, ''),
+  env.STUDENT_CLIENT_URL.replace(/\/$/, ''),
+  ...(env.EXTRA_CORS_ORIGINS ?? []).map((origin) => origin.replace(/\/$/, '')),
+];

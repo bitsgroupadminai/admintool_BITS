@@ -1,0 +1,13 @@
+# .dockerignore for backend Railway/Docker builds
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+uploads
+coverage
+*.log
+.git
+.gitignore
+README.md
+tests

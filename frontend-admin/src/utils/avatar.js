@@ -86,6 +86,14 @@ export { MAX_AVATAR_BYTES };
 export function resolveAvatarUrl(avatarUrl) {
   if (!avatarUrl) return null;
   if (avatarUrl.startsWith('http')) return avatarUrl;
+  // Production: avatars are served from the Railway API host, not the Vercel origin.
+  if (avatarUrl.startsWith('/')) {
+    const apiOrigin =
+      import.meta.env.VITE_SOCKET_URL?.replace(/\/$/, '') ||
+      import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/v1\/?$/, '') ||
+      '';
+    if (apiOrigin) return `${apiOrigin}${avatarUrl}`;
+  }
   return avatarUrl;
 }
 

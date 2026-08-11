@@ -242,7 +242,9 @@ export function InstituteSettingsPage() {
     }
   };
 
-  const erpListUrl = `${window.location.origin}/api/v1/erp/applications`;
+  const erpApiBase =
+    import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || `${window.location.origin}/api/v1`;
+  const erpListUrl = `${erpApiBase}/erp/applications`;
 
   return (
     <AdminLayout>

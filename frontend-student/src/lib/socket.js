@@ -1,10 +1,21 @@
+function normalizeAbsoluteUrl(value) {
+  const raw = value?.trim();
+  if (!raw) return '';
+  let url = raw.replace(/\/$/, '');
+  if (url.startsWith('//')) url = `https:${url}`;
+  if (!/^https?:\/\//i.test(url) && /^[a-z0-9.-]+\.[a-z]{2,}/i.test(url)) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/$/, '');
+}
+
 function resolveSocketUrl() {
-  if (import.meta.env.VITE_SOCKET_URL) {
-    return import.meta.env.VITE_SOCKET_URL;
-  }
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '');
-  }
+  const socket = normalizeAbsoluteUrl(import.meta.env.VITE_SOCKET_URL);
+  if (socket) return socket.replace(/\/api\/v1$/i, '');
+
+  const api = normalizeAbsoluteUrl(import.meta.env.VITE_API_BASE_URL);
+  if (api) return api.replace(/\/api\/v1\/?$/i, '');
+
   // Same origin in dev so Vite proxies /socket.io to the API server.
   if (import.meta.env.DEV) {
     return '';

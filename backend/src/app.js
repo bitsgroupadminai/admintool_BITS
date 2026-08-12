@@ -37,7 +37,7 @@ import exportRouter from './modules/exports/export.router.js';
 import erpAdminRouter, { apiRouter as erpApiRouter } from './modules/erp-sync/erp.router.js';
 import monitoringRouter from './modules/monitoring/monitoring.router.js';
 import { httpMetricsMiddleware } from './modules/monitoring/metrics.js';
-import { readiness, metrics } from './modules/monitoring/monitoring.controller.js';
+import { readiness, metrics, simpleHealth } from './modules/monitoring/monitoring.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.resolve(__dirname, '../uploads');
@@ -88,10 +88,8 @@ const authLimiter = rateLimit({
   },
 });
 
-app.get('/api/v1/health', (_req, res) => {
-  res.json({ success: true, message: 'OK', data: { status: 'healthy' } });
-});
-
+app.get('/health', simpleHealth);
+app.get('/api/v1/health', simpleHealth);
 app.get('/api/v1/health/ready', readiness);
 
 app.get('/metrics', metrics);

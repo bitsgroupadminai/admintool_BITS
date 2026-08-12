@@ -164,3 +164,41 @@ export async function getHealthReport() {
     queues,
   };
 }
+
+/**
+ * Lightweight public probe: server up + MongoDB + Redis.
+ * @returns {Promise<{
+ *   status: 'healthy' | 'degraded' | 'unhealthy',
+ *   message: string,
+ *   server: { listening: true, uptimeSeconds: number, timestamp: string },
+ *   mongodb: { status: string, latencyMs?: number, error?: string },
+ *   redis: { status: string, latencyMs?: number, error?: string },
+ * }>}
+ */
+export async function getSimpleHealth() {
+  const [mongodb, redis] = await Promise.all([checkMongo(), checkRedis()]);
+
+  let status = 'healthy';
+  if (mongodb.status === 'down' || redis.status === 'down') {
+    status = mongodb.status === 'down' && redis.status === 'down' ? 'unhealthy' : 'degraded';
+  }
+
+  const message =
+    status === 'healthy'
+      ? 'Server is listening; MongoDB and Redis are up'
+      : status === 'degraded'
+        ? 'Server is listening; one dependency is down'
+        : 'Server is listening; MongoDB and Redis are down';
+
+  return {
+    status,
+    message,
+    server: {
+      listening: true,
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    },
+    mongodb,
+    redis,
+  };
+}

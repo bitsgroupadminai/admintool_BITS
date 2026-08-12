@@ -1,7 +1,19 @@
-import { getHealthReport } from './health.service.js';
+import { getHealthReport, getSimpleHealth } from './health.service.js';
 import { getMetrics } from './metrics.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 import { env } from '../../core/config/env.js';
+
+/**
+ * GET /health and GET /api/v1/health — public probe (server + MongoDB + Redis).
+ */
+export async function simpleHealth(req, res, next) {
+  try {
+    const health = await getSimpleHealth();
+    res.status(health.status === 'unhealthy' ? 503 : 200).json(health);
+  } catch (err) {
+    next(err);
+  }
+}
 
 /**
  * GET /api/v1/health/ready — readiness probe.

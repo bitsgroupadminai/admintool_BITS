@@ -49,25 +49,15 @@ Same as admin, but:
 ## Phase 3 — Backend (Railway)
 
 1. Railway → New Project → Deploy from GitHub repo.
-2. Set **Root Directory** to `backend` (important).
-3. Railway will use `backend/Dockerfile` + `backend/railway.toml`.
-4. Open **Variables** and paste from `deploy/railway.env.example`.
-5. Required values you must fill:
+2. **CRITICAL:** Settings → **Root Directory** = `backend`
+3. Builder uses Nixpacks (`backend/railway.toml` + `backend/nixpacks.toml`).
+4. Open **Variables** → Raw Editor → paste from local `deploy/railway.env` (gitignored) or `deploy/railway.env.example`.
+5. Atlas Network Access: allow `0.0.0.0/0` for demo.
+6. Generate public domain (Settings → Networking).
+7. Smoke test: `GET https://YOUR-APP.up.railway.app/api/v1/health`
+8. Update both Vercel `VITE_API_BASE_URL` / `VITE_SOCKET_URL` → Redeploy.
 
-| Key | Value |
-| --- | --- |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `REDIS_URL` | Redis Cloud connection string |
-| `SESSION_SECRET` | Long random string (≥16 chars) |
-| `ADMIN_CLIENT_URL` | `https://eduportal-admin.vercel.app` |
-| `STUDENT_CLIENT_URL` | `https://eduportal-student.vercel.app` |
-| `NODE_ENV` | `production` |
-
-6. Generate a public domain in Railway (Settings → Networking).
-7. Copy that URL, e.g. `https://eduportal-api.up.railway.app`.
-8. Set `PUBLIC_API_URL` to that URL (optional but useful).
-9. Update **both Vercel projects** env vars to point at this API, then redeploy frontends.
-10. Smoke test: `GET https://YOUR-RAILWAY-APP.up.railway.app/api/v1/health`
+See also: `deploy/RAILWAY_MONOREPO.md`
 
 ---
 

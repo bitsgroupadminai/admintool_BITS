@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
-import { env, CLIENT_ORIGINS } from './core/config/env.js';
+import { env, isAllowedOrigin } from './core/config/env.js';
 import { logger } from './core/logger/index.js';
 import { globalErrorHandler } from './core/middlewares/globalErrorHandler.js';
 import { notFoundHandler } from './core/middlewares/notFoundHandler.js';
@@ -64,11 +64,11 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || CLIENT_ORIGINS.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     },
     credentials: true,
   }),

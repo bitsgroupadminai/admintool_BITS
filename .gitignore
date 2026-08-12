@@ -22,6 +22,9 @@ backend/uploads/
 *.log
 .DS_Store
 
+# Local Railway env paste file (never commit real secrets)
+deploy/railway.env
+
 # Large / personal submission packs (use docs/ for tracked guides)
 Capstone_Report_Answers.md
 Capstone_Report_Answers.txt

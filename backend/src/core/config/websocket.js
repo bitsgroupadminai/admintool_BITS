@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 
-import { CLIENT_ORIGINS } from './env.js';
+import { isAllowedOrigin } from './env.js';
 
 import { getSession } from '../services/session.service.js';
 
@@ -36,7 +36,11 @@ export function initWebSocket(httpServer) {
 
     cors: {
 
-      origin: CLIENT_ORIGINS,
+      origin(origin, callback) {
+
+        callback(null, isAllowedOrigin(origin));
+
+      },
 
       credentials: true,
 

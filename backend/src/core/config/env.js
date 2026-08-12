@@ -23,6 +23,14 @@ const envSchema = z.object({
             .filter(Boolean)
         : [],
     ),
+  /**
+   * When true, allow any https://*.vercel.app origin (useful while preview domains change).
+   * Set false later and lock to ADMIN_CLIENT_URL / STUDENT_CLIENT_URL only.
+   */
+  ALLOW_VERCEL_APP_ORIGINS: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   /** Public API base used in logs/docs; optional. Railway provides PORT automatically. */
   PUBLIC_API_URL: z
     .string()
@@ -166,7 +174,8 @@ const envSchema = z.object({
 
 const parsed = envSchema.safeParse(process.env);
 
-if (!parsed.success) { 
+if (!parsed.success) {
+  console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
 
@@ -177,3 +186,16 @@ export const CLIENT_ORIGINS = [
   env.STUDENT_CLIENT_URL.replace(/\/$/, ''),
   ...(env.EXTRA_CORS_ORIGINS ?? []).map((origin) => origin.replace(/\/$/, '')),
 ];
+
+const VERCEL_APP_ORIGIN = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
+
+/**
+ * @param {string | undefined} origin
+ */
+export function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  const normalized = origin.replace(/\/$/, '');
+  if (CLIENT_ORIGINS.includes(normalized)) return true;
+  if (env.ALLOW_VERCEL_APP_ORIGINS && VERCEL_APP_ORIGIN.test(normalized)) return true;
+  return false;
+}

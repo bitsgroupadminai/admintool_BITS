@@ -1,7 +1,9 @@
+# Use Nixpacks (more reliable than Docker for this Node monorepo service).
+# In Railway UI: Settings → Root Directory = backend
+
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
-watchPatterns = ["src/**", "package.json", "package-lock.json", "Dockerfile"]
+builder = "NIXPACKS"
+buildCommand = "npm ci --omit=dev"
 
 [deploy]
 startCommand = "npm start"

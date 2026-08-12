@@ -2,31 +2,20 @@
 
 ## How Railway picks only the backend from one GitHub repo
 
-Your repo has:
+Your build log showed Railway analyzing the **repo root** (it listed `backend/`, `frontend-admin/`, etc.). That means **Root Directory was empty**.
+
+### Fix (do ONE of these)
+
+**Option A — Best (Railway UI)**  
+Service → Settings → **Root Directory** = `backend` → Redeploy
+
+**Option B — Code fallback (already added)**  
+Root `railway.toml` + root `package.json` install/start the backend even when Root Directory is empty:
 
 ```text
-admintool_BITS/
-├── backend/           ← Railway uses THIS
-├── frontend-admin/    ← Vercel project 1
-└── frontend-student/  ← Vercel project 2
+build:  npm --prefix backend ci --omit=dev --legacy-peer-deps
+start:  npm --prefix backend start
 ```
-
-In Railway service settings:
-
-1. **Root Directory** = `backend`  ← required
-2. Builder = Nixpacks (from `backend/railway.toml`)
-3. Variables = paste from `deploy/railway.env` (local) / Railway Raw Editor
-
-Railway will only install/build/run files under `backend/`.
-
-### If build fails with Docker
-
-We switched to **Nixpacks**. In Railway:
-
-- Settings → Build → Builder: **Nixpacks** (or leave default from railway.toml)
-- Do **not** force Dockerfile unless Root Directory is `backend`
-
-Then redeploy.
 
 ### Atlas Network Access
 

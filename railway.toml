@@ -1,0 +1,13 @@
+# Monorepo root config for Railway / Railpack.
+# Prefer setting Root Directory = backend in the Railway UI.
+# If Root Directory is left empty, these commands still build/run backend/.
+
+[build]
+buildCommand = "npm --prefix backend ci --omit=dev --legacy-peer-deps"
+
+[deploy]
+startCommand = "npm --prefix backend start"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

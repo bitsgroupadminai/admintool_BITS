@@ -1,0 +1,13 @@
+{
+  "name": "admintool-bits",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo root — Railway builds the backend from here when Root Directory is unset",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "railway:install": "npm --prefix backend ci --omit=dev --legacy-peer-deps"
+  }
+}

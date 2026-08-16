@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, Send } from 'lucide-react';
+import { CheckCircle2, Clock3, Loader2, Send } from 'lucide-react';
 import { formatQueueMode } from '@/utils/offering';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { IntakeDocumentInput } from '@/components/enrollment/IntakeDocumentInput';
@@ -24,6 +24,7 @@ export function ApplicationPanel({
 }) {
   const blocked = intakeStatus?.canSubmit === false;
   const pending = intakeStatus?.status === 'pending_authorization';
+  const busy = submitting || checkingIntake;
 
   return (
     <div
@@ -73,7 +74,16 @@ export function ApplicationPanel({
       ) : null}
 
       {!blocked ? (
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(event) => {
+            if (busy) {
+              event.preventDefault();
+              return;
+            }
+            onSubmit(event);
+          }}
+        >
           <div>
             <label htmlFor="applicant-name" className="mb-1.5 block text-sm font-medium text-[#052E1C]">
               Full name
@@ -84,8 +94,9 @@ export function ApplicationPanel({
               value={applicantName}
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="Your full name"
-              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white"
+              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
               required
+              disabled={submitting}
             />
           </div>
           <div>
@@ -98,8 +109,9 @@ export function ApplicationPanel({
               value={applicantEmail}
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="you@email.com"
-              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white"
+              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
               required
+              disabled={submitting}
             />
             {checkingIntake ? (
               <p className="mt-1.5 text-xs text-[#6B7280]">Checking existing request…</p>
@@ -137,11 +149,16 @@ export function ApplicationPanel({
 
           <button
             type="submit"
-            disabled={submitting || checkingIntake}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0A6640] text-sm font-semibold text-white hover:bg-[#084F31] disabled:opacity-60"
+            disabled={busy}
+            aria-busy={submitting}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0A6640] text-sm font-semibold text-white hover:bg-[#084F31] disabled:pointer-events-none disabled:opacity-60"
           >
-            <Send className="h-4 w-4" />
-            {submitting ? 'Submitting...' : 'Start application'}
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden />
+            )}
+            {submitting ? 'Submitting…' : 'Start application'}
           </button>
           <p className="text-xs leading-relaxed text-[#4B6358]">
             This sends an authorization request to the institute. Login credentials are emailed after

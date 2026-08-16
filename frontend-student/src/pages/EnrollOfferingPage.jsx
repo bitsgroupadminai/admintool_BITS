@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ClipboardCheck, Clock3, ListChecks, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,6 +38,7 @@ export function EnrollOfferingPage() {
   const [applicantDetails, setApplicantDetails] = useState({});
   const [intakeStatus, setIntakeStatus] = useState(null);
   const [checkingIntake, setCheckingIntake] = useState(false);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     Promise.all([
@@ -76,6 +77,8 @@ export function EnrollOfferingPage() {
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    if (submitLockRef.current || submitting) return;
+
     if (intakeStatus?.canSubmit === false) {
       toast.error(intakeStatus.message || 'You cannot submit another request right now.');
       return;
@@ -102,6 +105,7 @@ export function EnrollOfferingPage() {
       return;
     }
 
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
       await studentApi.createApplication(
@@ -128,6 +132,7 @@ export function EnrollOfferingPage() {
     } catch (err) {
       toast.error(err.message || 'Failed to start application');
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };

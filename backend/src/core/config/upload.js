@@ -11,6 +11,8 @@ export const AVATAR_UPLOAD_ROOT = path.resolve(__dirname, '../../../uploads/avat
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
+  'application/x-pdf',
+  'application/octet-stream',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
   'text/markdown',
@@ -58,10 +60,16 @@ export const knowledgeUpload = multer({
   storage,
   limits: { fileSize: env.MAX_KNOWLEDGE_FILE_MB * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      return cb(new Error('Only PDF, DOCX, TXT, and MD files are supported'));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExt = ['.pdf', '.docx', '.txt', '.md'];
+    if (ALLOWED_MIME_TYPES.has(file.mimetype) || allowedExt.includes(ext)) {
+      if (file.mimetype === 'application/octet-stream' && !allowedExt.includes(ext)) {
+        return cb(new Error('Only PDF, DOCX, TXT, and MD files are supported'));
+      }
+      cb(null, true);
+      return;
     }
-    cb(null, true);
+    return cb(new Error('Only PDF, DOCX, TXT, and MD files are supported'));
   },
 });
 

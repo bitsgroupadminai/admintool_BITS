@@ -1,4 +1,6 @@
 import fs from 'fs';
+import path from 'path';
+import { logger } from '../../core/logger/index.js';
 
 /** Per-document and combined-corpus cap (real prospectuses exceed the old 80k limit). */
 const MAX_EXTRACT_CHARS = 200_000;
@@ -19,26 +21,50 @@ function normalizeExtractedText(text) {
 }
 
 /**
+ * Browsers/OS often send octet-stream or empty mime for PDFs.
+ * @param {string} filePath
+ * @param {string} [mimeType]
+ */
+function resolveExtractKind(filePath, mimeType = '') {
+  const mime = (mimeType || '').toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (mime === 'application/pdf' || mime === 'application/x-pdf' || ext === '.pdf') {
+    return 'pdf';
+  }
+  if (
+    mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mime === 'application/msword' ||
+    ext === '.docx' ||
+    ext === '.doc'
+  ) {
+    return 'docx';
+  }
+  if (mime === 'text/plain' || mime === 'text/markdown' || ext === '.txt' || ext === '.md') {
+    return 'text';
+  }
+  return 'unknown';
+}
+
+/**
  * @param {string} filePath
  * @param {string} mimeType
  * @returns {Promise<string>}
  */
 export async function extractTextFromDocument(filePath, mimeType) {
   if (!fs.existsSync(filePath)) {
+    logger.warn({ filePath }, 'Knowledge file missing on disk during text extract');
     return '';
   }
 
+  const kind = resolveExtractKind(filePath, mimeType);
   let text = '';
 
-  if (mimeType === 'application/pdf') {
+  if (kind === 'pdf') {
     text = await extractPdfText(filePath);
-  } else if (
-    mimeType ===
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    mimeType === 'application/msword'
-  ) {
+  } else if (kind === 'docx') {
     text = await extractDocxText(filePath);
-  } else if (mimeType === 'text/plain' || mimeType === 'text/markdown') {
+  } else if (kind === 'text') {
     text = fs.readFileSync(filePath, 'utf8');
   }
 
@@ -46,16 +72,24 @@ export async function extractTextFromDocument(filePath, mimeType) {
 }
 
 /**
+ * pdf-parse v2 uses PDFParse({ data }).getText(), not the v1 default function(buffer).
  * @param {string} filePath
  */
 async function extractPdfText(filePath) {
+  let parser;
   try {
-    const pdfParse = (await import('pdf-parse')).default;
+    const { PDFParse } = await import('pdf-parse');
     const buffer = fs.readFileSync(filePath);
-    const result = await pdfParse(buffer);
-    return result.text ?? '';
-  } catch {
+    parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    return result?.text ?? '';
+  } catch (err) {
+    logger.error({ err, filePath }, 'PDF text extraction failed');
     return '';
+  } finally {
+    if (parser) {
+      await parser.destroy().catch(() => {});
+    }
   }
 }
 
@@ -67,7 +101,8 @@ async function extractDocxText(filePath) {
     const mammoth = await import('mammoth');
     const result = await mammoth.extractRawText({ path: filePath });
     return result.value ?? '';
-  } catch {
+  } catch (err) {
+    logger.error({ err, filePath }, 'DOCX text extraction failed');
     return '';
   }
 }
@@ -109,7 +144,7 @@ export async function prepareDocumentForVerification(filePath, mimeType) {
     return { kind: 'text', text: trimmed.slice(0, MAX_VERIFY_TEXT_CHARS) };
   }
 
-  if (mimeType === 'application/pdf') {
+  if (resolveExtractKind(filePath, mimeType) === 'pdf') {
     return {
       kind: 'unreadable',
       reason: 'PDF appears to be scanned with no extractable text layer',
@@ -128,7 +163,7 @@ export async function buildCombinedDocumentText(documents) {
   for (const doc of documents) {
     let text = doc.extractedText?.trim() ?? '';
 
-    if (!text && doc.filePath && doc.mimeType) {
+    if (!text && doc.filePath) {
       text = await extractTextFromDocument(doc.filePath, doc.mimeType);
     }
 

@@ -79,6 +79,17 @@ export function EnrollOfferingPage() {
     event.preventDefault();
     if (submitLockRef.current || submitting) return;
 
+    const name = applicantName.trim();
+    const email = applicantEmail.trim();
+    if (!name) {
+      toast.error('Enter your full name');
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+
     if (intakeStatus?.canSubmit === false) {
       toast.error(intakeStatus.message || 'You cannot submit another request right now.');
       return;
@@ -99,6 +110,15 @@ export function EnrollOfferingPage() {
       return;
     }
 
+    for (const field of offering?.applicantFields ?? []) {
+      if (field.fieldType === 'phone' || field.required === false) continue;
+      const value = String(applicantDetails?.[field.fieldKey] ?? '').trim();
+      if (!value) {
+        toast.error(`${field.label} is required`);
+        return;
+      }
+    }
+
     const intakeDocument = offering?.intakeDocument;
     if (intakeDocument?.label && intakeDocument.required !== false && !intakeDocumentFile) {
       toast.error(`Please upload your ${intakeDocument.label}`);
@@ -112,8 +132,8 @@ export function EnrollOfferingPage() {
         instituteId,
         {
           offeringId,
-          applicantName,
-          applicantEmail,
+          applicantName: name,
+          applicantEmail: email,
           applicantMobile: mobileResult.e164,
           applicantDetails: serializeApplicantDetailsForSubmit(
             offering?.applicantFields ?? [],

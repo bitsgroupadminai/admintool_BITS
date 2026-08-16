@@ -101,7 +101,7 @@ function ApplicantFieldInput({ field, value, onChange }) {
           id={field.fieldKey}
           value={parsePhoneValue(value)}
           onChange={onChange}
-          required={field.required !== false}
+          required={false}
           placeholder={field.placeholder || 'Mobile number'}
         />
         {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}

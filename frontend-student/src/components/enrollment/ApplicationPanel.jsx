@@ -24,7 +24,6 @@ export function ApplicationPanel({
 }) {
   const blocked = intakeStatus?.canSubmit === false;
   const pending = intakeStatus?.status === 'pending_authorization';
-  const busy = submitting || checkingIntake;
 
   return (
     <div
@@ -74,16 +73,7 @@ export function ApplicationPanel({
       ) : null}
 
       {!blocked ? (
-        <form
-          className="mt-6 space-y-4"
-          onSubmit={(event) => {
-            if (busy) {
-              event.preventDefault();
-              return;
-            }
-            onSubmit(event);
-          }}
-        >
+        <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
           <div>
             <label htmlFor="applicant-name" className="mb-1.5 block text-sm font-medium text-[#052E1C]">
               Full name
@@ -95,7 +85,7 @@ export function ApplicationPanel({
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="Your full name"
               className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
-              required
+              autoComplete="name"
               disabled={submitting}
             />
           </div>
@@ -110,7 +100,7 @@ export function ApplicationPanel({
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="you@email.com"
               className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
-              required
+              autoComplete="email"
               disabled={submitting}
             />
             {checkingIntake ? (
@@ -126,6 +116,7 @@ export function ApplicationPanel({
               value={applicantMobile}
               onChange={onMobileChange}
               placeholder="Mobile number"
+              required={false}
             />
           </div>
 
@@ -149,7 +140,7 @@ export function ApplicationPanel({
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={submitting}
             aria-busy={submitting}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0A6640] text-sm font-semibold text-white hover:bg-[#084F31] disabled:pointer-events-none disabled:opacity-60"
           >

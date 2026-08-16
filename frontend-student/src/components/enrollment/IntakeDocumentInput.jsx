@@ -97,10 +97,10 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
         ref={inputRef}
         id="intake-document"
         type="file"
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
         accept={buildAcceptAttribute(intakeDocument.allowedTypes)}
         onChange={handleFileChange}
-        required={intakeDocument.required !== false}
       />
     </div>
   );

@@ -18,7 +18,15 @@ import { validateOperatingHoursWindow } from '../../shared/helpers/operatingHour
 import { ensureUniqueApplicantFieldKeys } from '../../shared/helpers/applicantFields.helper.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
-import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import {
+  flushInstituteReadCache,
+  flushStudentInstitutesCache,
+} from '../../shared/helpers/cacheInvalidation.helper.js';
+
+async function flushOfferingCaches(instituteId) {
+  await flushOfferingCaches(instituteId);
+  await flushStudentInstitutesCache();
+}
 
 async function scheduleOfferingReindex(offering) {
   await enqueueServiceReindex(
@@ -52,6 +60,18 @@ function applyPaymentConfig(offering, paymentConfig) {
  */
 function formatOffering(doc) {
   const completeness = getOfferingCompleteness(doc);
+  const now = new Date();
+  const opensInFuture = Boolean(doc.startDate && doc.startDate > now);
+  const closedByDate = Boolean(doc.endDate && doc.endDate < now);
+  const isActive = doc.status === OFFERING_STATUS.ACTIVE;
+  let studentPortalNote = null;
+  if (isActive && opensInFuture) {
+    studentPortalNote = `Scheduled — visible on the student portal from ${doc.startDate.toISOString().slice(0, 10)}`;
+  } else if (isActive && closedByDate) {
+    studentPortalNote = 'Intake dates have ended — not visible on the student portal until dates are updated';
+  } else if (isActive) {
+    studentPortalNote = 'Visible on the student portal';
+  }
 
   return {
     id: doc._id.toString(),
@@ -64,6 +84,8 @@ function formatOffering(doc) {
     status: resolveOfferingDisplayStatus(doc),
     startDate: doc.startDate,
     endDate: doc.endDate,
+    studentPortalVisible: isActive && !opensInFuture && !closedByDate,
+    studentPortalNote,
     configurationVersion: doc.configurationVersion,
     eligibilityRules: doc.eligibilityRules ?? [],
     documentRequirements: doc.documentRequirements ?? [],
@@ -148,7 +170,7 @@ export async function createOffering(instituteId, payload) {
   });
 
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -191,7 +213,7 @@ export async function updateOffering(offeringId, instituteId, payload) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -252,7 +274,7 @@ export async function updateOfferingDetails(offeringId, instituteId, payload) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -268,7 +290,7 @@ export async function updateOfferingPayment(offeringId, instituteId, paymentConf
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -283,7 +305,7 @@ export async function updateEligibilityRules(offeringId, instituteId, rules) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -303,7 +325,7 @@ export async function updateDocumentRequirements(offeringId, instituteId, requir
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -318,7 +340,7 @@ export async function updateWorkflow(offeringId, instituteId, steps) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -349,7 +371,7 @@ export async function updateQueueConfig(offeringId, instituteId, payload) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -376,7 +398,7 @@ export async function activateOffering(offeringId, instituteId) {
   await offering.save();
   await syncServiceActiveStatus(offering.serviceId.toString(), instituteId);
   await scheduleOfferingReindex(offering);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }
 
@@ -402,7 +424,7 @@ export async function duplicateOffering(offeringId, instituteId) {
 
   copy.status = deriveOfferingStatus(copy);
   await copy.save();
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return formatOffering(copy);
 }
 
@@ -441,7 +463,7 @@ export async function bulkOfferingAction(instituteId, payload) {
     results.push({ id, success: true });
   }
 
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return { results };
 }
 
@@ -461,6 +483,6 @@ export async function deleteOffering(offeringId, instituteId) {
   const serviceId = offering.serviceId.toString();
   await Offering.deleteOne({ _id: offeringId });
   await syncServiceActiveStatus(serviceId, instituteId);
-  await flushInstituteReadCache(instituteId);
+  await flushOfferingCaches(instituteId);
   return { id: offeringId };
 }

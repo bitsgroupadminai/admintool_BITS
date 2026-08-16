@@ -24,7 +24,13 @@ async function expireOfferings() {
       endDate: { $lt: now },
       status: OFFERING_STATUS.EXPIRED,
     });
-    await Promise.all(institutes.map((id) => flushInstituteReadCache(id.toString())));
+    const { flushStudentInstitutesCache } = await import(
+      '../../shared/helpers/cacheInvalidation.helper.js'
+    );
+    await Promise.all([
+      ...institutes.map((id) => flushInstituteReadCache(id.toString())),
+      flushStudentInstitutesCache(),
+    ]);
   }
 }
 

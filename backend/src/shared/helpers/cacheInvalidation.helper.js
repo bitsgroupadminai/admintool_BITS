@@ -20,6 +20,10 @@ export async function invalidateReadExact(namespace, parts) {
  */
 export async function invalidateReadByPrefix(namespace, prefixParts = []) {
   const prefixKey = buildReadCacheKey(namespace, prefixParts);
+  // Always delete the exact key first. Redis Cloud / managed Redis often
+  // restricts SCAN, which would leave stale read-through entries (e.g. empty
+  // student programme lists) for the full 12h TTL after activate/update.
+  await cacheDelete(prefixKey);
   await cacheDeleteByPrefix(prefixKey);
 }
 

@@ -905,7 +905,9 @@ export function ServiceDetailPage() {
           <div className="rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_4px_24px_rgba(10,102,64,0.07)] overflow-hidden">
             <div className="flex items-center gap-3 px-7 pt-7 pb-5 border-b border-[#E2EEE8]">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#0A6640] to-[#10B981] shadow-[0_2px_8px_rgba(10,102,64,0.22)]">
-                <span className="text-xs font-bold text-white">4</span>
+                <span className="text-xs font-bold text-white">
+                  {offerings.length}
+                </span>
               </div>
               <div>
                 <p className="text-sm font-bold text-[#052E1C]">
@@ -975,6 +977,17 @@ export function ServiceDetailPage() {
                             <p className="mt-1 text-xs text-[#0A6640]">
                               Configuration complete — open Configure, go to Review, and
                               activate this offering.
+                            </p>
+                          )}
+                        {offering.status === "active" && offering.studentPortalNote && (
+                            <p
+                              className={`mt-1 text-xs ${
+                                offering.studentPortalVisible
+                                  ? "text-[#0A6640]"
+                                  : "text-[#B45309]"
+                              }`}
+                            >
+                              {offering.studentPortalNote}
                             </p>
                           )}
                       </div>

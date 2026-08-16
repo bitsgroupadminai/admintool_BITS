@@ -65,7 +65,11 @@ export async function remember(key, ttlSeconds, loader) {
   }
 
   const value = await loader();
-  await cacheSetJson(key, value, ttlSeconds);
+  // Empty lists must not stick for hours — activate often happens right after
+  // an empty catalogue was cached, and SCAN-based flush can fail on managed Redis.
+  const ttl =
+    Array.isArray(value) && value.length === 0 ? Math.min(ttlSeconds, 60) : ttlSeconds;
+  await cacheSetJson(key, value, ttl);
   return value;
 }
 

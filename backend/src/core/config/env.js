@@ -199,6 +199,19 @@ if (!parsed.success) {
 
 export const env = parsed.data;
 
+console.log(
+  JSON.stringify({
+    msg: 'env_loaded',
+    nodeEnv: env.NODE_ENV,
+    port: env.PORT,
+    hasMongo: Boolean(env.MONGODB_URI),
+    hasRedis: Boolean(env.REDIS_URL),
+    hasOpenAI: Boolean(env.OPENAI_API_KEY),
+    hasPinecone: Boolean(env.PINECONE_API_KEY),
+    hasSmtp: Boolean(env.SMTP_USER && env.SMTP_PASS),
+  }),
+);
+
 export const CLIENT_ORIGINS = [
   env.ADMIN_CLIENT_URL.replace(/\/$/, ''),
   env.STUDENT_CLIENT_URL.replace(/\/$/, ''),

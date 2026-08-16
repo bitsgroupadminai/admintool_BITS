@@ -1,7 +1,7 @@
 {
   "name": "admintool-bits",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Monorepo root — Railway builds the backend from here when Root Directory is unset",
   "engines": {
     "node": ">=20"

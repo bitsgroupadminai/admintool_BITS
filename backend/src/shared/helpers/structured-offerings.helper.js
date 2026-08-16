@@ -12,8 +12,53 @@ const OFFERING_NAME_BLOCK =
 const CATALOGUE_INDEX_LINE =
   /^\s*\d{1,3}\.\s+([A-Za-z].{2,180}?(?:\([^)]+\))?)\s*$/gm;
 
+// Require dotted/abbreviated degrees so English words like "be" / "me" do not match.
+const DEGREE_TOKEN =
+  /\b(?:b\.e\.?|b\.?\s*tech\.?|b\.?\s*sc\.?|b\.?\s*com\.?|b\.?\s*arch\.?|b\.?\s*pharm\.?|bba|bca|b\.?\s*des\.?|ll\.?\s*b\.?|ll\.?\s*m\.?|mba|m\.e\.?|m\.?\s*tech\.?|m\.?\s*sc\.?|mca|m\.?\s*com\.?|m\.?\s*arch\.?|ph\.?\s*d\.?|m\.?\s*phil\.?|pgdm|diploma|integrated|bachelor(?:['’]s)?\s+of|master(?:['’]s)?\s+of)\b/i;
+
+const PROGRAMME_TITLE_LINE =
+  /^\s*(?:\d+(?:\.\d+)*\.?\s+)?((?:B\.E\.|B\.Tech\.?|B\.Sc\.?|B\.Com\.?|B\.Arch\.?|B\.Des\.?|BBA|BCA|MBA|M\.E\.|M\.Tech\.?|M\.Sc\.?|M\.Com\.?|MCA|Ph\.D\.?|PGDM|LL\.B\.?|LL\.M\.?|Diploma|Integrated)[^\n]{2,120})\s*$/gim;
+
 const SKIP_NAME =
-  /^(school of|college of|part |document |end |primary service|undergraduate & postgraduate)/i;
+  /^(school of|college of|part |document |end |primary service|undergraduate & postgraduate|purpose of|campuses covered|programmes covered|programs covered|general admissions|programme knowledge|application submission|profile screening|entrance score|interview scheduling|interview evaluation|final merit|offer release|standard deficiency|queue and appointment|ai chatbot|audit and compliance|internal escalation|end-of-cycle|end of cycle|knowledge document|knowledge sections|operational principles|operational closure|deficiency handling)/i;
+
+const SECTION_OR_STEP =
+  /\b(purpose of this|campuses covered|programmes covered|programs covered|operational principles|knowledge sections|application submission|profile screening|entrance score validation|interview scheduling|interview evaluation|final merit|offer release|deficiency handling|queue and appointment|chatbot knowledge|audit and compliance|escalation matrix|operational closure|knowledge guidelines)\b/i;
+
+/**
+ * True only for apply-to programmes (B.E., M.Sc., MBA, …), not TOC headings or workflow steps.
+ * @param {string} name
+ */
+export function isLikelyProgrammeOfferingName(name) {
+  const cleaned = cleanOfferingName(name);
+  if (!cleaned || cleaned.length < 5 || cleaned.length > 160) return false;
+  if (SKIP_NAME.test(cleaned)) return false;
+  if (SECTION_OR_STEP.test(cleaned)) return false;
+  if (/^\d+[\.)]\s/.test(cleaned)) return false;
+  return DEGREE_TOKEN.test(cleaned);
+}
+
+/**
+ * Drop TOC headings / workflow steps that models often mis-label as offerings.
+ * @param {Array<{ name?: string, description?: string, documentExcerpt?: string }>} offerings
+ */
+export function filterProgrammeOfferings(offerings) {
+  const seen = new Set();
+  const out = [];
+  for (const o of offerings ?? []) {
+    const name = cleanOfferingName(o?.name);
+    if (!isLikelyProgrammeOfferingName(name)) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      name,
+      description: String(o.description ?? '').trim(),
+      documentExcerpt: String(o.documentExcerpt ?? name).trim().slice(0, 500),
+    });
+  }
+  return out;
+}
 
 /**
  * @param {string} docText
@@ -26,8 +71,8 @@ export function extractStructuredOfferingsFromText(docText) {
   const byKey = new Map();
 
   const add = (rawName, excerpt) => {
-    const name = cleanOfferingName(rawName);
-    if (!name || SKIP_NAME.test(name) || name.length < 3) return;
+    const name = cleanOfferingName(rawName).replace(/^\d+(?:\.\d+)*\.?\s+/, '');
+    if (!isLikelyProgrammeOfferingName(name)) return;
     const key = name.toLowerCase();
     if (byKey.has(key)) return;
     byKey.set(key, {
@@ -37,22 +82,35 @@ export function extractStructuredOfferingsFromText(docText) {
     });
   };
 
+  OFFERING_NAME_BLOCK.lastIndex = 0;
+  CATALOGUE_INDEX_LINE.lastIndex = 0;
+  PROGRAMME_TITLE_LINE.lastIndex = 0;
+
   for (const match of docText.matchAll(OFFERING_NAME_BLOCK)) {
     const name = match[1] ?? '';
     add(name, `Offering Name: ${cleanOfferingName(name)}`);
   }
 
-  // Prefer explicit Offering Name blocks; if none, fall back to numbered catalogue index.
-  if (byKey.size === 0) {
-    const catalogueSection = sliceBetween(
+  // Numbered catalogue index — only inside a real catalogue slice, never the whole TOC.
+  const catalogueSection =
+    sliceBetween(docText, /PART H[^\n]*PROGRAMME CATALOGUE/i, /PART I[^\n]*PROGRAMME DETAILS/i) ||
+    sliceBetween(
       docText,
-      /PART H[^\n]*PROGRAMME CATALOGUE/i,
-      /PART I[^\n]*PROGRAMME DETAILS/i,
+      /programmes covered in this document/i,
+      /general admissions operational/i,
     );
-    const source = catalogueSection || docText;
-    for (const match of source.matchAll(CATALOGUE_INDEX_LINE)) {
+
+  const numberedSource = catalogueSection || (byKey.size === 0 ? docText : '');
+  if (numberedSource) {
+    CATALOGUE_INDEX_LINE.lastIndex = 0;
+    for (const match of numberedSource.matchAll(CATALOGUE_INDEX_LINE)) {
       add(match[1] ?? '', String(match[0]).trim());
     }
+  }
+
+  PROGRAMME_TITLE_LINE.lastIndex = 0;
+  for (const match of docText.matchAll(PROGRAMME_TITLE_LINE)) {
+    add(match[1] ?? '', String(match[0]).trim());
   }
 
   return [...byKey.values()].slice(0, 80);
@@ -95,7 +153,7 @@ export function prepareInsightsDocumentText(docText, maxChars = 55_000) {
     catalogue ? `\n\n--- PROGRAMME CATALOGUE INDEX ---\n${catalogue.slice(0, 12_000)}` : '',
     offeringLines ? `\n\n--- EXTRACTED OFFERING NAMES ---\n${offeringLines}` : '',
     sampleDetails ? `\n\n--- SAMPLE PROGRAMME DETAILS ---\n${sampleDetails}` : '',
-    '\n\n[Document truncated for analysis. All offering names above must be returned in suggestedOfferings.]',
+    '\n\n[Document truncated for analysis. suggestedOfferings must list only named degree programmes — never table-of-contents titles or workflow steps.]',
   ]
     .join('')
     .slice(0, maxChars);
@@ -494,30 +552,5 @@ function extractOfferingDetailSamples(text, maxBlocks, maxCharsEach) {
  * @param {Array<{ name: string, description?: string, documentExcerpt: string }>} structuredOfferings
  */
 export function mergeSuggestedOfferings(aiOfferings, structuredOfferings) {
-  /** @type {Map<string, { name: string, description: string, documentExcerpt: string }>} */
-  const byKey = new Map();
-
-  for (const o of aiOfferings ?? []) {
-    const name = cleanOfferingName(o.name);
-    if (!name) continue;
-    byKey.set(name.toLowerCase(), {
-      name,
-      description: o.description?.trim() ?? '',
-      documentExcerpt: (o.documentExcerpt ?? name).trim().slice(0, 500),
-    });
-  }
-
-  for (const o of structuredOfferings ?? []) {
-    const name = cleanOfferingName(o.name);
-    if (!name) continue;
-    const key = name.toLowerCase();
-    if (byKey.has(key)) continue;
-    byKey.set(key, {
-      name,
-      description: o.description?.trim() ?? '',
-      documentExcerpt: (o.documentExcerpt ?? `Offering Name: ${name}`).trim().slice(0, 500),
-    });
-  }
-
-  return [...byKey.values()].slice(0, 80);
+  return filterProgrammeOfferings([...(aiOfferings ?? []), ...(structuredOfferings ?? [])]);
 }

@@ -57,10 +57,11 @@ INTERPRETIVE (AI-written, grounded in document):
 
 EXTRACTIVE (exact from document — empty array if none found):
 - suggestedOfferings: each { name, description, documentExcerpt }
-  - name: exact programme/offering name as written (prefer "Degree + specialisation" lines; include campus in the name when the document attaches it)
-  - description: only text explicitly tied to that offering in the document; else ""
-  - documentExcerpt: required direct quote proving this offering; omit offerings you cannot quote
-  - For large programme catalogues, return ALL explicitly listed programmes (up to the schema limit), not a short sample
+  - name: exact DEGREE PROGRAMME name (must include a degree token such as B.E., B.Tech, M.Sc, MBA, M.E.)
+  - description: only text explicitly tied to that programme; else ""
+  - documentExcerpt: required direct quote proving this programme exists
+  - Do NOT add TOC items, chapter titles, or admissions workflow steps as offerings
+  - A typical knowledge PDF has about 3–10 programmes, not 20+ headings
 
 Use exactly this JSON shape (arrays must be arrays, not strings or booleans):
 ${SERVICE_INSIGHTS_JSON_EXAMPLE}`;

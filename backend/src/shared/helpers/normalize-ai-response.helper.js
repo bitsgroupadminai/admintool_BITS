@@ -1,3 +1,5 @@
+import { filterProgrammeOfferings } from './structured-offerings.helper.js';
+
 /**
  * Coerce common OpenAI JSON shape mistakes before Zod validation.
  * @param {unknown} raw
@@ -45,6 +47,7 @@ export function normalizeServiceInsightsPayload(raw) {
         return null;
       })
       .filter(Boolean);
+    obj.suggestedOfferings = filterProgrammeOfferings(obj.suggestedOfferings);
   } else {
     obj.suggestedOfferings = [];
   }

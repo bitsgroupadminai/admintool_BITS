@@ -18,21 +18,22 @@ export const DOCUMENT_EXTRACTION_RULES = `EXTRACTIVE OUTPUT (verbatim from the d
 - Every extracted item MUST include documentExcerpt: a direct quote from the document (≤300 characters) proving it.
 - Preserve document order for lists (offerings, steps, documents, rules).`;
 
-export const OFFERING_DEFINITION = `An "offering" is a distinct programme / course / intake track under a parent service that students apply to separately.
+export const OFFERING_DEFINITION = `An "offering" is a distinct academic programme / course / intake that a student can APPLY TO separately.
 
-INCLUDE as offerings when explicitly listed:
-- Degree programmes and specialisations (e.g. "B.Tech. Computer Science & Engineering", "MBA Fintech", "BCA Data Science")
-- Named application categories, quotas, batches, or campuses when the document presents them as separate apply-to options
-- Prefer the most specific named programme line (degree + specialisation + campus if stated together)
+INCLUDE only when the document names a real programme, typically with a degree token:
+- B.E. / B.Tech / B.Sc / BBA / BCA / M.E. / M.Tech / M.Sc / MBA / MCA / Ph.D / Diploma / Integrated …
+- Example: "B.E. Computer Science", "MBA in Business Analytics", "M.Sc. Economics"
+- Include campus in the name only if the document presents that campus as a separate apply-to option
 
-DO NOT treat as offerings:
-- Marketing section headings alone (e.g. "Rankings", "Placements", "Vision")
-- Workflow steps, document checklist titles, or generic labels like "Undergraduate" with no programme name
-- Years, survey names, or ranking positions
+DO NOT treat as offerings (these are NOT programmes):
+- Table of contents / numbered section titles: "Purpose of This Knowledge Document", "Campuses Covered", "Programmes Covered in This Document"
+- Workflow or process steps: "Application submission", "Profile screening", "Interview scheduling", "Offer release", "Final merit generation"
+- Policy chapters: "Queue and Appointment Handling", "AI Chatbot Knowledge Guidelines", "Audit and Compliance", "Escalation Matrix"
+- Generic headings: "Programme Knowledge Sections", "General Admissions Operational Principles"
 
 EXTRACTION RULES FOR OFFERINGS:
-- List ONLY offerings explicitly named in the document (exact titles as written; light cleanup of line breaks OK).
-- For nested catalogues (School → Degree → Specialisation), emit one offering per specialisation/programme line, not only the school name.
-- If the document describes a single intake only, return exactly one offering with its exact name from the document.
-- If no distinct offering is explicitly named, return an empty suggestedOfferings array.
-- Return as many valid offerings as the document lists (do not stop early at an arbitrary small count).`;
+- Return every named degree programme the student can apply to (small PDFs often have 3–8; large catalogues may have more).
+- Never add a numbered heading just because it is numbered.
+- Copy programme titles exactly as written (light cleanup of line breaks OK).
+- If no degree programme is named, return an empty suggestedOfferings array.
+- Prefer quality over quantity: never pad the list with section titles.`;

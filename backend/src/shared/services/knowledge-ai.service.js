@@ -22,6 +22,7 @@ import {
   extractStructuredOfferingsFromText,
   prepareInsightsDocumentText,
   mergeSuggestedOfferings,
+  filterProgrammeOfferings,
   focusDocumentForOffering,
   extractEligibilityRulesFromText,
   mergeEligibilityRules,
@@ -87,7 +88,7 @@ export async function generateServiceInsights(service, documents) {
     });
 
     const mergedOfferings = mergeSuggestedOfferings(
-      result.suggestedOfferings,
+      filterProgrammeOfferings(result.suggestedOfferings),
       structuredOfferings,
     );
 
@@ -139,7 +140,10 @@ export async function generateServiceInsights(service, documents) {
  * @param {string|null} analysisWarning
  */
 function finalizeInsights(base, structuredOfferings, analysisMode, analysisWarning) {
-  const merged = mergeSuggestedOfferings(base.suggestedOfferings ?? [], structuredOfferings);
+  const merged = mergeSuggestedOfferings(
+    filterProgrammeOfferings(base.suggestedOfferings ?? []),
+    structuredOfferings,
+  );
   const gaps = [...(base.gaps ?? [])];
 
   if (merged.length > 0) {

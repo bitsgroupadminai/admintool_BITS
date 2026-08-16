@@ -1,19 +1,22 @@
-import { getHealthReport, getSimpleHealth } from './health.service.js';
+import { getHealthReport } from './health.service.js';
 import { getMetrics } from './metrics.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 import { env } from '../../core/config/env.js';
 
 /**
- * GET /health and GET /api/v1/health — public probe (server + MongoDB + Redis).
+ * GET /health and GET /api/v1/health — public liveness probe.
+ * Must stay dependency-free so Railway healthchecks pass while Mongo/Redis/SMTP start.
  */
-export async function simpleHealth(req, res, next) {
-  try {
-    const health = await getSimpleHealth();
-    // Always 200 once HTTP is up so Railway healthchecks pass while deps reconnect.
-    res.status(200).json(health);
-  } catch (err) {
-    next(err);
-  }
+export async function simpleHealth(req, res) {
+  res.status(200).json({
+    status: 'healthy',
+    message: 'Server is listening',
+    server: {
+      listening: true,
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    },
+  });
 }
 
 /**

@@ -66,9 +66,14 @@ async function checkEmail() {
     return { status: emailCache.status, cached: true };
   }
 
-  const ok = await verifyEmailTransport();
-  emailCache = { status: ok ? 'up' : 'down', checkedAt: now };
-  return { status: emailCache.status };
+  try {
+    const ok = await verifyEmailTransport();
+    emailCache = { status: ok ? 'up' : 'down', checkedAt: now };
+    return { status: emailCache.status };
+  } catch (err) {
+    emailCache = { status: 'down', checkedAt: now };
+    return { status: 'down', error: err.message };
+  }
 }
 
 function checkWebsocket() {

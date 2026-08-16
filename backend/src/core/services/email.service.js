@@ -159,8 +159,13 @@ export async function verifyEmailTransport() {
 
   try {
     const transport = getTransporter();
+    const verifyPromise = transport.verify();
+    // Prevent a late verify() rejection from becoming an unhandledRejection
+    // (which can crash the Railway process after a timeout wins the race).
+    verifyPromise.catch(() => {});
+
     await Promise.race([
-      transport.verify(),
+      verifyPromise,
       new Promise((_, reject) => {
         setTimeout(
           () => reject(new Error(`SMTP verify timed out after ${SMTP_VERIFY_TIMEOUT_MS}ms`)),

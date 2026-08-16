@@ -53,7 +53,10 @@ async function connectDependencies() {
   startEmbeddingWorker();
   startAiVerificationWorker();
   startOfferingExpiryJob();
-  await verifyEmailTransport();
+  // Never block or crash startup on SMTP — Railway healthchecks need /health immediately.
+  verifyEmailTransport().catch((err) => {
+    logger.error({ err }, 'Background SMTP verification failed');
+  });
   startHealthMonitor();
 }
 

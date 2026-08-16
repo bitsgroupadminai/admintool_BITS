@@ -3,11 +3,29 @@ import { z } from 'zod';
 
 dotenv.config();
 
+/** Railway Raw Editor often sends empty strings; treat them as unset so defaults apply. */
+const cleanedEnv = Object.fromEntries(
+  Object.entries(process.env).map(([key, value]) => [
+    key,
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  ]),
+);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
   MONGODB_URI: z.string().min(1),
-  REDIS_URL: z.string().min(1),
+  REDIS_URL: z
+    .string()
+    .min(1)
+    .transform((url) => {
+      const trimmed = url.trim();
+      // Redis Cloud / redis.io typically requires TLS.
+      if (trimmed.startsWith('redis://') && /(?:^|\.)redis\.io(?::|\/|$)/i.test(trimmed)) {
+        return `rediss://${trimmed.slice('redis://'.length)}`;
+      }
+      return trimmed;
+    }),
   SESSION_SECRET: z.string().min(16),
   ADMIN_CLIENT_URL: z.string().url(),
   STUDENT_CLIENT_URL: z.string().url(),
@@ -172,7 +190,7 @@ const envSchema = z.object({
   HEALTH_MONITOR_INTERVAL_MS: z.coerce.number().min(5_000).default(60_000),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = envSchema.safeParse(cleanedEnv);
 
 if (!parsed.success) {
   console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);

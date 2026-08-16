@@ -11,6 +11,7 @@ export function getQueueConnection() {
   if (!sharedConnection) {
     sharedConnection = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
+      tls: env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
     });
   }
   return sharedConnection;

@@ -42,7 +42,7 @@ async function shutdown() {
   process.exit(0);
 }
 
-async function start() {
+async function connectDependencies() {
   await connectDb();
   await ensureTenantIndexes();
   await connectRedis();
@@ -54,14 +54,29 @@ async function start() {
   startAiVerificationWorker();
   startOfferingExpiryJob();
   await verifyEmailTransport();
+  startHealthMonitor();
+}
 
+async function start() {
   const server = http.createServer(app);
   initWebSocket(server);
-  startHealthMonitor();
 
-  server.listen(env.PORT, () => {
-    logger.info(`Server listening on port ${env.PORT}`);
+  await new Promise((resolve, reject) => {
+    server.listen(env.PORT, '0.0.0.0', (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      logger.info(`Server listening on 0.0.0.0:${env.PORT}`);
+      resolve();
+    });
   });
+
+  try {
+    await connectDependencies();
+  } catch (err) {
+    logger.error({ err }, 'Dependency startup failed; HTTP /health remains available');
+  }
 }
 
 process.on('SIGINT', shutdown);

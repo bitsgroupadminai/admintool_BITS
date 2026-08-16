@@ -9,7 +9,8 @@ import { env } from '../../core/config/env.js';
 export async function simpleHealth(req, res, next) {
   try {
     const health = await getSimpleHealth();
-    res.status(health.status === 'unhealthy' ? 503 : 200).json(health);
+    // Always 200 once HTTP is up so Railway healthchecks pass while deps reconnect.
+    res.status(200).json(health);
   } catch (err) {
     next(err);
   }

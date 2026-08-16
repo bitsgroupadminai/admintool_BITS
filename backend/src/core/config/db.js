@@ -8,6 +8,8 @@ import { logger } from '../logger/index.js';
  */
 export async function connectDb() {
   mongoose.set('strictQuery', true);
-  await mongoose.connect(env.MONGODB_URI);
+  await mongoose.connect(env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 12_000,
+  });
   logger.info('MongoDB connected');
 }

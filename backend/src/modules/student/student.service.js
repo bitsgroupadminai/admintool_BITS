@@ -55,13 +55,10 @@ import {
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
 import { resolveStudentPortalInstituteId } from '../../shared/helpers/studentPortalInstitute.helper.js';
 import { fuzzyFilterByName } from '../../shared/helpers/fuzzySearch.helper.js';
-
-function isWithinOfferingDates(offering) {
-  const now = new Date();
-  if (offering.startDate && offering.startDate > now) return false;
-  if (offering.endDate && offering.endDate < now) return false;
-  return true;
-}
+import {
+  isWithinOfferingDates,
+  offeringDateQueryBounds,
+} from '../../shared/helpers/offeringDates.helper.js';
 
 function isStudentVisibleOffering(offering) {
   // Student portal shows only Active offerings (within date window if set).
@@ -69,15 +66,11 @@ function isStudentVisibleOffering(offering) {
 }
 
 function studentVisibleOfferingQuery(instituteId, serviceId) {
-  const now = new Date();
   return {
     instituteId,
     ...(serviceId ? { serviceId } : {}),
     status: OFFERING_STATUS.ACTIVE,
-    $and: [
-      { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: { $lte: now } }] },
-      { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: { $gte: now } }] },
-    ],
+    ...offeringDateQueryBounds(),
   };
 }
 

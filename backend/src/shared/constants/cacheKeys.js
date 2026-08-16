@@ -31,11 +31,11 @@ export const cacheNs = {
   USERS_STUDENTS_LIST: 'read:users:students',
   USERS_PROGRAMMES: 'read:users:programmes',
   USERS_STAFF_ROLES: 'read:users:staff-roles',
-  STUDENT_INSTITUTES: 'read:student:institutes:v2',
+  STUDENT_INSTITUTES: 'read:student:institutes:v3',
   STUDENT_INSTITUTE_PROFILE: 'read:student:institute-profile',
-  // v2: bust stale empty catalogue entries cached before exact-key invalidation
-  STUDENT_OFFERINGS: 'read:student:offerings:v2',
-  STUDENT_OFFERING_DETAIL: 'read:student:offering-detail:v2',
+  // v3: intake dates use Asia/Kolkata calendar days
+  STUDENT_OFFERINGS: 'read:student:offerings:v3',
+  STUDENT_OFFERING_DETAIL: 'read:student:offering-detail:v3',
   STUDENT_INTAKE_STATUS: 'read:student:intake-status',
   STUDENT_APPLICATIONS: 'read:student:applications',
   STUDENT_SERVICES: 'read:student:services',

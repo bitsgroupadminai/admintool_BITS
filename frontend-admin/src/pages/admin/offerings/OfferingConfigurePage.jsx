@@ -65,7 +65,19 @@ const SECTION_LABELS = {
 
 function toDateInput(value) {
   if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
+  // Use India calendar day — UTC slice() shifts dates back one day for IST midnights.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
+}
+
+function toInstituteIsoDateTime(dateYmd, endOfDay = false) {
+  if (!dateYmd) return null;
+  const time = endOfDay ? 'T23:59:59.999+05:30' : 'T00:00:00.000+05:30';
+  return new Date(`${dateYmd}${time}`).toISOString();
 }
 
 function StepFooter({ onBack, onSaveDraft, onContinue, saving, continueLabel = 'Save & continue' }) {
@@ -322,12 +334,8 @@ export function OfferingConfigurePage() {
       const { data } = await offeringsApi.updateDetails(id, {
         name: detailsForm.name.trim(),
         description: detailsForm.description.trim(),
-        startDate: detailsForm.startDate
-          ? new Date(`${detailsForm.startDate}T00:00:00`).toISOString()
-          : null,
-        endDate: detailsForm.endDate
-          ? new Date(`${detailsForm.endDate}T23:59:59`).toISOString()
-          : null,
+        startDate: toInstituteIsoDateTime(detailsForm.startDate, false),
+        endDate: toInstituteIsoDateTime(detailsForm.endDate, true),
         applicantFields: applicantFields.map((field, index) => ({
           ...field,
           label: field.label.trim(),

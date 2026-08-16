@@ -55,19 +55,22 @@ function applyPaymentConfig(offering, paymentConfig) {
   offering.markModified('paymentConfig');
 }
 
+import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
+import {
+  isWithinOfferingDates,
+} from '../../shared/helpers/offeringDates.helper.js';
+
 /**
  * @param {import('./offering.model.js').Offering} doc
  */
 function formatOffering(doc) {
   const completeness = getOfferingCompleteness(doc);
-  const now = new Date();
-  const opensInFuture = Boolean(doc.startDate && doc.startDate > now);
-  const closedByDate = Boolean(doc.endDate && doc.endDate < now);
   const isActive = doc.status === OFFERING_STATUS.ACTIVE;
+  const inWindow = isWithinOfferingDates(doc);
   let studentPortalNote = null;
-  if (isActive && opensInFuture) {
-    studentPortalNote = `Scheduled — visible on the student portal from ${doc.startDate.toISOString().slice(0, 10)}`;
-  } else if (isActive && closedByDate) {
+  if (isActive && !inWindow && doc.startDate && new Date(doc.startDate) > new Date()) {
+    studentPortalNote = `Scheduled — visible on the student portal from ${new Date(doc.startDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+  } else if (isActive && !inWindow) {
     studentPortalNote = 'Intake dates have ended — not visible on the student portal until dates are updated';
   } else if (isActive) {
     studentPortalNote = 'Visible on the student portal';
@@ -84,7 +87,7 @@ function formatOffering(doc) {
     status: resolveOfferingDisplayStatus(doc),
     startDate: doc.startDate,
     endDate: doc.endDate,
-    studentPortalVisible: isActive && !opensInFuture && !closedByDate,
+    studentPortalVisible: isActive && inWindow,
     studentPortalNote,
     configurationVersion: doc.configurationVersion,
     eligibilityRules: doc.eligibilityRules ?? [],

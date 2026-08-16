@@ -15,17 +15,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
   MONGODB_URI: z.string().min(1),
-  REDIS_URL: z
-    .string()
-    .min(1)
-    .transform((url) => {
-      const trimmed = url.trim();
-      // Redis Cloud / redis.io typically requires TLS.
-      if (trimmed.startsWith('redis://') && /(?:^|\.)redis\.io(?::|\/|$)/i.test(trimmed)) {
-        return `rediss://${trimmed.slice('redis://'.length)}`;
-      }
-      return trimmed;
-    }),
+  REDIS_URL: z.string().min(1).transform((url) => url.trim()),
   SESSION_SECRET: z.string().min(16),
   ADMIN_CLIENT_URL: z.string().url(),
   STUDENT_CLIENT_URL: z.string().url(),

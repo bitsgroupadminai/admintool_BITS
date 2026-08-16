@@ -6,6 +6,7 @@ import { Application } from '../applications/application.model.js';
 import { User } from '../users/user.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { env } from '../../core/config/env.js';
+import { logger } from '../../core/logger/index.js';
 import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import { SERVICE_STATUS } from '../../shared/enums/service.enums.js';
 import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
@@ -354,7 +355,9 @@ async function recordEnrollmentIntake(application, offering, instituteId) {
     instituteName: institute?.name ?? 'Your institute',
   };
 
-  notifyEnrollmentIntakeReceived(application, emailContext).catch(() => {});
+  notifyEnrollmentIntakeReceived(application, emailContext).catch((err) => {
+    logger.error({ err, applicationId: application._id }, 'Failed to queue enrollment intake received email');
+  });
 
   await notifyInstituteTeamOfEnrollmentIntake(application, {
     offeringName: offering.name,

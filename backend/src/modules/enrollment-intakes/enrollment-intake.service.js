@@ -25,6 +25,7 @@ import { findApplicationDocument } from '../../shared/helpers/applicationDocumen
 import { formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import { streamDocumentFile } from '../applications/application.service.js';
 import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
+import { logger } from '../../core/logger/index.js';
 
 const SALT_ROUNDS = 10;
 
@@ -253,7 +254,9 @@ export async function approveEnrollmentIntake(instituteId, intakeId, reviewer, p
   application.assignedBy = undefined;
   await application.save();
 
-  notifyEnrollmentIntakeApproved(application, context, { temporaryPassword }).catch(() => {});
+  notifyEnrollmentIntakeApproved(application, context, { temporaryPassword }).catch((err) => {
+    logger.error({ err, applicationId: application._id }, 'Failed to queue enrollment approval email');
+  });
 
   const applicationId = application._id.toString();
   const recipients = await User.find({
@@ -316,7 +319,9 @@ export async function rejectEnrollmentIntake(instituteId, intakeId, reviewer, pa
   application.correctionNote = payload.reason;
   await application.save();
 
-  notifyApplicationStatusChange(application, context, APPLICATION_STATUS.REJECTED).catch(() => {});
+  notifyApplicationStatusChange(application, context, APPLICATION_STATUS.REJECTED).catch((err) => {
+    logger.error({ err, applicationId: application._id }, 'Failed to queue enrollment rejection email');
+  });
 
   const applicationId = application._id.toString();
   const recipients = await User.find({

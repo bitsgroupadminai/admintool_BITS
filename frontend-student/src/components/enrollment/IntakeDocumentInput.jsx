@@ -1,10 +1,8 @@
 import { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FileUp, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildAcceptAttribute, validateFileForRequirement } from '@/utils/applicationDocuments';
-
-const inputClassName =
-  'h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white';
 
 /**
  * @param {{
@@ -32,6 +30,7 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
 
   const handleFileChange = (event) => {
     const nextFile = event.target.files?.[0] ?? null;
+    // Clear native value so the same file can be re-selected; keep File in React state.
     event.target.value = '';
 
     if (!nextFile) {
@@ -52,12 +51,39 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
     onChange(nextFile);
   };
 
+  // Keep the native file input outside the <form> so browser constraint
+  // validation can never block submit (hidden + required = not focusable).
+  const fileInput =
+    typeof document !== 'undefined'
+      ? createPortal(
+          <input
+            ref={inputRef}
+            id="intake-document"
+            type="file"
+            accept={buildAcceptAttribute(intakeDocument.allowedTypes)}
+            onChange={handleFileChange}
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+              opacity: 0,
+              pointerEvents: 'none',
+            }}
+            tabIndex={-1}
+            aria-hidden="true"
+          />,
+          document.body,
+        )
+      : null;
+
   return (
     <div>
-      <label htmlFor="intake-document" className="mb-1.5 block text-sm font-medium text-[#052E1C]">
+      <p className="mb-1.5 block text-sm font-medium text-[#052E1C]">
         {intakeDocument.label}
         {intakeDocument.required !== false ? <span className="text-[#B91C1C]"> *</span> : null}
-      </label>
+      </p>
 
       <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -93,15 +119,7 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
         <p className="mt-1 text-xs text-[#6B7280]">{intakeDocument.helpText}</p>
       ) : null}
 
-      <input
-        ref={inputRef}
-        id="intake-document"
-        type="file"
-        className="sr-only"
-        tabIndex={-1}
-        accept={buildAcceptAttribute(intakeDocument.allowedTypes)}
-        onChange={handleFileChange}
-      />
+      {fileInput}
     </div>
   );
 }

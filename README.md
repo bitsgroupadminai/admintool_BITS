@@ -210,9 +210,10 @@ More help: [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
 
 ## Production deploy (summary)
 
-- Admin UI → Vercel (`eduportal-admin.vercel.app`)
-- Student UI → Vercel (`eduportal-student.vercel.app`)
-- Backend → Railway (Docker) + MongoDB Atlas + Redis Cloud
+- Admin UI → Vercel (`https://campusflow-admin-flame.vercel.app`)
+- Student UI → Vercel (`https://campusflow-student-smoky.vercel.app`)
+- Backend API → Railway + custom domain (`https://api.bits.bhupeshb7.me`)
+- Data → MongoDB Atlas + Redis Cloud
 
 See [`deploy/DEPLOY.md`](deploy/DEPLOY.md) for step-by-step.
 

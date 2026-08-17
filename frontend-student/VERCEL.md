@@ -14,8 +14,8 @@ If `/login` refresh shows Vercel `404 NOT_FOUND`, the project is not using `fron
 ## Env vars (Production + Preview)
 
 ```env
-VITE_API_BASE_URL=https://admintoolbits-production.up.railway.app/api/v1
-VITE_SOCKET_URL=https://admintoolbits-production.up.railway.app
+VITE_API_BASE_URL=https://api.bits.bhupeshb7.me/api/v1
+VITE_SOCKET_URL=https://api.bits.bhupeshb7.me
 ```
 
 Must include `https://`.

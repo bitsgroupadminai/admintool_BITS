@@ -31,12 +31,12 @@ REDIS_URL=rediss://default:PASSWORD@HOST:PORT
 
 ### After backend is live
 
-1. Copy Railway public URL, e.g. `https://xxx.up.railway.app`
+1. Use the custom API domain (or Railway public URL): `https://api.bits.bhupeshb7.me`
 2. Set on **both** Vercel projects:
 
 ```env
-VITE_API_BASE_URL=https://xxx.up.railway.app/api/v1
-VITE_SOCKET_URL=https://xxx.up.railway.app
+VITE_API_BASE_URL=https://api.bits.bhupeshb7.me/api/v1
+VITE_SOCKET_URL=https://api.bits.bhupeshb7.me
 ```
 
 3. Redeploy both Vercel apps

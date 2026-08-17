@@ -22,9 +22,10 @@ import {
   flushInstituteReadCache,
   flushStudentInstitutesCache,
 } from '../../shared/helpers/cacheInvalidation.helper.js';
+import { isWithinOfferingDates } from '../../shared/helpers/offeringDates.helper.js';
 
 async function flushOfferingCaches(instituteId) {
-  await flushOfferingCaches(instituteId);
+  await flushInstituteReadCache(instituteId);
   await flushStudentInstitutesCache();
 }
 
@@ -54,11 +55,6 @@ function applyPaymentConfig(offering, paymentConfig) {
   }
   offering.markModified('paymentConfig');
 }
-
-import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
-import {
-  isWithinOfferingDates,
-} from '../../shared/helpers/offeringDates.helper.js';
 
 /**
  * @param {import('./offering.model.js').Offering} doc

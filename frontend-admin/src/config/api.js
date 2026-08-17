@@ -18,7 +18,7 @@ function normalizeAbsoluteUrl(value) {
 
 /**
  * In local Vite, `/api/v1` is proxied to the backend.
- * On Vercel, set `VITE_API_BASE_URL` to https://xxx.up.railway.app/api/v1
+ * On Vercel, set `VITE_API_BASE_URL` to https://api.bits.bhupeshb7.me/api/v1
  */
 export function getApiBaseUrl() {
   const fromEnv = normalizeAbsoluteUrl(import.meta.env.VITE_API_BASE_URL);

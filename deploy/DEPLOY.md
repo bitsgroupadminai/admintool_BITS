@@ -4,9 +4,9 @@ Chosen domains:
 
 | App | URL |
 | --- | --- |
-| Admin / Staff | https://eduportal-admin.vercel.app |
-| Student | https://eduportal-student.vercel.app |
-| Backend API | https://YOUR-RAILWAY-APP.up.railway.app (set after Railway deploy) |
+| Admin / Staff | https://campusflow-admin-flame.vercel.app |
+| Student | https://campusflow-student-smoky.vercel.app |
+| Backend API | https://api.bits.bhupeshb7.me |
 
 Deploy order for this project: **frontends first**, then backend.
 
@@ -21,16 +21,15 @@ Deploy order for this project: **frontends first**, then backend.
    - **Framework:** Vite
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
-4. Project name / domain: `eduportal-admin` → `eduportal-admin.vercel.app`
-5. Environment Variables (Production) — can use placeholder until Railway is ready:
+4. Project name / domain: `campusflow-admin-flame`
+5. Environment Variables (Production):
 
 ```env
-VITE_API_BASE_URL=https://YOUR-RAILWAY-APP.up.railway.app/api/v1
-VITE_SOCKET_URL=https://YOUR-RAILWAY-APP.up.railway.app
+VITE_API_BASE_URL=https://api.bits.bhupeshb7.me/api/v1
+VITE_SOCKET_URL=https://api.bits.bhupeshb7.me
 ```
 
 6. Deploy.
-7. After backend exists, update these two vars to the real Railway URL and **Redeploy**.
 
 `vercel.json` already rewrites SPA routes to `index.html`.
 
@@ -41,7 +40,7 @@ VITE_SOCKET_URL=https://YOUR-RAILWAY-APP.up.railway.app
 Same as admin, but:
 
 - **Root Directory:** `frontend-student`
-- Domain: `eduportal-student.vercel.app`
+- Domain: `campusflow-student-smoky.vercel.app`
 - Same `VITE_API_BASE_URL` / `VITE_SOCKET_URL` values as admin
 
 ---
@@ -49,13 +48,14 @@ Same as admin, but:
 ## Phase 3 — Backend (Railway)
 
 1. Railway → New Project → Deploy from GitHub repo.
-2. **CRITICAL:** Settings → **Root Directory** = `backend`
-3. Builder uses Nixpacks (`backend/railway.toml` + `backend/nixpacks.toml`).
+2. **CRITICAL:** Settings → **Root Directory** = `backend` (or use root `railway.toml` monorepo start).
+3. Builder uses Railpack / Nixpacks.
 4. Open **Variables** → Raw Editor → paste from local `deploy/railway.env` (gitignored) or `deploy/railway.env.example`.
 5. Atlas Network Access: allow `0.0.0.0/0` for demo.
-6. Generate public domain (Settings → Networking).
-7. Smoke test: `GET https://YOUR-APP.up.railway.app/api/v1/health`
-8. Update both Vercel `VITE_API_BASE_URL` / `VITE_SOCKET_URL` → Redeploy.
+6. Networking → custom domain: `api.bits.bhupeshb7.me` (also keep Railway default URL if needed).
+7. Set `PUBLIC_API_URL=https://api.bits.bhupeshb7.me` on Railway.
+8. Smoke test: `GET https://api.bits.bhupeshb7.me/health` and `GET https://api.bits.bhupeshb7.me/api/v1/health`
+9. Confirm both Vercel apps use the `VITE_*` values above → Redeploy if changed.
 
 See also: `deploy/RAILWAY_MONOREPO.md`
 
@@ -64,9 +64,9 @@ See also: `deploy/RAILWAY_MONOREPO.md`
 ## CORS / cookies (already configured in code)
 
 - Backend allows only `ADMIN_CLIENT_URL` + `STUDENT_CLIENT_URL` (+ optional `EXTRA_CORS_ORIGINS`)
-- Production cookies use `SameSite=None; Secure` so Vercel → Railway auth works
+- Production cookies use `SameSite=None; Secure` so Vercel → API auth works
 - Frontends call API with `withCredentials: true`
-- Avatars under `/uploads/...` resolve against the Railway origin
+- Avatars under `/uploads/...` resolve against the API origin
 
 ---
 
@@ -75,17 +75,17 @@ See also: `deploy/RAILWAY_MONOREPO.md`
 | Mode | API URL |
 | --- | --- |
 | Local `npm run dev` | Leave `VITE_*` unset → Vite proxies `/api` to `localhost:5001` |
-| Vercel production | Set `VITE_API_BASE_URL` + `VITE_SOCKET_URL` to Railway |
+| Vercel production | Set `VITE_API_BASE_URL` + `VITE_SOCKET_URL` to `https://api.bits.bhupeshb7.me` |
 
 ---
 
 ## Checklist before demo
 
-- [ ] Admin Vercel live on `eduportal-admin.vercel.app`
-- [ ] Student Vercel live on `eduportal-student.vercel.app`
-- [ ] Railway health endpoint OK
+- [ ] Admin Vercel live on `campusflow-admin-flame.vercel.app`
+- [ ] Student Vercel live on `campusflow-student-smoky.vercel.app`
+- [ ] API health OK on `https://api.bits.bhupeshb7.me/health`
 - [ ] Atlas + Redis reachable from Railway
-- [ ] Frontend env vars updated to real Railway URL + redeployed
+- [ ] Frontend env vars point at custom API domain + redeployed
 - [ ] Admin signup/login works (cookies)
 - [ ] Student login works
 - [ ] Socket/chat works (if testing chat)

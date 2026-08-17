@@ -138,7 +138,7 @@ export async function withdrawApplication(instituteId, applicationId, user, note
   appendLifecycleHistory(application, user, 'withdrawn', note);
   await application.save();
 
-  notifyApplicationStatusChange(application, 'withdrawn').catch(() => {});
+  notifyApplicationStatusChange(application, null, APPLICATION_STATUS.WITHDRAWN).catch(() => {});
   await emitLifecycleUpdate(application, instituteId);
   return application;
 }
@@ -160,7 +160,7 @@ export async function cancelApplication(instituteId, applicationId, actor, note 
   appendLifecycleHistory(application, actor, 'cancelled', note);
   await application.save();
 
-  notifyApplicationStatusChange(application, 'cancelled').catch(() => {});
+  notifyApplicationStatusChange(application, null, APPLICATION_STATUS.CANCELLED).catch(() => {});
   await emitLifecycleUpdate(application, instituteId);
   return application;
 }
@@ -182,7 +182,7 @@ export async function reopenApplication(instituteId, applicationId, actor, note 
   appendLifecycleHistory(application, actor, 'reopened', note);
   await application.save();
 
-  notifyApplicationStatusChange(application, 'reopened').catch(() => {});
+  notifyApplicationStatusChange(application, null, APPLICATION_STATUS.IN_REVIEW).catch(() => {});
   await emitLifecycleUpdate(application, instituteId);
   return application;
 }

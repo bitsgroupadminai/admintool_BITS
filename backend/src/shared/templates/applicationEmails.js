@@ -1,6 +1,7 @@
-import { env } from '../../core/config/env.js';
 import { queueEmailNotification } from '../../core/services/email.service.js';
 import { buildHtmlEmail } from './emailLayout.js';
+import { getAdminPortalUrl, getStudentPortalUrl } from '../helpers/portalUrls.helper.js';
+import { logger } from '../../core/logger/index.js';
 
 const STATUS_MESSAGES = {
   submitted: {
@@ -32,6 +33,26 @@ const STATUS_MESSAGES = {
     subject: 'Enrollment request received',
     headline: 'We received your enrollment request',
     body: 'Your institute is reviewing whether you are authorized to start this programme. You will receive another email once the review is complete.',
+  },
+  pending_ai_review: {
+    subject: 'Your request is being checked',
+    headline: 'Automatic review in progress',
+    body: 'Your documents are being reviewed. We will email you when a decision is ready.',
+  },
+  withdrawn: {
+    subject: 'Your request was withdrawn',
+    headline: 'Request withdrawn',
+    body: 'This request has been withdrawn. You can start a new application from the student portal if needed.',
+  },
+  cancelled: {
+    subject: 'Your request was cancelled',
+    headline: 'Request cancelled',
+    body: 'This request was cancelled by your institute. Contact the office if you need help.',
+  },
+  reopened: {
+    subject: 'Your request was reopened',
+    headline: 'Request reopened',
+    body: 'Your request is open again and will continue through review.',
   },
 };
 
@@ -81,7 +102,7 @@ export function buildStatusUpdateEmail(params) {
     '',
     `Service: ${serviceName}`,
     `Option: ${offeringName}`,
-    `Status: ${status.replace('_', ' ')}`,
+    `Status: ${String(status ?? 'updated').replace(/_/g, ' ')}`,
     '',
     `View details: ${studentPortalUrl}/services`,
     '',
@@ -150,7 +171,7 @@ export async function notifyApplicationSubmitted(application, context) {
     serviceName: context.serviceName,
     offeringName: context.offeringName,
     instituteName: context.instituteName,
-    studentPortalUrl: env.STUDENT_CLIENT_URL,
+    studentPortalUrl: getStudentPortalUrl(),
   });
 
   return queueEmailNotification({
@@ -161,20 +182,35 @@ export async function notifyApplicationSubmitted(application, context) {
 }
 
 export async function notifyApplicationStatusChange(application, context, status) {
+  let ctx = context && typeof context === 'object' ? context : {};
+  let resolvedStatus = status;
+  if (typeof context === 'string' && status == null) {
+    resolvedStatus = context;
+  }
+  resolvedStatus = resolvedStatus || application.status;
+
   const email = buildStatusUpdateEmail({
     applicantName: application.applicantName,
-    status,
-    serviceName: context.serviceName,
-    offeringName: context.offeringName,
-    instituteName: context.instituteName,
-    studentPortalUrl: env.STUDENT_CLIENT_URL,
+    status: resolvedStatus,
+    serviceName: ctx.serviceName ?? 'Service',
+    offeringName: ctx.offeringName ?? 'Option',
+    instituteName: ctx.instituteName ?? 'Your institute',
+    studentPortalUrl: getStudentPortalUrl(),
   });
 
-  return queueEmailNotification({
-    to: application.applicantEmail,
-    type: 'application-status-change',
-    ...email,
-  });
+  try {
+    return await queueEmailNotification({
+      to: application.applicantEmail,
+      type: 'application-status-change',
+      ...email,
+    });
+  } catch (err) {
+    logger.error(
+      { err, to: application.applicantEmail, status: resolvedStatus, applicationId: application._id },
+      'Failed to queue application status email',
+    );
+    return null;
+  }
 }
 
 export async function notifyApplicationAssigned(application, context, staff) {
@@ -184,7 +220,7 @@ export async function notifyApplicationAssigned(application, context, staff) {
     serviceName: context.serviceName,
     offeringName: context.offeringName,
     instituteName: context.instituteName,
-    adminPortalUrl: env.ADMIN_CLIENT_URL,
+    adminPortalUrl: getAdminPortalUrl(),
     applicationId: application._id.toString(),
   });
 
@@ -304,7 +340,7 @@ export async function notifyEnrollmentIntakeApproved(application, context, crede
     serviceName: context.serviceName,
     offeringName: context.offeringName,
     instituteName: context.instituteName,
-    studentPortalUrl: env.STUDENT_CLIENT_URL,
+    studentPortalUrl: getStudentPortalUrl(),
     email: application.applicantEmail,
     temporaryPassword: credentials.temporaryPassword,
   });
@@ -315,3 +351,66 @@ export async function notifyEnrollmentIntakeApproved(application, context, crede
     ...email,
   });
 }
+
+/**
+ * @param {{ staffName: string, email: string, staffRoleLabel: string, password: string, instituteName: string, adminPortalUrl: string }} params
+ */
+export function buildStaffWelcomeEmail(params) {
+  const { staffName, email, staffRoleLabel, password, instituteName, adminPortalUrl } = params;
+  const loginUrl = `${adminPortalUrl}/login`;
+  const subject = `${instituteName}: Your staff account is ready`;
+  const text = [
+    `Hello ${staffName},`,
+    '',
+    `A staff account was created for you at ${instituteName}.`,
+    `Role: ${staffRoleLabel}`,
+    `Login email: ${email}`,
+    `Password: ${password}`,
+    '',
+    `Sign in here: ${loginUrl}`,
+    '',
+    `— ${instituteName}`,
+  ].join('\n');
+
+  return {
+    subject,
+    text,
+    html: buildHtmlEmail({
+      headline: 'Your staff account is ready',
+      intro: `Hello ${staffName},`,
+      body: `A staff account was created for you at <strong>${instituteName}</strong>.<br/><br/>Role: <strong>${staffRoleLabel}</strong><br/>Login email: <strong>${email}</strong><br/>Password: <strong>${password}</strong>`,
+      ctaLabel: 'Open staff portal',
+      ctaUrl: loginUrl,
+      instituteName,
+    }),
+  };
+}
+
+export async function notifyStaffAccountCreated({
+  name,
+  email,
+  staffRoleLabel,
+  password,
+  instituteName,
+}) {
+  const mail = buildStaffWelcomeEmail({
+    staffName: name,
+    email,
+    staffRoleLabel,
+    password,
+    instituteName,
+    adminPortalUrl: getAdminPortalUrl(),
+  });
+
+  try {
+    return await queueEmailNotification({
+      to: email,
+      type: 'staff-account-created',
+      ...mail,
+    });
+  } catch (err) {
+    logger.error({ err, to: email }, 'Failed to queue staff welcome email');
+    return null;
+  }
+}
+

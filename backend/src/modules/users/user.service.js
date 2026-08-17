@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { read, utils } from 'xlsx';
 import { User } from './user.model.js';
 import { AppError } from '../../core/utils/AppError.js';
-import { ROLES, STAFF_ROLES } from '../../shared/constants/roles.js';
+import { ROLES, STAFF_ROLES, getStaffRoleLabel } from '../../shared/constants/roles.js';
 import { Offering } from '../offerings/offering.model.js';
 import { Service } from '../services/service.model.js';
 import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
@@ -19,6 +19,9 @@ import {
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import { Institute } from '../institutes/institute.model.js';
+import { notifyStaffAccountCreated } from '../../shared/templates/applicationEmails.js';
+import { logger } from '../../core/logger/index.js';
 
 const SALT_ROUNDS = 12;
 
@@ -75,6 +78,18 @@ export async function createStaffUser(instituteId, payload) {
   });
 
   await flushInstituteReadCache(instituteId);
+
+  const institute = await Institute.findById(instituteId).select('name');
+  notifyStaffAccountCreated({
+    name: user.name,
+    email: user.email,
+    staffRoleLabel: getStaffRoleLabel(user.staffRole),
+    password: payload.password,
+    instituteName: institute?.name ?? 'Your institute',
+  }).catch((err) => {
+    logger.error({ err, email: user.email }, 'Staff welcome email failed');
+  });
+
   return {
     id: user._id.toString(),
     name: user.name,

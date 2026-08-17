@@ -1,6 +1,6 @@
-import { env } from '../../core/config/env.js';
 import { queueEmailNotification } from '../../core/services/email.service.js';
 import { buildHtmlEmail } from './emailLayout.js';
+import { getStudentPortalUrl } from '../helpers/portalUrls.helper.js';
 
 function formatReceiptAmount(amountPaise, currency = 'INR') {
   const amount = amountPaise / 100;
@@ -41,7 +41,7 @@ export function buildPaymentReceiptEmail({
 }) {
   const amountDisplay = formatReceiptAmount(payment.amountPaise, payment.currency);
   const paidAtDisplay = formatPaidAt(payment.paidAt);
-  const studentPortalUrl = env.STUDENT_CLIENT_URL;
+  const studentPortalUrl = getStudentPortalUrl();
   const subject = `${instituteName}: Payment receipt — ${payment.label}`;
 
   const text = [

@@ -1,4 +1,3 @@
-import { env } from '../../core/config/env.js';
 import { queueEmailNotification } from '../../core/services/email.service.js';
 import { buildHtmlEmail } from './emailLayout.js';
 import { PRIORITY_LABELS } from '../helpers/queuePriority.helper.js';
@@ -337,6 +336,4 @@ export async function sendAppointmentCancelledEmail(params) {
   });
 }
 
-export function getStudentPortalUrl() {
-  return env.STUDENT_CLIENT_URL;
-}
+export { getStudentPortalUrl } from '../helpers/portalUrls.helper.js';

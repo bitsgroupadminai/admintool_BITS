@@ -1,13 +1,13 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { redisClient } from '../config/redis.js';
-import { env } from '../config/env.js';
 import { User } from '../../modules/users/user.model.js';
 import { Institute } from '../../modules/institutes/institute.model.js';
 import { AppError } from '../utils/AppError.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { buildPasswordResetEmail } from '../../shared/templates/emailLayout.js';
 import { queueEmailNotification } from './email.service.js';
+import { getAdminPortalUrl, getStudentPortalUrl } from '../../shared/helpers/portalUrls.helper.js';
 
 const RESET_PREFIX = 'password-reset:';
 const RESET_TTL_SECONDS = 10 * 60;
@@ -37,7 +37,7 @@ export async function requestPasswordReset(email) {
 
     const institute = await Institute.findById(user.instituteId).select('name');
     const baseUrl =
-      user.role === ROLES.STUDENT ? env.STUDENT_CLIENT_URL : env.ADMIN_CLIENT_URL;
+      user.role === ROLES.STUDENT ? getStudentPortalUrl() : getAdminPortalUrl();
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
     const portalLabel = user.role === ROLES.STUDENT ? 'EduPortal Student' : 'EduPortal Staff';
     const instituteLabel = institute?.name ? ` (${institute.name})` : '';

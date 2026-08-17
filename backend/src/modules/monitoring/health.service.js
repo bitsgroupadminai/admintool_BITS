@@ -16,7 +16,7 @@ import { env } from '../../core/config/env.js';
 /** Dependencies whose failure makes the service "unhealthy" (not just degraded). */
 export const CRITICAL_DEPENDENCIES = ['mongodb', 'redis', 'queue'];
 
-const EMAIL_CHECK_TTL_MS = 5 * 60 * 1000;
+const EMAIL_CHECK_TTL_MS = 2 * 60 * 1000;
 let emailCache = { status: null, checkedAt: 0 };
 
 async function timed(fn) {

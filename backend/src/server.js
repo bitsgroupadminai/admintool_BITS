@@ -85,6 +85,14 @@ async function start() {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
+process.on('unhandledRejection', (err) => {
+  logger.error({ err }, 'Unhandled promise rejection (process kept alive for Railway health)');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'Uncaught exception (process kept alive for Railway health)');
+});
+
 start().catch((err) => {
   logger.error({ err }, 'Failed to start server');
   process.exit(1);

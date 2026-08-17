@@ -6,7 +6,10 @@ import { enqueueEmailJob } from '../queues/email.queue.js';
 /** @type {import('nodemailer').Transporter | null} */
 let transporter = null;
 
-const SMTP_VERIFY_TIMEOUT_MS = 8_000;
+/** Gmail cold connects from cloud hosts often exceed 8–10s. */
+const SMTP_VERIFY_TIMEOUT_MS = 30_000;
+const SMTP_CONNECTION_TIMEOUT_MS = 25_000;
+const SMTP_SOCKET_TIMEOUT_MS = 45_000;
 
 function resolveSmtpHost() {
   if (env.SMTP_HOST) return env.SMTP_HOST;
@@ -19,8 +22,8 @@ function isSmtpConfigured() {
 }
 
 /**
- * Gmail (and most SMTP providers) reject mail when From ≠ authenticated user.
- * Keep a display name from SMTP_FROM but force the address to SMTP_USER when they differ.
+ * Gmail rejects mail when From ≠ authenticated user.
+ * Keep display name from SMTP_FROM but force the address to SMTP_USER when they differ.
  */
 export function resolveSmtpFrom() {
   const configured = String(env.SMTP_FROM ?? '').trim();
@@ -54,28 +57,44 @@ function resetTransporter() {
   transporter = null;
 }
 
+function buildSmtpTransportOptions() {
+  const host = resolveSmtpHost();
+  const user = env.SMTP_USER;
+  const pass = env.SMTP_PASS.replace(/\s+/g, '');
+  const isGmail = host === 'smtp.gmail.com' || user?.includes('@gmail.com');
+
+  // Prefer well-known Gmail settings; fall back to explicit host/port.
+  if (isGmail) {
+    return {
+      service: 'gmail',
+      auth: { user, pass },
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+    };
+  }
+
+  return {
+    host,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    requireTLS: !env.SMTP_SECURE,
+    auth: { user, pass },
+    connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    greetingTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+    tls: {
+      minVersion: 'TLSv1.2',
+      servername: host,
+    },
+  };
+}
+
 function getTransporter() {
   if (transporter) return transporter;
 
-  const host = resolveSmtpHost();
-  if (host && env.SMTP_USER && env.SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_SECURE,
-      requireTLS: !env.SMTP_SECURE,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS.replace(/\s+/g, ''),
-      },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 20_000,
-      tls: {
-        minVersion: 'TLSv1.2',
-        servername: host,
-      },
-    });
+  if (isSmtpConfigured()) {
+    transporter = nodemailer.createTransport(buildSmtpTransportOptions());
     return transporter;
   }
 
@@ -179,7 +198,7 @@ export async function verifyEmailTransport() {
     resetTransporter();
     logger.error(
       { err, host: resolveSmtpHost(), user: env.SMTP_USER },
-      'SMTP transport verification failed — check SMTP_USER/SMTP_PASS app password and outbound port 587 from the host',
+      'SMTP transport verification failed — check SMTP_USER/SMTP_PASS app password and network access to smtp.gmail.com',
     );
     return false;
   }

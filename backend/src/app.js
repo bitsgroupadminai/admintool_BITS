@@ -47,6 +47,19 @@ const app = express();
 // Railway / reverse proxies terminate TLS; required for secure cookies.
 app.set('trust proxy', 1);
 
+// Liveness FIRST — before logging/middleware — so Railway healthchecks never wait on deps.
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    message: 'Server is listening',
+    server: {
+      listening: true,
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
 app.use(
   pinoHttp({
     logger,
@@ -88,7 +101,6 @@ const authLimiter = rateLimit({
   },
 });
 
-app.get('/health', simpleHealth);
 app.get('/api/v1/health', simpleHealth);
 app.get('/api/v1/health/ready', readiness);
 

@@ -13,6 +13,21 @@ export function globalErrorHandler(err, req, res, _next) {
     return sendError(res, err.statusCode, err.message, err.errors);
   }
 
+  if (err.name === 'CastError') {
+    return sendError(res, 400, 'Invalid identifier in request');
+  }
+
+  if (err.name === 'ValidationError') {
+    return sendError(res, 400, 'The request contains invalid data');
+  }
+
+  if (err.error?.description || err.statusCode) {
+    const description = err.error?.description || err.message || 'Payment provider error';
+    const status = err.statusCode >= 400 && err.statusCode < 500 ? err.statusCode : 502;
+    logger.error({ err }, 'Payment provider error');
+    return sendError(res, status === 401 || status === 403 ? 503 : status, description);
+  }
+
   if (err.code === 'LIMIT_FILE_SIZE') {
     const isAvatar = req.originalUrl?.includes('/profile/avatar');
     return sendError(

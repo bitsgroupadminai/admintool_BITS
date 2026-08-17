@@ -32,6 +32,7 @@ import { Service } from '../services/service.model.js';
 import { Offering } from '../offerings/offering.model.js';
 import { Institute } from '../institutes/institute.model.js';
 import { Appointment, APPOINTMENT_STATUS as APPOINTMENT_VISIT_STATUS } from '../appointments/appointment.model.js';
+import { logger } from '../../core/logger/index.js';
 
 function normalizePaymentConfig(config) {
   if (!config?.enabled) {
@@ -56,7 +57,11 @@ export function formatPaymentConfig(config) {
 }
 
 function rupeesToPaise(amount) {
-  return Math.round(Number(amount) * 100);
+  const rupees = Number(amount);
+  if (!Number.isFinite(rupees) || rupees < 1) {
+    throw new AppError('Payment amount is not configured correctly for this offering', 400);
+  }
+  return Math.round(rupees * 100);
 }
 
 function formatAmountDisplay(amount, currency = 'INR') {
@@ -273,6 +278,11 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     throw new AppError('Online payments are not available right now', 503);
   }
 
+  const applicantEmail = user?.email?.toLowerCase?.();
+  if (!applicantEmail) {
+    throw new AppError('Your session is missing an email. Please sign in again.', 401);
+  }
+
   const offering = await Offering.findOne({
     _id: offeringId,
     instituteId,
@@ -291,15 +301,19 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     instituteId,
     serviceId,
     offeringId,
-    applicantEmail: user.email.toLowerCase(),
+    applicantEmail,
   });
   if (!application) {
     throw new AppError('Start your request before paying', 400);
   }
 
-  await assertApplicationOwnership(application, user.email);
+  await assertApplicationOwnership(application, applicantEmail);
 
-  await unlockWorkflowPaymentAfterVisit(application, offering, instituteId);
+  try {
+    await unlockWorkflowPaymentAfterVisit(application, offering, instituteId);
+  } catch (err) {
+    logger.error({ err, applicationId: application._id }, 'Could not unlock workflow payment step');
+  }
 
   let paymentState = await getApplicationPaymentState(offering, application);
 
@@ -334,7 +348,7 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     config.timing === PAYMENT_TIMING.WORKFLOW_STEP ? config.workflowStepId : undefined;
 
   const amountPaise = rupeesToPaise(config.amount);
-  const receipt = `app_${application._id.toString().slice(-8)}_${Date.now()}`;
+  const receipt = `p${application._id.toString().slice(-10)}${Date.now().toString(36)}`;
 
   const order = await createRazorpayOrder({
     amountPaise,
@@ -352,12 +366,12 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     applicationId: application._id,
     serviceId,
     offeringId,
-    applicantEmail: user.email.toLowerCase(),
+    applicantEmail,
     purpose,
     workflowStepId,
     label: config.label,
     amountPaise,
-    currency: config.currency,
+    currency: String(config.currency || 'INR').toUpperCase(),
     razorpayOrderId: order.id,
     status: PAYMENT_STATUS.CREATED,
   });
@@ -367,7 +381,7 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     orderId: order.id,
     amount: amountPaise,
     amountDisplay: formatAmountDisplay(config.amount, config.currency),
-    currency: config.currency,
+    currency: String(config.currency || 'INR').toUpperCase(),
     label: config.label,
     keyId: getRazorpayKeyId(),
     prefill: {

@@ -56,7 +56,7 @@ async function checkQueueRedis() {
 }
 
 async function checkEmail() {
-  const configured = Boolean(env.SMTP_USER && env.SMTP_PASS);
+  const configured = Boolean(env.RESEND_API_KEY || (env.SMTP_USER && env.SMTP_PASS));
   if (!configured) {
     return { status: 'not_configured' };
   }

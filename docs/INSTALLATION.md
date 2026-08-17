@@ -71,7 +71,7 @@ STUDENT_CLIENT_URL=http://localhost:5174
 | --- | --- |
 | AI suggestions / verification / chat | `OPENAI_API_KEY` |
 | Better chatbot (RAG) | `PINECONE_API_KEY`, `PINECONE_INDEX` |
-| Email | `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` |
+| Email | `RESEND_API_KEY`, `EMAIL_FROM` (SMTP `SMTP_*` backup) |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 | Google Meet | `GOOGLE_OAUTH_*` |
 

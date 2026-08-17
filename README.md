@@ -110,7 +110,7 @@ STUDENT_CLIENT_URL=http://localhost:5174
 | --- | --- |
 | AI extraction / verification / chat | `OPENAI_API_KEY` |
 | Stronger chatbot (RAG) | `PINECONE_API_KEY`, `PINECONE_INDEX` |
-| Email notifications | `SMTP_*` |
+| Email notifications | `RESEND_API_KEY`, `EMAIL_FROM` (SMTP `SMTP_*` is backup) |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 | Google Meet appointments | `GOOGLE_OAUTH_*` |
 | Turn on AI verification worker | `AI_VERIFICATION_ENABLED=true` |

@@ -90,6 +90,15 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  RESEND_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  EMAIL_FROM: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  /** Nodemailer SMTP backup when Resend is unset or fails. */
   SMTP_HOST: z
     .string()
     .optional()
@@ -109,7 +118,8 @@ const envSchema = z.object({
     .transform((value) => (value?.trim() ? value.trim() : undefined)),
   SMTP_FROM: z
     .string()
-    .default('EduPortal <noreply@localhost>'),
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
   EMAIL_QUEUE_CONCURRENCY: z.coerce.number().default(5),
   OPERATIONS_QUEUE_CONCURRENCY: z.coerce.number().default(3),
   GOOGLE_SERVICE_ACCOUNT_KEY_FILE: z
@@ -199,6 +209,7 @@ console.log(
     hasOpenAI: Boolean(env.OPENAI_API_KEY),
     hasPinecone: Boolean(env.PINECONE_API_KEY),
     hasSmtp: Boolean(env.SMTP_USER && env.SMTP_PASS),
+    hasResend: Boolean(env.RESEND_API_KEY),
   }),
 );
 

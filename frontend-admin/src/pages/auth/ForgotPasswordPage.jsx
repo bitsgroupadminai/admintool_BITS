@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { authApi } from '@/api/auth.api';
 import { FieldWrapper, InputBase, InputNormal } from '@/pages/auth/LoginPage';
 import { cn } from '@/lib/utils';
+import { getAuthPortal, loginPathForPortal } from '@/constants/portalBranding';
 
 export function ForgotPasswordPage() {
+  const { pathname } = useLocation();
+  const portal = getAuthPortal(pathname);
+  const loginPath = loginPathForPortal(portal);
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -33,13 +37,14 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout
+      portal={portal}
       title="Forgot password"
       subtitle="We will email you a secure link valid for 10 minutes"
       heroTitle="Secure account recovery"
       heroSubtitle="Reset access without contacting support. Links expire quickly to keep your institute account safe."
     >
       <Link
-        to="/login"
+        to={loginPath}
         className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-[#0A6640] transition-colors hover:bg-[#E6F7EF]"
       >
         <ArrowLeft className="h-4 w-4" />

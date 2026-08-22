@@ -79,6 +79,31 @@ export function AppRoutes() {
       />
 
       <Route
+        path="/staff/login"
+        element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/staff/forgot-password"
+        element={
+          <GuestRoute>
+            <ForgotPasswordPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/staff/reset-password"
+        element={
+          <GuestRoute>
+            <ResetPasswordPage />
+          </GuestRoute>
+        }
+      />
+
+      <Route
         path="/setup/institute"
         element={
           <ProtectedRoute roles={['admin']}>

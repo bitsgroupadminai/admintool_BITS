@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,11 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { authApi } from "@/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
+import {
+  PORTAL_BRAND,
+  forgotPasswordPathForPortal,
+  getAuthPortal,
+} from "@/constants/portalBranding";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -17,9 +22,13 @@ const loginSchema = z.object({
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const portal = getAuthPortal(pathname);
+  const brand = PORTAL_BRAND[portal];
   const setUser = useAuthStore((s) => s.setUser);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const isStaffPortal = portal === "staff";
 
   const {
     register,
@@ -52,10 +61,23 @@ export function LoginPage() {
 
   return (
     <AuthLayout
+      portal={portal}
       title="Welcome back"
-      subtitle="Sign in to your admin account to continue"
-      heroTitle="Education institute administration, simplified."
-      heroSubtitle="Configure your institute, manage staff, and run all services in one structured workspace."
+      subtitle={
+        isStaffPortal
+          ? "Sign in to your staff account to continue"
+          : "Sign in to your admin account to continue"
+      }
+      heroTitle={
+        isStaffPortal
+          ? "Your staff workspace, ready when you are."
+          : "Education institute administration, simplified."
+      }
+      heroSubtitle={
+        isStaffPortal
+          ? "Review applications, manage queues, and support students from one structured workspace."
+          : "Configure your institute, manage staff, and run all services in one structured workspace."
+      }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <FieldWrapper
@@ -111,7 +133,7 @@ export function LoginPage() {
 
         <div className="flex justify-end -mt-2">
           <Link
-            to="/forgot-password"
+            to={forgotPasswordPathForPortal(portal)}
             className="rounded-full px-2 py-1 text-[0.75rem] font-semibold text-[#0A6640] transition-colors hover:bg-[#E6F7EF] hover:text-[#052E1C]"
           >
             Forgot password?
@@ -125,22 +147,50 @@ export function LoginPage() {
         />
       </form>
 
-      <div className="relative flex items-center gap-3 my-1">
-        <div className="h-px flex-1 bg-[#E2EEE8]" />
-        <span className="text-[0.68rem] font-semibold text-[#A0B8AC] tracking-[0.12em] uppercase">
-          or
-        </span>
-        <div className="h-px flex-1 bg-[#E2EEE8]" />
-      </div>
+      {!isStaffPortal && (
+        <>
+          <div className="relative flex items-center gap-3 my-1">
+            <div className="h-px flex-1 bg-[#E2EEE8]" />
+            <span className="text-[0.68rem] font-semibold text-[#A0B8AC] tracking-[0.12em] uppercase">
+              or
+            </span>
+            <div className="h-px flex-1 bg-[#E2EEE8]" />
+          </div>
 
-      <p className="text-center text-[0.85rem] text-[#6B7280]">
-        New to AdminPortal?{" "}
-        <Link
-          to="/signup"
-          className="font-semibold text-[#0A6640] transition-colors hover:text-[#052E1C]"
-        >
-          Create an account
-        </Link>
+          <p className="text-center text-[0.85rem] text-[#6B7280]">
+            New to {brand.name}?{" "}
+            <Link
+              to="/signup"
+              className="font-semibold text-[#0A6640] transition-colors hover:text-[#052E1C]"
+            >
+              Create an account
+            </Link>
+          </p>
+        </>
+      )}
+
+      <p className="text-center text-[0.82rem] text-[#6B7280] pt-1">
+        {isStaffPortal ? (
+          <>
+            Institute admin?{" "}
+            <Link
+              to="/login"
+              className="font-semibold text-[#0A6640] transition-colors hover:text-[#052E1C]"
+            >
+              {PORTAL_BRAND.admin.name}
+            </Link>
+          </>
+        ) : (
+          <>
+            Staff member?{" "}
+            <Link
+              to="/staff/login"
+              className="font-semibold text-[#0A6640] transition-colors hover:text-[#052E1C]"
+            >
+              {PORTAL_BRAND.staff.name}
+            </Link>
+          </>
+        )}
       </p>
     </AuthLayout>
   );

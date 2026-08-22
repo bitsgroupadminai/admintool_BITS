@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { authApi } from '@/api/student.api';
 import { useAuthStore } from '@/store/auth.store';
 import { LoginFormBackdrop, LoginHeroAccent } from '@/components/auth/LoginCircuitArt';
+import { PORTAL_BRAND } from '@/constants/portalBranding';
 
 const FEATURES = [
   {
@@ -37,7 +38,7 @@ const FEATURES = [
 export function LoginPage() {
   const navigate = useNavigate();
   const setUser = useAuthStore((s) => s.setUser);
-  const [instituteName] = useState('Student Portal');
+  const portalName = PORTAL_BRAND.student.name;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -91,9 +92,9 @@ export function LoginPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A7F3D0]">
-                    Student portal
+                    CampusFlow
                   </p>
-                  <p className="text-base font-bold text-white">{instituteName}</p>
+                  <p className="text-base font-bold text-white">{portalName}</p>
                 </div>
               </div>
             </div>
@@ -140,7 +141,7 @@ export function LoginPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0A6640] text-white shadow-sm">
               <GraduationCap className="h-4 w-4" />
             </div>
-            <span className="text-sm font-bold text-[#052E1C]">{instituteName}</span>
+            <span className="text-sm font-bold text-[#052E1C]">{portalName}</span>
           </Link>
           <Link
             to="/"

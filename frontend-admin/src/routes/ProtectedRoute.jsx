@@ -26,7 +26,10 @@ export function ProtectedRoute({ children, roles }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const loginPath = location.pathname.startsWith('/staff')
+      ? '/staff/login'
+      : '/login';
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
   if (roles && !roles.includes(user.role)) {

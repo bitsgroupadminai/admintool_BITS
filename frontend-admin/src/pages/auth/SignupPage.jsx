@@ -88,6 +88,7 @@ export function SignupPage() {
 
   return (
     <AuthLayout
+      portal="admin"
       title="Create your institute"
       subtitle="Register as the first admin for your institution"
       heroTitle="Set up your institute in minutes."

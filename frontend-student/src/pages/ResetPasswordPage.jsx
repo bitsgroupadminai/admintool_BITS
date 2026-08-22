@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  GraduationCap,
   Loader2,
   Lock,
   ShieldCheck,
@@ -13,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { authApi } from '@/api/student.api';
 import { LoginFormBackdrop } from '@/components/auth/LoginCircuitArt';
+import { AuthBrandMark } from '@/components/auth/AuthBrandMark';
 import { cn } from '@/lib/utils';
 
 const inputClassName =
@@ -59,10 +59,7 @@ export function ResetPasswordPage() {
 
       <header className="relative z-10 flex items-center justify-between px-5 py-4 sm:px-8">
         <Link to="/login" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0A6640] text-white">
-            <GraduationCap className="h-4 w-4" />
-          </div>
-          <span className="text-sm font-bold text-[#052E1C]">Student Portal</span>
+          <AuthBrandMark />
         </Link>
       </header>
 

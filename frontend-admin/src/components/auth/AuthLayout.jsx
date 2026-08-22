@@ -1,4 +1,5 @@
 import { GraduationCap } from "lucide-react";
+import { PORTAL_BRAND } from "@/constants/portalBranding";
 
 export function AuthLayout({
   title,
@@ -7,13 +8,15 @@ export function AuthLayout({
   heroSubtitle,
   children,
   wide = false,
+  portal = "admin",
 }) {
+  const brand = PORTAL_BRAND[portal] ?? PORTAL_BRAND.admin;
   return (
     <div className="relative flex min-h-screen w-full items-stretch bg-[#F4FAF7]">
       <AcademicBackground />
 
       <div className="relative z-10 hidden lg:flex lg:w-[50%] xl:w-[48%] flex-col justify-between p-12 xl:p-16">
-        <Logo />
+        <Logo brand={brand} />
 
         <div className="space-y-9">
           {heroTitle && (
@@ -83,7 +86,7 @@ export function AuthLayout({
         </div>
 
         <p className="text-[0.7rem] text-[#3D7A5C]/45 font-medium">
-          © 2025 AdminPortal · All rights reserved
+          © 2025 {brand.name} · All rights reserved
         </p>
       </div>
 
@@ -91,7 +94,7 @@ export function AuthLayout({
         className={`relative z-10 flex flex-1 flex-col items-center justify-center px-5 py-10 sm:px-8 lg:py-12 ${wide ? "lg:px-10 xl:px-14" : "lg:px-12 xl:px-16"}`}
       >
         <div className="flex lg:hidden mb-8">
-          <Logo />
+          <Logo brand={brand} />
         </div>
 
         <div className={`w-full ${wide ? "max-w-[520px]" : "max-w-[420px]"}`}>
@@ -112,14 +115,15 @@ export function AuthLayout({
   );
 }
 
-function Logo() {
+function Logo({ brand }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0A6640] shadow-[0_2px_14px_rgba(10,102,64,0.32)]">
         <GraduationCap className="h-5 w-5 text-white" strokeWidth={2} />
       </div>
-      <span className="text-[0.75rem] font-black tracking-[0.2em] text-[#052E1C] uppercase">
-        Admin<span className="text-[#0A6640]">Portal</span>
+      <span className="text-[0.75rem] font-black tracking-[0.14em] text-[#052E1C] uppercase">
+        CampusFlow{" "}
+        <span className="text-[#0A6640]">{brand.suffix}</span>
       </span>
     </div>
   );

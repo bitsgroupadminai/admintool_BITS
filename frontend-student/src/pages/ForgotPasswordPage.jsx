@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, Loader2, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { authApi } from '@/api/student.api';
 import { LoginFormBackdrop } from '@/components/auth/LoginCircuitArt';
+import { AuthBrandMark } from '@/components/auth/AuthBrandMark';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] px-4 text-sm outline-none transition placeholder:text-[#9CA3AF] focus:border-[#0A6640] focus:bg-white focus:ring-2 focus:ring-[#6EE7B7]/25';
@@ -38,10 +39,7 @@ export function ForgotPasswordPage() {
 
       <header className="relative z-10 flex items-center justify-between px-5 py-4 sm:px-8">
         <Link to="/login" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0A6640] text-white">
-            <GraduationCap className="h-4 w-4" />
-          </div>
-          <span className="text-sm font-bold text-[#052E1C]">Student Portal</span>
+          <AuthBrandMark />
         </Link>
         <Link
           to="/"

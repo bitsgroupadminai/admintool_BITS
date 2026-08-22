@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { authApi } from '@/api/auth.api';
 import { FieldWrapper, InputBase, InputNormal } from '@/pages/auth/LoginPage';
 import { cn } from '@/lib/utils';
+import { getAuthPortal, loginPathForPortal } from '@/constants/portalBranding';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const portal = getAuthPortal(pathname);
+  const loginPath = loginPathForPortal(portal);
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const [password, setPassword] = useState('');
@@ -34,7 +38,7 @@ export function ResetPasswordPage() {
     try {
       await authApi.resetPassword({ token, password });
       toast.success('Password updated. Sign in with your new password.');
-      navigate('/login', { replace: true });
+      navigate(loginPath, { replace: true });
     } catch (err) {
       toast.error(err.message || 'Could not reset password');
     } finally {
@@ -44,13 +48,14 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout
+      portal={portal}
       title="Set new password"
       subtitle="Choose a strong password for your account"
       heroTitle="Almost done"
       heroSubtitle="Your reset link is valid for 10 minutes. Pick a new password you have not used elsewhere."
     >
       <Link
-        to="/login"
+        to={loginPath}
         className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-[#0A6640] transition-colors hover:bg-[#E6F7EF]"
       >
         <ArrowLeft className="h-4 w-4" />

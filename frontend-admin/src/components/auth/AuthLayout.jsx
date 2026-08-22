@@ -86,7 +86,7 @@ export function AuthLayout({
         </div>
 
         <p className="text-[0.7rem] text-[#3D7A5C]/45 font-medium">
-          © 2025 {brand.name} · All rights reserved
+          © 2026 {brand.name} · All rights reserved
         </p>
       </div>
 

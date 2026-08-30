@@ -524,7 +524,7 @@ export function OfferingConfigurePage() {
       const { data } = await offeringsApi.activate(id);
       setOffering(data.data.offering);
       toast.success('Offering is now active');
-      navigate(`/admin/services/${offering.serviceId}`);
+      navigate('/admin/services');
     } catch (err) {
       toast.error(err.message || 'Cannot activate — complete all configuration');
     }
@@ -580,11 +580,11 @@ export function OfferingConfigurePage() {
     <AdminLayout>
       <div className="mx-auto max-w-4xl px-6 py-8">
         <Link
-          to={`/admin/services/${offering.serviceId}`}
+          to="/admin/services"
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to {service?.name ?? 'service'}
+          Back to services
         </Link>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

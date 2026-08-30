@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus, ChevronRight, Trash2, Layers, Pencil, PowerOff, Archive, RotateCcw } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, ChevronRight, Trash2, Layers, Pencil, PowerOff, Archive, RotateCcw, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,12 @@ import { Drawer } from "@/components/ui/drawer";
 import { useConfirm } from "@/components/ui/confirm-context";
 import { ServicesListSkeleton } from "@/components/skeletons";
 import { servicesApi } from "@/api/services.api";
+import { offeringsApi } from "@/api/offerings.api";
 
 export function ServicesListPage() {
+  const navigate = useNavigate();
   const [services, setServices] = useState([]);
+  const [offeringsByService, setOfferingsByService] = useState({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -23,8 +26,18 @@ export function ServicesListPage() {
 
   const load = async () => {
     try {
-      const { data } = await servicesApi.list();
-      setServices(data.data.services);
+      const [servicesRes, offeringsRes] = await Promise.all([
+        servicesApi.list(),
+        offeringsApi.list().catch(() => ({ data: { data: { offerings: [] } } })),
+      ]);
+      setServices(servicesRes.data.data.services);
+      const grouped = {};
+      for (const offering of offeringsRes.data.data.offerings ?? []) {
+        const key = offering.serviceId;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(offering);
+      }
+      setOfferingsByService(grouped);
     } catch (err) {
       toast.error(err.message || "Failed to load services");
     } finally {
@@ -257,11 +270,14 @@ export function ServicesListPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {services.map((service) => (
+            {services.map((service) => {
+              const childOfferings = offeringsByService[service.id] ?? [];
+              return (
               <div
                 key={service.id}
-                className="group flex items-center gap-1 rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_2px_12px_rgba(10,102,64,0.05)] transition-all duration-300 hover:border-[#6EE7B7] hover:shadow-[0_4px_20px_rgba(10,102,64,0.10)] sm:gap-2"
+                className="rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_2px_12px_rgba(10,102,64,0.05)] transition-all duration-300 hover:border-[#6EE7B7] hover:shadow-[0_4px_20px_rgba(10,102,64,0.10)]"
               >
+                <div className="group flex items-center gap-1 sm:gap-2">
                 <Link
                   to={`/admin/services/${service.id}`}
                   className="flex min-w-0 flex-1 items-center justify-between px-4 py-4 sm:px-6"
@@ -344,8 +360,62 @@ export function ServicesListPage() {
                     </button>
                   </div>
                 )}
+                </div>
+
+                {childOfferings.length > 0 && (
+                  <ul className="space-y-2 border-t border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3 sm:px-6">
+                    {childOfferings.map((offering) => (
+                      <li key={offering.id}>
+                        <div className="flex items-center gap-2 rounded-xl border border-[#C4E8D4] bg-white px-3 py-2.5 sm:px-4">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/admin/offerings/${offering.id}/configure`)
+                            }
+                            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                          >
+                            <span className="h-8 w-0.5 shrink-0 rounded-full bg-[#6EE7B7]" />
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate text-sm font-semibold text-[#052E1C]">
+                                  {offering.name}
+                                </p>
+                                <Badge variant={offering.status}>{offering.status}</Badge>
+                              </div>
+                              <p className="mt-0.5 text-xs text-[#6B7280]">
+                                Offering
+                              </p>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            title="Edit offering"
+                            onClick={() =>
+                              navigate(`/admin/offerings/${offering.id}/configure`)
+                            }
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                          >
+                            <Pencil className="h-4 w-4" strokeWidth={2} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Configure offering"
+                            onClick={() =>
+                              navigate(`/admin/offerings/${offering.id}/configure`)
+                            }
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#0A6640] transition hover:bg-[#F0FAF5]"
+                          >
+                            <Settings className="h-3.5 w-3.5" strokeWidth={2} />
+                            Open
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

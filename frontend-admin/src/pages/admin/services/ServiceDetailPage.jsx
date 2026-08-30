@@ -195,8 +195,8 @@ export function ServiceDetailPage() {
       );
       setInsights(data.data.insights);
       await load();
-      toast.success("Offering created — continue configuration");
-      navigate(`/admin/offerings/${data.data.offering.id}/configure`);
+      toast.success("Offering created — open it from the services list to configure");
+      navigate("/admin/services");
     } catch (err) {
       toast.error(err.message);
     }

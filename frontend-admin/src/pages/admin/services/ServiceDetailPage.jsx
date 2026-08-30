@@ -356,9 +356,9 @@ export function ServiceDetailPage() {
         <div className="mb-8 rounded-2xl border border-[#C4E8D4] bg-gradient-to-r from-[#F0FAF5] to-[#D1FAE5]/30 px-6 py-4">
           <p className="text-sm font-semibold text-[#052E1C]">How this works</p>
           <p className="mt-1 text-sm text-[#4B6358] leading-relaxed">
-            Upload policies → extract a review pack with AI → confirm chatbot
-            readiness and offerings here → configure eligibility, documents,
-            workflow, and queue per offering.
+            Upload policies → extract a review pack and index student chat with
+            AI → confirm chatbot readiness and offerings here → configure
+            eligibility, documents, workflow, and queue per offering.
           </p>
         </div>
 
@@ -475,44 +475,6 @@ export function ServiceDetailPage() {
                   ))}
                 </ul>
               )}
-
-              {ragStatus ? (
-                <div className="mt-4 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
-                    Student chat (RAG)
-                  </p>
-                  <p className="mt-1 text-sm text-[#4B6358]">
-                    {ragStatus.ragEnabled
-                      ? ragStatus.readyForChat
-                        ? 'Knowledge indexed — chatbot answers from your documents and programme configuration.'
-                        : 'Upload documents, then use Extract knowledge — chat indexing runs with that action.'
-                      : 'Add OPENAI_API_KEY and PINECONE_API_KEY in backend .env to enable semantic chat.'}
-                  </p>
-                </div>
-              ) : null}
-
-              {knowledgeCoverage ? (
-                <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 py-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
-                    Knowledge coverage
-                  </p>
-                  <p className="mt-1 text-sm text-[#4B6358]">{knowledgeCoverage.recommendation}</p>
-                  <p className="mt-2 text-xs text-[#6B7280]">
-                    {knowledgeCoverage.knowledgeDocuments.indexed} of{' '}
-                    {knowledgeCoverage.knowledgeDocuments.total} documents indexed ·{' '}
-                    {knowledgeCoverage.chatbotCoverage.ready} offering(s) chat-ready
-                  </p>
-                  {knowledgeCoverage.chatbotCoverage.gaps?.length > 0 && (
-                    <ul className="mt-2 space-y-1 text-xs text-[#92400E]">
-                      {knowledgeCoverage.chatbotCoverage.gaps.slice(0, 3).map((gap) => (
-                        <li key={gap.offeringId}>
-                          {gap.offeringName}: missing {gap.gaps.join(', ')}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
             </div>
           </div>
 
@@ -526,6 +488,8 @@ export function ServiceDetailPage() {
                 analysisWarning={insights?.analysisWarning}
                 analysisMode={insights?.analysisMode}
                 aiEnabled={aiEnabled}
+                ragStatus={ragStatus}
+                knowledgeCoverage={knowledgeCoverage}
                 onExtract={handleGenerateInsights}
                 onScrollToStep={scrollToStep}
               />

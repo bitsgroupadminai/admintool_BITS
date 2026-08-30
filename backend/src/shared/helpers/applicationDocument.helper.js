@@ -1,4 +1,6 @@
+import fs from 'fs';
 import path from 'path';
+import { APPLICATION_UPLOAD_ROOT } from '../../core/config/upload.js';
 import { DOCUMENT_FILE_TYPES } from '../enums/offering.enums.js';
 
 const MIME_BY_TYPE = {
@@ -216,5 +218,23 @@ export function isAllowedDocumentType(type) {
  * @param {string} documentId
  */
 export function findApplicationDocument(application, documentId) {
-  return application.documents?.find((document) => document._id.toString() === documentId);
+  const id = String(documentId ?? '');
+  return application.documents?.find((document) => {
+    const docId = document._id?.toString?.() ?? document.id;
+    return docId === id;
+  });
+}
+
+/**
+ * @param {{ filePath?: string, storedName?: string }} document
+ * @returns {string | null}
+ */
+export function resolveStoredApplicationFilePath(document) {
+  const candidates = [
+    document?.filePath,
+    document?.storedName ? path.join(APPLICATION_UPLOAD_ROOT, document.storedName) : null,
+    document?.filePath ? path.join(APPLICATION_UPLOAD_ROOT, path.basename(document.filePath)) : null,
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
 }

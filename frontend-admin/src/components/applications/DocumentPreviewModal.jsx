@@ -21,7 +21,7 @@ export function DocumentPreviewModal({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open || !document || !applicationId) {
+    if (!open || !document || (!fetchBlob && !applicationId)) {
       setPreviewUrl(null);
       setError('');
       return undefined;
@@ -59,7 +59,10 @@ export function DocumentPreviewModal({
 
   if (!open || !document) return null;
 
-  const previewable = isPreviewableMimeType(document.mimeType);
+  const previewable = isPreviewableMimeType(document.mimeType, document.originalName);
+  const isPdf =
+    String(document.mimeType ?? '').toLowerCase() === 'application/pdf' ||
+    String(document.originalName ?? '').toLowerCase().endsWith('.pdf');
   const handleDownload = () => {
     if (onDownload) return onDownload(document);
     return mode === 'staff'
@@ -111,7 +114,7 @@ export function DocumentPreviewModal({
               {error}
             </p>
           ) : previewable && previewUrl ? (
-            document.mimeType === 'application/pdf' ? (
+            isPdf ? (
               <iframe
                 title={document.originalName}
                 src={previewUrl}

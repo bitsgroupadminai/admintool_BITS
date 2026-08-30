@@ -75,6 +75,7 @@ export function IntakeDocumentsSection({ intake, api }) {
       <DocumentPreviewModal
         open={Boolean(previewDocument)}
         onClose={() => setPreviewDocument(null)}
+        applicationId={intake.id}
         document={previewDocument}
         fetchBlob={fetchBlob}
         onDownload={handleDownload}

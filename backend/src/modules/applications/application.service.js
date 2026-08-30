@@ -1,4 +1,3 @@
-import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import { Application } from './application.model.js';
 import { Service } from '../services/service.model.js';
@@ -24,6 +23,7 @@ import {
   findApplicationDocument,
   formatDocumentRequirements,
   getDocumentUploadProgress,
+  resolveStoredApplicationFilePath,
 } from '../../shared/helpers/applicationDocument.helper.js';
 import {
   applyWorkflowOutcome,
@@ -817,21 +817,19 @@ export async function streamAssignedApplicationDocument(
 }
 
 export async function streamDocumentFile(document, res, options = {}) {
-  if (!document?.filePath) {
-    throw new AppError('File not found', 404);
-  }
-
-  try {
-    await fs.access(document.filePath);
-  } catch {
-    throw new AppError('File not found', 404);
+  const filePath = resolveStoredApplicationFilePath(document);
+  if (!filePath) {
+    throw new AppError(
+      'The uploaded file is no longer on the server. Ask the applicant to upload it again.',
+      404,
+    );
   }
 
   const disposition = options.download ? 'attachment' : 'inline';
-  res.setHeader('Content-Type', document.mimeType);
+  res.setHeader('Content-Type', document.mimeType || 'application/octet-stream');
   res.setHeader(
     'Content-Disposition',
     `${disposition}; filename="${encodeURIComponent(document.originalName)}"`,
   );
-  createReadStream(document.filePath).pipe(res);
+  createReadStream(filePath).pipe(res);
 }

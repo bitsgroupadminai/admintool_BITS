@@ -17,15 +17,23 @@ export const applicationsApi = {
     }),
 };
 
-export function isPreviewableMimeType(mimeType) {
-  return [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-  ].includes(String(mimeType ?? '').toLowerCase());
+export function isPreviewableMimeType(mimeType, fileName = '') {
+  const mime = String(mimeType ?? '').toLowerCase();
+  if (
+    [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ].includes(mime)
+  ) {
+    return true;
+  }
+
+  const extension = String(fileName).toLowerCase().split('.').pop();
+  return ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'].includes(extension);
 }
 
 export async function downloadApplicationDocument(applicationId, document) {

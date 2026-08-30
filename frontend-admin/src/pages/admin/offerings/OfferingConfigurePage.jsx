@@ -63,6 +63,16 @@ const SECTION_LABELS = {
   queue: 'queue settings',
 };
 
+function sectionHasExtractedContent(suggestions, section) {
+  const payload = suggestions?.payload;
+  if (!payload) return false;
+  if (section === 'eligibility') return Boolean(payload.eligibilityRules?.length);
+  if (section === 'documents') return Boolean(payload.documentRequirements?.length);
+  if (section === 'workflow') return Boolean(payload.workflowSteps?.length);
+  if (section === 'queue') return Boolean(payload.queueMode);
+  return false;
+}
+
 function toDateInput(value) {
   if (!value) return '';
   // Use India calendar day — UTC slice() shifts dates back one day for IST midnights.
@@ -287,30 +297,30 @@ export function OfferingConfigurePage() {
     setGeneratingSection(section);
     try {
       const { data } = await offeringsApi.generateAi(id, { section });
-      setAiSuggestions(data.data.suggestions);
-      toast.success(data.message);
+      const suggestions = data.data.suggestions;
+      setAiSuggestions(suggestions);
+      const label = SECTION_LABELS[section];
+
+      if (!suggestions?.sourceDocumentCount) {
+        toast.warning('Upload knowledge documents on the service first, then extract again.');
+        return;
+      }
+
+      if (!sectionHasExtractedContent(suggestions, section)) {
+        toast.warning(
+          `Nothing could be extracted for ${label} from the uploaded documents. Add them below manually, or upload a document that states them clearly.`,
+        );
+        return;
+      }
+
+      await offeringsApi.applyAi(id, { section });
+      await loadOffering();
+      toast.success(`${label.charAt(0).toUpperCase()}${label.slice(1)} have been populated below.`);
     } catch (err) {
-      toast.error(err.message || 'Could not generate suggestions');
+      toast.error(err.message || 'Could not extract from documents');
     } finally {
       setGeneratingSection(null);
     }
-  };
-
-  const applyAiSection = async (section) => {
-    try {
-      const { data } = await offeringsApi.applyAi(id, { section });
-      setOffering(data.data.offering);
-      await loadOffering();
-      toast.success('Suggestions applied');
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  const dismissAi = async () => {
-    await offeringsApi.rejectAi(id);
-    setAiSuggestions(null);
-    toast.success('Suggestions dismissed');
   };
 
   const saveDetails = async ({ advance = false } = {}) => {
@@ -768,12 +778,9 @@ export function OfferingConfigurePage() {
             <CardContent className="space-y-4">
               <AiStepAssist
                 section="eligibility"
-                sectionLabel={SECTION_LABELS.eligibility}
                 aiSuggestions={aiSuggestions}
                 generating={generatingSection === 'eligibility'}
                 onGenerate={handleGenerateAi}
-                onApply={applyAiSection}
-                onDismiss={dismissAi}
                 canGenerate={canUseAi}
               />
 
@@ -882,12 +889,9 @@ export function OfferingConfigurePage() {
             <CardContent className="space-y-4">
               <AiStepAssist
                 section="documents"
-                sectionLabel={SECTION_LABELS.documents}
                 aiSuggestions={aiSuggestions}
                 generating={generatingSection === 'documents'}
                 onGenerate={handleGenerateAi}
-                onApply={applyAiSection}
-                onDismiss={dismissAi}
                 canGenerate={canUseAi}
               />
               {docs.map((doc, i) => (
@@ -962,12 +966,9 @@ export function OfferingConfigurePage() {
             <CardContent className="space-y-6">
               <AiStepAssist
                 section="workflow"
-                sectionLabel={SECTION_LABELS.workflow}
                 aiSuggestions={aiSuggestions}
                 generating={generatingSection === 'workflow'}
                 onGenerate={handleGenerateAi}
-                onApply={applyAiSection}
-                onDismiss={dismissAi}
                 canGenerate={canUseAi}
               />
               <WorkflowTimelineBuilder
@@ -1000,12 +1001,9 @@ export function OfferingConfigurePage() {
             <CardContent className="space-y-4">
               <AiStepAssist
                 section="queue"
-                sectionLabel={SECTION_LABELS.queue}
                 aiSuggestions={aiSuggestions}
                 generating={generatingSection === 'queue'}
                 onGenerate={handleGenerateAi}
-                onApply={applyAiSection}
-                onDismiss={dismissAi}
                 canGenerate={canUseAi}
               />
               <div className="space-y-2">

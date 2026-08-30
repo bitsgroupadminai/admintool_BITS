@@ -56,7 +56,6 @@ export function ServiceDetailPage() {
   const [editDesc, setEditDesc] = useState("");
   const [activatingService, setActivatingService] = useState(false);
   const [ragStatus, setRagStatus] = useState(null);
-  const [reindexing, setReindexing] = useState(false);
   const [knowledgeCoverage, setKnowledgeCoverage] = useState(null);
   const [selectedOfferingIds, setSelectedOfferingIds] = useState(new Set());
   const confirm = useConfirm();
@@ -152,6 +151,7 @@ export function ServiceDetailPage() {
       } else {
         toast.success(data.message);
       }
+      await load();
     } catch (err) {
       toast.error(err.message || "Could not generate insights");
     } finally {
@@ -478,41 +478,16 @@ export function ServiceDetailPage() {
 
               {ragStatus ? (
                 <div className="mt-4 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
-                        Student chat (RAG)
-                      </p>
-                      <p className="mt-1 text-sm text-[#4B6358]">
-                        {ragStatus.ragEnabled
-                          ? ragStatus.readyForChat
-                            ? 'Knowledge indexed — chatbot answers from your documents and programme configuration.'
-                            : 'Upload documents and configure offerings — indexing runs automatically in the background.'
-                          : 'Add OPENAI_API_KEY and PINECONE_API_KEY in backend .env to enable semantic chat.'}
-                      </p>
-                    </div>
-                    {ragStatus.ragEnabled ? (
-                      <button
-                        type="button"
-                        disabled={reindexing}
-                        onClick={async () => {
-                          setReindexing(true);
-                          try {
-                            await servicesApi.reindexRag(id);
-                            toast.success('Re-indexing queued for student chat');
-                            await load();
-                          } catch (err) {
-                            toast.error(err.message || 'Could not queue re-index');
-                          } finally {
-                            setReindexing(false);
-                          }
-                        }}
-                        className="rounded-lg border border-[#C4E8D4] bg-white px-3 py-1.5 text-xs font-semibold text-[#0A6640] hover:bg-[#F0FAF5] disabled:opacity-60"
-                      >
-                        {reindexing ? 'Queuing...' : 'Re-index chat knowledge'}
-                      </button>
-                    ) : null}
-                  </div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+                    Student chat (RAG)
+                  </p>
+                  <p className="mt-1 text-sm text-[#4B6358]">
+                    {ragStatus.ragEnabled
+                      ? ragStatus.readyForChat
+                        ? 'Knowledge indexed — chatbot answers from your documents and programme configuration.'
+                        : 'Upload documents, then use Extract knowledge — chat indexing runs with that action.'
+                      : 'Add OPENAI_API_KEY and PINECONE_API_KEY in backend .env to enable semantic chat.'}
+                  </p>
                 </div>
               ) : null}
 

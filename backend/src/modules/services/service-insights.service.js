@@ -10,6 +10,7 @@ import { extractTextFromDocument } from '../../shared/services/document-text.ser
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import { enqueueServiceReindex } from '../../core/queues/embedding.queue.js';
 
 /**
  * @param {string} serviceId
@@ -72,6 +73,7 @@ export async function generateServiceInsightsAction(serviceId, instituteId) {
   await service.save();
 
   await flushInstituteReadCache(instituteId);
+  await enqueueServiceReindex(instituteId, serviceId, 'extract-knowledge');
   const usedOpenAi = service.knowledgeInsights.analysisMode === 'openai';
 
   return {

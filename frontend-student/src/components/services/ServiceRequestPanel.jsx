@@ -121,6 +121,7 @@ export function ServiceRequestPanel({
               fields={applicantFields}
               values={applicantDetails ?? {}}
               onChange={onApplicantDetailChange}
+              showErrors
             />
           </div>
           {application && canEditDocuments && onSaveApplicantDetails ? (

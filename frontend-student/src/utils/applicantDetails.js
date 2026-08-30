@@ -171,7 +171,7 @@ export function areApplicantDetailsComplete(offering, values = {}) {
 /**
  * Public enroll form: identity fields, additional details, and required intake file.
  */
-export function getPublicApplicationFormError({
+export function getPublicApplicationFieldErrors({
   applicantName,
   applicantEmail,
   applicantMobile,
@@ -179,23 +179,58 @@ export function getPublicApplicationFormError({
   offering,
   intakeDocumentFile,
 }) {
-  if (!String(applicantName ?? '').trim()) return 'Enter your full name';
-  if (!isValidApplicantEmail(applicantEmail)) return 'Enter a valid email address';
+  const applicantFieldErrors = {};
+  for (const field of offering?.applicantFields ?? []) {
+    const error = getApplicantFieldError(field, applicantDetails[field.fieldKey]);
+    if (error) applicantFieldErrors[field.fieldKey] = error;
+  }
 
+  const email = String(applicantEmail ?? '').trim();
   const mobileResult = validatePhoneInput(applicantMobile);
-  if (!mobileResult.valid) {
-    return mobileResult.error || 'Enter a valid mobile number';
-  }
-
-  const detailsError = getApplicantDetailsValidationError(offering, applicantDetails);
-  if (detailsError) return detailsError;
-
   const intakeDocument = offering?.intakeDocument;
-  if (intakeDocument?.label && intakeDocument.required !== false && !intakeDocumentFile) {
-    return `Please upload your ${intakeDocument.label}`;
-  }
 
-  return null;
+  return {
+    applicantName: String(applicantName ?? '').trim() ? null : 'Enter your full name',
+    applicantEmail: isValidApplicantEmail(email) ? null : 'Enter a valid email address',
+    applicantMobile: mobileResult.valid ? null : mobileResult.error || 'Enter a valid mobile number',
+    applicantDetails: applicantFieldErrors,
+    intakeDocument:
+      intakeDocument?.label && intakeDocument.required !== false && !intakeDocumentFile
+        ? `Please upload your ${intakeDocument.label}`
+        : null,
+  };
+}
+
+export function getPublicApplicationFormError(values) {
+  const errors = getPublicApplicationFieldErrors(values);
+  return (
+    errors.applicantName ||
+    errors.applicantEmail ||
+    errors.applicantMobile ||
+    Object.values(errors.applicantDetails)[0] ||
+    errors.intakeDocument ||
+    null
+  );
+}
+
+export function hasStartedPublicApplicationForm({
+  applicantName,
+  applicantEmail,
+  applicantMobile,
+  applicantDetails = {},
+  intakeDocumentFile,
+}) {
+  if (String(applicantName ?? '').trim()) return true;
+  if (String(applicantEmail ?? '').trim()) return true;
+  if (parsePhoneValue(applicantMobile)) return true;
+  if (intakeDocumentFile) return true;
+
+  return Object.values(applicantDetails).some((value) => {
+    if (value && typeof value === 'object') {
+      return Boolean(parsePhoneValue(value));
+    }
+    return String(value ?? '').trim() !== '';
+  });
 }
 
 export function isPublicApplicationFormValid(values) {

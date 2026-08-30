@@ -15,9 +15,10 @@ import { buildAcceptAttribute, validateFileForRequirement } from '@/utils/applic
  *   };
  *   file: File | null;
  *   onChange: (file: File | null) => void;
+ *   error?: string | null;
  * }} props
  */
-export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
+export function IntakeDocumentInput({ intakeDocument, file, onChange, error }) {
   const inputRef = useRef(null);
 
   if (!intakeDocument?.label) {
@@ -85,7 +86,11 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
         {intakeDocument.required !== false ? <span className="text-[#B91C1C]"> *</span> : null}
       </p>
 
-      <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4">
+      <div
+        className={`rounded-xl border p-4 ${
+          error ? 'border-[#FECACA] bg-[#FEF2F2]' : 'border-[#E2EEE8] bg-[#F9FCFB]'
+        }`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -115,7 +120,11 @@ export function IntakeDocumentInput({ intakeDocument, file, onChange }) {
         </div>
       </div>
 
-      {intakeDocument.helpText ? (
+      {error ? (
+        <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+          {error}
+        </p>
+      ) : intakeDocument.helpText ? (
         <p className="mt-1 text-xs text-[#6B7280]">{intakeDocument.helpText}</p>
       ) : null}
 

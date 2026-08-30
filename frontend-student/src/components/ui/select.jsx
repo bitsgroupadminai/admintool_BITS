@@ -25,6 +25,7 @@ const optionSizes = {
  *   id?: string;
  *   className?: string;
  *   size?: 'default' | 'compact' | 'sm';
+ *   invalid?: boolean;
  *   'aria-label'?: string;
  * }} props
  */
@@ -38,6 +39,7 @@ export function Select({
   id: idProp,
   className,
   size = 'default',
+  invalid = false,
   'aria-label': ariaLabel,
 }) {
   const generatedId = useId();
@@ -162,6 +164,7 @@ export function Select({
           aria-controls={`${id}-listbox`}
           aria-label={ariaLabel ?? label}
           disabled={disabled}
+          aria-invalid={invalid || undefined}
           onClick={() => {
             if (disabled) return;
             setOpen((current) => {
@@ -182,6 +185,7 @@ export function Select({
             'focus-visible:border-[#0A6640] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#6EE7B7]/25',
             'disabled:cursor-not-allowed disabled:opacity-50',
             open && 'border-[#0A6640] bg-white ring-2 ring-[#6EE7B7]/25',
+            invalid && 'border-[#FECACA] bg-[#FEF2F2] hover:border-[#FCA5A5] hover:bg-[#FEF2F2]',
             triggerSizes[size],
           )}
         >

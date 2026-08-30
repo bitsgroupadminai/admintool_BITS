@@ -2,19 +2,23 @@ import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { parsePhoneValue } from '@/utils/phone';
-import { getDateOfBirthError } from '@/utils/applicantDetails';
+import { getApplicantFieldError } from '@/utils/applicantDetails';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white';
+
+const invalidInputClassName =
+  'border-[#FECACA] bg-[#FEF2F2] focus:border-[#FCA5A5] focus:bg-[#FEF2F2]';
 
 /**
  * @param {{
  *   fields?: Array<any>;
  *   values: Record<string, string>;
  *   onChange: (fieldKey: string, value: string) => void;
+ *   showErrors?: boolean;
  * }} props
  */
-export function ApplicantDetailsForm({ fields = [], values, onChange }) {
+export function ApplicantDetailsForm({ fields = [], values, onChange, showErrors = false }) {
   if (!fields.length) return null;
 
   return (
@@ -28,13 +32,38 @@ export function ApplicantDetailsForm({ fields = [], values, onChange }) {
           field={field}
           value={values[field.fieldKey] ?? ''}
           onChange={(value) => onChange(field.fieldKey, value)}
+          showErrors={showErrors}
         />
       ))}
     </div>
   );
 }
 
-function ApplicantFieldInput({ field, value, onChange }) {
+function FieldMessage({ error, helpText }) {
+  if (error) {
+    return (
+      <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+        {error}
+      </p>
+    );
+  }
+
+  if (helpText) {
+    return <p className="mt-1 text-xs text-[#6B7280]">{helpText}</p>;
+  }
+
+  return null;
+}
+
+function ApplicantFieldInput({ field, value, onChange, showErrors }) {
+  const error = getApplicantFieldError(field, value);
+  const hasValue =
+    field.fieldType === 'phone'
+      ? Boolean(parsePhoneValue(value))
+      : String(value ?? '').trim() !== '';
+  const visibleError = error && (showErrors || hasValue) ? error : null;
+  const invalid = Boolean(visibleError);
+
   const label = (
     <label htmlFor={field.fieldKey} className="mb-1.5 block text-sm font-medium text-[#052E1C]">
       {field.label}
@@ -53,9 +82,10 @@ function ApplicantFieldInput({ field, value, onChange }) {
           required={field.required !== false}
           placeholder={field.placeholder || ''}
           onChange={(event) => onChange(event.target.value)}
-          className={`${inputClassName} min-h-[96px] py-3`}
+          aria-invalid={invalid || undefined}
+          className={`${inputClassName} min-h-[96px] py-3 ${invalid ? invalidInputClassName : ''}`}
         />
-        {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}
+        <FieldMessage error={visibleError} helpText={field.helpText} />
       </div>
     );
   }
@@ -69,19 +99,18 @@ function ApplicantFieldInput({ field, value, onChange }) {
           value={value}
           onChange={onChange}
           placeholder={field.placeholder || 'Choose an option'}
+          invalid={invalid}
           options={(field.options ?? []).map((option) => ({
             value: option,
             label: option,
           }))}
         />
-        {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}
+        <FieldMessage error={visibleError} helpText={field.helpText} />
       </div>
     );
   }
 
   if (field.fieldType === 'date') {
-    const dateError = getDateOfBirthError(field, value);
-
     return (
       <div>
         {label}
@@ -90,15 +119,9 @@ function ApplicantFieldInput({ field, value, onChange }) {
           value={value}
           onChange={onChange}
           placeholder={field.placeholder || 'Select date'}
-          invalid={Boolean(dateError)}
+          invalid={invalid}
         />
-        {dateError ? (
-          <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
-            {dateError}
-          </p>
-        ) : field.helpText ? (
-          <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p>
-        ) : null}
+        <FieldMessage error={visibleError} helpText={field.helpText} />
       </div>
     );
   }
@@ -113,18 +136,15 @@ function ApplicantFieldInput({ field, value, onChange }) {
           onChange={onChange}
           required={false}
           placeholder={field.placeholder || 'Mobile number'}
+          invalid={invalid}
         />
-        {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}
+        <FieldMessage error={visibleError} helpText={field.helpText} />
       </div>
     );
   }
 
   const inputType =
-    field.fieldType === 'number'
-      ? 'number'
-      : field.fieldType === 'email'
-        ? 'email'
-        : 'text';
+    field.fieldType === 'number' ? 'number' : field.fieldType === 'email' ? 'email' : 'text';
 
   return (
     <div>
@@ -136,9 +156,10 @@ function ApplicantFieldInput({ field, value, onChange }) {
         required={field.required !== false}
         placeholder={field.placeholder || ''}
         onChange={(event) => onChange(event.target.value)}
-        className={inputClassName}
+        aria-invalid={invalid || undefined}
+        className={`${inputClassName} ${invalid ? invalidInputClassName : ''}`}
       />
-      {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}
+      <FieldMessage error={visibleError} helpText={field.helpText} />
     </div>
   );
 }

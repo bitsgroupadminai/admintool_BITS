@@ -25,6 +25,12 @@
   box-shadow: 0 0 0 2px rgb(110 231 183 / 0.25);
 }
 
+.phone-input-root--invalid .PhoneInputInput,
+.phone-input-root--invalid .phone-country-select__trigger {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
 .phone-country-select {
   position: relative;
   flex-shrink: 0;

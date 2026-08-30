@@ -3,7 +3,11 @@ import { formatQueueMode } from '@/utils/offering';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { IntakeDocumentInput } from '@/components/enrollment/IntakeDocumentInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
-import { isPublicApplicationFormValid } from '@/utils/applicantDetails';
+import {
+  getPublicApplicationFieldErrors,
+  hasStartedPublicApplicationForm,
+  isPublicApplicationFormValid,
+} from '@/utils/applicantDetails';
 
 export function ApplicationPanel({
   visible,
@@ -25,14 +29,17 @@ export function ApplicationPanel({
 }) {
   const blocked = intakeStatus?.canSubmit === false;
   const pending = intakeStatus?.status === 'pending_authorization';
-  const canSubmit = isPublicApplicationFormValid({
+  const formValues = {
     applicantName,
     applicantEmail,
     applicantMobile,
     applicantDetails,
     offering,
     intakeDocumentFile,
-  });
+  };
+  const canSubmit = isPublicApplicationFormValid(formValues);
+  const showErrors = hasStartedPublicApplicationForm(formValues);
+  const fieldErrors = showErrors ? getPublicApplicationFieldErrors(formValues) : {};
 
   return (
     <div
@@ -93,10 +100,20 @@ export function ApplicationPanel({
               value={applicantName}
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="Your full name"
-              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
+              aria-invalid={Boolean(fieldErrors.applicantName) || undefined}
+              className={`h-11 w-full rounded-xl border bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:bg-white disabled:opacity-60 ${
+                fieldErrors.applicantName
+                  ? 'border-[#FECACA] bg-[#FEF2F2] focus:border-[#FCA5A5]'
+                  : 'border-[#C4E8D4] focus:border-[#6EE7B7]'
+              }`}
               autoComplete="name"
               disabled={submitting}
             />
+            {fieldErrors.applicantName ? (
+              <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+                {fieldErrors.applicantName}
+              </p>
+            ) : null}
           </div>
           <div>
             <label htmlFor="applicant-email" className="mb-1.5 block text-sm font-medium text-[#052E1C]">
@@ -108,11 +125,20 @@ export function ApplicationPanel({
               value={applicantEmail}
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="you@email.com"
-              className="h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white disabled:opacity-60"
+              aria-invalid={Boolean(fieldErrors.applicantEmail) || undefined}
+              className={`h-11 w-full rounded-xl border bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:bg-white disabled:opacity-60 ${
+                fieldErrors.applicantEmail
+                  ? 'border-[#FECACA] bg-[#FEF2F2] focus:border-[#FCA5A5]'
+                  : 'border-[#C4E8D4] focus:border-[#6EE7B7]'
+              }`}
               autoComplete="email"
               disabled={submitting}
             />
-            {checkingIntake ? (
+            {fieldErrors.applicantEmail ? (
+              <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+                {fieldErrors.applicantEmail}
+              </p>
+            ) : checkingIntake ? (
               <p className="mt-1.5 text-xs text-[#6B7280]">Checking existing request…</p>
             ) : null}
           </div>
@@ -126,19 +152,27 @@ export function ApplicationPanel({
               onChange={onMobileChange}
               placeholder="Mobile number"
               required={false}
+              invalid={Boolean(fieldErrors.applicantMobile)}
             />
+            {fieldErrors.applicantMobile ? (
+              <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+                {fieldErrors.applicantMobile}
+              </p>
+            ) : null}
           </div>
 
           <ApplicantDetailsForm
             fields={offering?.applicantFields ?? []}
             values={applicantDetails ?? {}}
             onChange={onApplicantDetailChange}
+            showErrors={showErrors}
           />
 
           <IntakeDocumentInput
             intakeDocument={offering?.intakeDocument}
             file={intakeDocumentFile}
             onChange={onIntakeDocumentChange}
+            error={fieldErrors.intakeDocument}
           />
 
           {intakeStatus?.message && intakeStatus.canSubmit ? (

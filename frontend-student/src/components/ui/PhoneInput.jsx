@@ -18,6 +18,7 @@ import { parsePhoneValue, clampPhoneInputValue } from '@/utils/phone';
  *   placeholder?: string;
  *   className?: string;
  *   defaultCountry?: string;
+ *   invalid?: boolean;
  * }} props
  */
 export function PhoneInput({
@@ -28,12 +29,13 @@ export function PhoneInput({
   placeholder = 'Mobile number',
   className,
   defaultCountry = 'IN',
+  invalid = false,
 }) {
   const e164Value = parsePhoneValue(value) || undefined;
   const normalizedDefaultCountry = String(defaultCountry ?? 'IN').toUpperCase();
 
   return (
-    <div className={`phone-input-root ${className ?? ''}`}>
+    <div className={`phone-input-root ${invalid ? 'phone-input-root--invalid' : ''} ${className ?? ''}`}>
       <PhoneInputWithCountry
         id={id}
         name={id}

@@ -182,7 +182,9 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
     setSubmitting(true);
     try {
       await studentApi.submitServiceApplication(serviceId, offering.id);
-      toast.success('Request submitted to the institute');
+      toast.success(
+        'Application submitted. You will receive an email with next steps once it is reviewed.',
+      );
       await onRefresh();
     } catch (err) {
       toast.error(err.message || 'Could not submit your request');
@@ -195,7 +197,9 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
     setResubmitting(true);
     try {
       await studentApi.resubmitServiceApplication(serviceId, offering.id);
-      toast.success('Updated request sent back to the institute');
+      toast.success(
+        'Updated application submitted. You will receive an email with next steps once it is reviewed.',
+      );
       await onRefresh();
     } catch (err) {
       toast.error(err.message || 'Could not resubmit your request');

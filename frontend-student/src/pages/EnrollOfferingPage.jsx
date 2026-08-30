@@ -12,10 +12,9 @@ import { ApplicationPanel } from '@/components/enrollment/ApplicationPanel';
 import {
   createEmptyPhoneValue,
   serializeApplicantDetailsForSubmit,
-  validateApplicantPhoneFields,
   validatePhoneInput,
 } from '@/utils/phone';
-import { getApplicantDetailsAgeError } from '@/utils/applicantDetails';
+import { getPublicApplicationFormError, isValidApplicantEmail } from '@/utils/applicantDetails';
 import { studentApi } from '@/api/student.api';
 import {
   formatOfferingWindow,
@@ -59,7 +58,7 @@ export function EnrollOfferingPage() {
 
   useEffect(() => {
     const email = applicantEmail.trim();
-    if (!email || !email.includes('@')) {
+    if (!isValidApplicantEmail(email)) {
       setIntakeStatus(null);
       return undefined;
     }
@@ -80,14 +79,16 @@ export function EnrollOfferingPage() {
     event.preventDefault();
     if (submitLockRef.current || submitting) return;
 
-    const name = applicantName.trim();
-    const email = applicantEmail.trim();
-    if (!name) {
-      toast.error('Enter your full name');
-      return;
-    }
-    if (!email || !email.includes('@')) {
-      toast.error('Enter a valid email address');
+    const formError = getPublicApplicationFormError({
+      applicantName,
+      applicantEmail,
+      applicantMobile,
+      applicantDetails,
+      offering,
+      intakeDocumentFile,
+    });
+    if (formError) {
+      toast.error(formError);
       return;
     }
 
@@ -96,41 +97,9 @@ export function EnrollOfferingPage() {
       return;
     }
 
+    const name = applicantName.trim();
+    const email = applicantEmail.trim();
     const mobileResult = validatePhoneInput(applicantMobile);
-    if (!mobileResult.valid) {
-      toast.error(mobileResult.error || 'Enter a valid mobile number');
-      return;
-    }
-
-    const phoneFieldError = validateApplicantPhoneFields(
-      offering?.applicantFields ?? [],
-      applicantDetails,
-    );
-    if (phoneFieldError) {
-      toast.error(phoneFieldError);
-      return;
-    }
-
-    const ageError = getApplicantDetailsAgeError(offering, applicantDetails);
-    if (ageError) {
-      toast.error(ageError);
-      return;
-    }
-
-    for (const field of offering?.applicantFields ?? []) {
-      if (field.fieldType === 'phone' || field.required === false) continue;
-      const value = String(applicantDetails?.[field.fieldKey] ?? '').trim();
-      if (!value) {
-        toast.error(`${field.label} is required`);
-        return;
-      }
-    }
-
-    const intakeDocument = offering?.intakeDocument;
-    if (intakeDocument?.label && intakeDocument.required !== false && !intakeDocumentFile) {
-      toast.error(`Please upload your ${intakeDocument.label}`);
-      return;
-    }
 
     submitLockRef.current = true;
     setSubmitting(true);

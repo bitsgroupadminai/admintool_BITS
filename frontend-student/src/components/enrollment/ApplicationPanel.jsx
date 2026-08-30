@@ -3,6 +3,7 @@ import { formatQueueMode } from '@/utils/offering';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { IntakeDocumentInput } from '@/components/enrollment/IntakeDocumentInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
+import { isPublicApplicationFormValid } from '@/utils/applicantDetails';
 
 export function ApplicationPanel({
   visible,
@@ -24,6 +25,14 @@ export function ApplicationPanel({
 }) {
   const blocked = intakeStatus?.canSubmit === false;
   const pending = intakeStatus?.status === 'pending_authorization';
+  const canSubmit = isPublicApplicationFormValid({
+    applicantName,
+    applicantEmail,
+    applicantMobile,
+    applicantDetails,
+    offering,
+    intakeDocumentFile,
+  });
 
   return (
     <div
@@ -140,7 +149,7 @@ export function ApplicationPanel({
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !canSubmit}
             aria-busy={submitting}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0A6640] text-sm font-semibold text-white hover:bg-[#084F31] disabled:pointer-events-none disabled:opacity-60"
           >

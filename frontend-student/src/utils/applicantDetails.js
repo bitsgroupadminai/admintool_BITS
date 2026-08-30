@@ -1,4 +1,10 @@
-import { parsePhoneValue, isPhoneValueComplete } from '@/utils/phone';
+import { parsePhoneValue, isPhoneValueComplete, validatePhoneInput } from '@/utils/phone';
+
+export const APPLICANT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidApplicantEmail(value) {
+  return APPLICANT_EMAIL_PATTERN.test(String(value ?? '').trim());
+}
 
 export const MIN_APPLICANT_AGE_YEARS = 15;
 export const MIN_APPLICANT_AGE_ERROR =
@@ -112,9 +118,86 @@ export function getMissingApplicantFields(offering, values = {}) {
   });
 }
 
+/**
+ * @param {{ fieldType?: string, fieldKey?: string, label?: string, required?: boolean }} field
+ * @param {unknown} value
+ */
+export function getApplicantFieldError(field, value) {
+  if (!field) return null;
+
+  if (field.fieldType === 'phone') {
+    const raw = parsePhoneValue(value);
+    if (!raw) {
+      return field.required === false ? null : `${field.label} is required`;
+    }
+    return isPhoneValueComplete(raw) ? null : `Enter a valid ${String(field.label).toLowerCase()}`;
+  }
+
+  const trimmed = value === undefined || value === null ? '' : String(value).trim();
+  if (!trimmed) {
+    return field.required === false ? null : `${field.label} is required`;
+  }
+
+  if (field.fieldType === 'email' && !isValidApplicantEmail(trimmed)) {
+    return `${field.label} must be a valid email`;
+  }
+
+  if (field.fieldType === 'date') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return `${field.label} must be a valid date`;
+    }
+    return getDateOfBirthError(field, trimmed);
+  }
+
+  if (field.fieldType === 'number' && Number.isNaN(Number(trimmed))) {
+    return `${field.label} must be a number`;
+  }
+
+  return null;
+}
+
+export function getApplicantDetailsValidationError(offering, values = {}) {
+  for (const field of offering?.applicantFields ?? []) {
+    const error = getApplicantFieldError(field, values[field.fieldKey]);
+    if (error) return error;
+  }
+  return null;
+}
+
 export function areApplicantDetailsComplete(offering, values = {}) {
-  return (
-    getMissingApplicantFields(offering, values).length === 0 &&
-    !getApplicantDetailsAgeError(offering, values)
-  );
+  return !getApplicantDetailsValidationError(offering, values);
+}
+
+/**
+ * Public enroll form: identity fields, additional details, and required intake file.
+ */
+export function getPublicApplicationFormError({
+  applicantName,
+  applicantEmail,
+  applicantMobile,
+  applicantDetails = {},
+  offering,
+  intakeDocumentFile,
+}) {
+  if (!String(applicantName ?? '').trim()) return 'Enter your full name';
+  if (!isValidApplicantEmail(applicantEmail)) return 'Enter a valid email address';
+
+  const mobileResult = validatePhoneInput(applicantMobile);
+  if (!mobileResult.valid) {
+    return mobileResult.error || 'Enter a valid mobile number';
+  }
+
+  const detailsError = getApplicantDetailsValidationError(offering, applicantDetails);
+  if (detailsError) return detailsError;
+
+  const intakeDocument = offering?.intakeDocument;
+  if (intakeDocument?.label && intakeDocument.required !== false && !intakeDocumentFile) {
+    return `Please upload your ${intakeDocument.label}`;
+  }
+
+  return null;
+}
+
+export function isPublicApplicationFormValid(values) {
+  return !getPublicApplicationFormError(values);
 }

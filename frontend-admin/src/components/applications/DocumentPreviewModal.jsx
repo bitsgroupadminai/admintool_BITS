@@ -13,6 +13,8 @@ export function DocumentPreviewModal({
   applicationId,
   document,
   mode = 'admin',
+  fetchBlob,
+  onDownload,
 }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,8 +34,9 @@ export function DocumentPreviewModal({
       setLoading(true);
       setError('');
       try {
-        const { data } =
-          mode === 'staff'
+        const { data } = fetchBlob
+          ? await fetchBlob(document)
+          : mode === 'staff'
             ? await staffApplicationsApi.fetchDocumentBlob(applicationId, document.id)
             : await applicationsApi.fetchDocumentBlob(applicationId, document.id);
         if (!active) return;
@@ -52,25 +55,27 @@ export function DocumentPreviewModal({
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [open, document, applicationId, mode]);
+  }, [open, document, applicationId, mode, fetchBlob]);
 
   if (!open || !document) return null;
 
   const previewable = isPreviewableMimeType(document.mimeType);
-  const handleDownload = () =>
-    mode === 'staff'
+  const handleDownload = () => {
+    if (onDownload) return onDownload(document);
+    return mode === 'staff'
       ? downloadStaffApplicationDocument(applicationId, document)
       : downloadApplicationDocument(applicationId, document);
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-[#052E1C]/45 backdrop-blur-sm"
         onClick={onClose}
         aria-label="Close preview"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#E2EEE8] bg-white shadow-[0_24px_80px_rgba(5,46,28,0.25)]">
+      <div className="relative flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#E2EEE8] bg-white shadow-[0_24px_80px_rgba(5,46,28,0.25)]">
         <div className="flex items-center justify-between gap-3 border-b border-[#E2EEE8] px-5 py-4">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-[#052E1C]">{document.originalName}</p>
@@ -96,7 +101,7 @@ export function DocumentPreviewModal({
           </div>
         </div>
 
-        <div className="min-h-[360px] flex-1 overflow-auto bg-[#F9FCFB] p-4">
+        <div className="min-h-0 flex-1 overflow-auto bg-[#F9FCFB] p-4">
           {loading ? (
             <div className="flex min-h-[320px] items-center justify-center text-sm text-[#4B6358]">
               Loading preview...
@@ -110,13 +115,13 @@ export function DocumentPreviewModal({
               <iframe
                 title={document.originalName}
                 src={previewUrl}
-                className="h-[75vh] w-full rounded-xl border border-[#E2EEE8] bg-white"
+                className="h-full min-h-[75vh] w-full rounded-xl border border-[#E2EEE8] bg-white"
               />
             ) : (
               <img
                 src={previewUrl}
                 alt={document.originalName}
-                className="mx-auto max-h-[75vh] rounded-xl border border-[#E2EEE8] bg-white object-contain"
+                className="mx-auto block h-auto w-full max-w-full rounded-xl border border-[#E2EEE8] bg-white"
               />
             )
           ) : (

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, Download, Mail, Phone, UserCheck, UserRound } from 'lucide-react';
+import { CalendarDays, Mail, Phone, UserCheck, UserRound } from 'lucide-react';
 import { BackLink, softCardClassName, softHeroClassName } from '@/components/ui/back-link';
 import { IntakeDetailSkeleton } from '@/components/skeletons';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { staffEnrollmentIntakesApi } from '@/api/enrollmentIntakes.api';
+import { IntakeDocumentsSection } from '@/components/enrollment/IntakeDocumentsSection';
 import { cn } from '@/lib/utils';
 
 export function StaffEnrollmentIntakeDetailPage() {
@@ -113,37 +113,7 @@ export function StaffEnrollmentIntakeDetailPage() {
                 ) : null}
               </dl>
 
-              {intake.documents?.length > 0 ? (
-                <div className="mt-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9CA3AF]">
-                    Uploaded documents
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {intake.documents.map((document) => (
-                      <li
-                        key={document.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-[#052E1C]">{document.requirementName}</p>
-                          <p className="mt-1 text-xs text-[#4B6358]">{document.originalName}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            staffEnrollmentIntakesApi.downloadDocument(intake.id, document)
-                          }
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+              <IntakeDocumentsSection intake={intake} api={staffEnrollmentIntakesApi} />
 
               {isPending ? (
                 <div className="mt-5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4 text-sm text-[#92400E]">

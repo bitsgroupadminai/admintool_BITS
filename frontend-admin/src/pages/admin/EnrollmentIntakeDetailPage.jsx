@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { enrollmentIntakesApi } from '@/api/enrollmentIntakes.api';
 import { useConfirm } from '@/components/ui/confirm-context';
 import { AdminEnrollmentIntakeSkeleton } from '@/components/skeletons';
+import { IntakeDocumentsSection } from '@/components/enrollment/IntakeDocumentsSection';
 
 export function EnrollmentIntakeDetailPage() {
   const { id } = useParams();
@@ -141,34 +142,7 @@ export function EnrollmentIntakeDetailPage() {
                 ) : null}
               </dl>
 
-              {intake.documents?.length > 0 ? (
-                <div className="mt-6">
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9CA3AF]">
-                    Uploaded documents
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {intake.documents.map((document) => (
-                      <li
-                        key={document.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] px-4 py-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-[#052E1C]">{document.requirementName}</p>
-                          <p className="mt-1 text-xs text-[#4B6358]">{document.originalName}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => enrollmentIntakesApi.downloadDocument(intake.id, document)}
-                        >
-                          Download
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+              <IntakeDocumentsSection intake={intake} api={enrollmentIntakesApi} />
 
               {intake.applicantDetails?.length > 0 ? (
                 <dl className="mt-6 grid gap-3 sm:grid-cols-2">

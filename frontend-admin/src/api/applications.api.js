@@ -18,7 +18,14 @@ export const applicationsApi = {
 };
 
 export function isPreviewableMimeType(mimeType) {
-  return ['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType);
+  return [
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ].includes(String(mimeType ?? '').toLowerCase());
 }
 
 export async function downloadApplicationDocument(applicationId, document) {

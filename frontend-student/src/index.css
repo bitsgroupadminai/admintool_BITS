@@ -13,18 +13,10 @@
   --color-accent: #d1fae5;
 
   --scrollbar-size: 5px;
-  --scrollbar-brand-dark: #0a6640;
-  --scrollbar-brand-light: #10b981;
-  --scrollbar-thumb: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--scrollbar-brand-light) 62%, transparent),
-    color-mix(in srgb, var(--scrollbar-brand-dark) 62%, transparent)
-  );
-  --scrollbar-thumb-hover: linear-gradient(
-    180deg,
-    var(--scrollbar-brand-light),
-    var(--scrollbar-brand-dark)
-  );
+  --scrollbar-brand-dark: #c4e8d4;
+  --scrollbar-brand-light: #d1eee0;
+  --scrollbar-thumb: #d1eee0;
+  --scrollbar-thumb-hover: #c4e8d4;
 }
 
 @layer base {
@@ -52,7 +44,7 @@ html,
 body,
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-brand-dark) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 html::-webkit-scrollbar,

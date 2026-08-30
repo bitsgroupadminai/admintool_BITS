@@ -20,7 +20,19 @@ export default function App() {
         <SocketProvider>
           <NotificationProvider>
             <AppRoutes />
-            <Toaster position="top-right" richColors closeButton />
+            <Toaster
+              position="top-center"
+              richColors
+              closeButton
+              visibleToasts={4}
+              toastOptions={{
+                classNames: {
+                  toast: 'items-start whitespace-normal',
+                  title: 'leading-snug whitespace-normal',
+                  description: 'leading-snug whitespace-normal',
+                },
+              }}
+            />
           </NotificationProvider>
         </SocketProvider>
       </ConfirmProvider>

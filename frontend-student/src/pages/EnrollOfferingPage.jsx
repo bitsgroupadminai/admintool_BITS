@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, ClipboardCheck, Clock3, ListChecks, MapPinned } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ClipboardCheck, Clock3, ListChecks, MapPinned, PartyPopper } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicLayout } from '@/components/StudentLayout';
 import { EnrollmentOfferingSkeleton } from '@/components/skeletons';
@@ -118,7 +118,11 @@ export function EnrollOfferingPage() {
         },
         intakeDocumentFile,
       );
-      toast.success('Request submitted. Your institute will review authorization before you can sign in.');
+      toast.success('Application submitted', {
+        description: 'You will receive an email with next steps once it is reviewed.',
+        duration: 10_000,
+        icon: <PartyPopper className="h-5 w-5" aria-hidden />,
+      });
       setApplicantName('');
       setApplicantEmail('');
       setApplicantMobile(createEmptyPhoneValue());

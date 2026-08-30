@@ -104,3 +104,19 @@ body::-webkit-scrollbar-resizer,
   height: 0;
   background: transparent !important;
 }
+
+[data-sonner-toaster][data-x-position='center'] {
+  width: min(26rem, calc(100vw - 1.5rem));
+}
+
+[data-sonner-toast] {
+  width: min(26rem, calc(100vw - 1.5rem)) !important;
+  align-items: flex-start !important;
+}
+
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}

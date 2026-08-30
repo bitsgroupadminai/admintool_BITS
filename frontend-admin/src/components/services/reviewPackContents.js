@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  MessageCircle,
   HelpCircle,
   AlertTriangle,
   Layers,
@@ -14,15 +13,6 @@ import {
  * What the AI extraction "review pack" contains — shown on upload + extract steps.
  */
 export const REVIEW_PACK_SECTIONS = [
-  {
-    id: 'student-chat-rag',
-    step: 'extract',
-    emoji: '🔎',
-    Icon: MessageCircle,
-    shortTitle: 'Student chat index',
-    tagline: 'RAG indexing so the chatbot can answer from your uploads',
-    whenShort: 'Extract',
-  },
   {
     id: 'chatbot-summary',
     step: 2,
@@ -104,7 +94,6 @@ export const CONFIGURE_PACK = REVIEW_PACK_SECTIONS.filter((s) => s.step === 'con
 
 export const EXTRACTION_PROGRESS_STEPS = [
   'Reading uploaded files…',
-  'Indexing student chat (RAG)…',
   'Chatbot summaries…',
   'Example questions…',
   'Document gaps…',

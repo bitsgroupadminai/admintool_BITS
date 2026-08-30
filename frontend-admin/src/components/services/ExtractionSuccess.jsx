@@ -47,8 +47,7 @@ export function ExtractionSuccess({ insights, onScrollToStep }) {
             Review pack ready
           </p>
           <p className="text-xs text-[#6B7C69] leading-relaxed">
-            Student chat indexing is queued. Confirm the pack below — nothing
-            goes live until you activate offerings.
+            Confirm below — nothing goes live until you activate offerings.
           </p>
           {stats.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">

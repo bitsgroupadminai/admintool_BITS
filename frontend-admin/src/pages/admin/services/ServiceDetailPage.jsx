@@ -37,7 +37,6 @@ import {
   OfferingBulkToolbar,
   OfferingBulkCheckbox,
 } from "@/components/offerings/OfferingBulkToolbar";
-import { settingsApi } from "@/api/settings.api";
 
 export function ServiceDetailPage() {
   const { id } = useParams();
@@ -55,8 +54,6 @@ export function ServiceDetailPage() {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [activatingService, setActivatingService] = useState(false);
-  const [ragStatus, setRagStatus] = useState(null);
-  const [knowledgeCoverage, setKnowledgeCoverage] = useState(null);
   const [selectedOfferingIds, setSelectedOfferingIds] = useState(new Set());
   const confirm = useConfirm();
 
@@ -76,23 +73,18 @@ export function ServiceDetailPage() {
 
   const load = async () => {
     try {
-      const [serviceRes, offeringsRes, docsRes, insightsRes, ragRes] =
+      const [serviceRes, offeringsRes, docsRes, insightsRes] =
         await Promise.all([
           servicesApi.get(id),
           offeringsApi.list(id),
           knowledgeApi.list(id),
           servicesApi.getInsights(id),
-          servicesApi.getRagStatus(id).catch(() => ({ data: { data: null } })),
         ]);
       setService(serviceRes.data.data.service);
       setOfferings(offeringsRes.data.data.offerings);
       setDocuments(docsRes.data.data.documents);
       setInsights(insightsRes.data.data.insights);
       setAiEnabled(Boolean(insightsRes.data.data.aiEnabled));
-      setRagStatus(ragRes.data.data ?? null);
-      settingsApi.getKnowledgeCoverage(id).then(({ data }) => {
-        setKnowledgeCoverage(data.data);
-      }).catch(() => setKnowledgeCoverage(null));
     } catch (err) {
       toast.error(err.message || "Failed to load service");
     }
@@ -356,9 +348,9 @@ export function ServiceDetailPage() {
         <div className="mb-8 rounded-2xl border border-[#C4E8D4] bg-gradient-to-r from-[#F0FAF5] to-[#D1FAE5]/30 px-6 py-4">
           <p className="text-sm font-semibold text-[#052E1C]">How this works</p>
           <p className="mt-1 text-sm text-[#4B6358] leading-relaxed">
-            Upload policies → extract a review pack and index student chat with
-            AI → confirm chatbot readiness and offerings here → configure
-            eligibility, documents, workflow, and queue per offering.
+            Upload policies → extract a review pack with AI → confirm chatbot
+            readiness and offerings here → configure eligibility, documents,
+            workflow, and queue per offering.
           </p>
         </div>
 
@@ -488,8 +480,6 @@ export function ServiceDetailPage() {
                 analysisWarning={insights?.analysisWarning}
                 analysisMode={insights?.analysisMode}
                 aiEnabled={aiEnabled}
-                ragStatus={ragStatus}
-                knowledgeCoverage={knowledgeCoverage}
                 onExtract={handleGenerateInsights}
                 onScrollToStep={scrollToStep}
               />

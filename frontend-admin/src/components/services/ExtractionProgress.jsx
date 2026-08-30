@@ -31,7 +31,7 @@ export function ExtractionProgress({ active }) {
           />
         </div>
         <p className="text-sm font-semibold text-[#1A2E16]">
-          Building the review pack and chat index…
+          Building your review pack…
         </p>
       </div>
       <ul className="space-y-2.5">

@@ -57,11 +57,7 @@ function FieldMessage({ error, helpText }) {
 
 function ApplicantFieldInput({ field, value, onChange, showErrors }) {
   const error = getApplicantFieldError(field, value);
-  const hasValue =
-    field.fieldType === 'phone'
-      ? Boolean(parsePhoneValue(value))
-      : String(value ?? '').trim() !== '';
-  const visibleError = error && (showErrors || hasValue) ? error : null;
+  const visibleError = showErrors ? error : null;
   const invalid = Boolean(visibleError);
 
   const label = (

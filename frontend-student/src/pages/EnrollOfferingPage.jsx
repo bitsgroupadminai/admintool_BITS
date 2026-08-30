@@ -38,6 +38,7 @@ export function EnrollOfferingPage() {
   const [applicantDetails, setApplicantDetails] = useState({});
   const [intakeStatus, setIntakeStatus] = useState(null);
   const [checkingIntake, setCheckingIntake] = useState(false);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
   const submitLockRef = useRef(false);
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export function EnrollOfferingPage() {
       intakeDocumentFile,
     });
     if (formError) {
-      toast.error(formError);
+      setShowFieldErrors(true);
       return;
     }
 
@@ -129,6 +130,7 @@ export function EnrollOfferingPage() {
       setIntakeDocumentFile(null);
       setApplicantDetails({});
       setIntakeStatus(null);
+      setShowFieldErrors(false);
     } catch (err) {
       toast.error(err.message || 'Failed to start application');
     } finally {
@@ -250,6 +252,7 @@ export function EnrollOfferingPage() {
                   setApplicantDetails((current) => ({ ...current, [fieldKey]: value }))
                 }
                 onSubmit={onSubmit}
+                showErrors={showFieldErrors}
                 submitting={submitting}
                 intakeStatus={intakeStatus}
                 checkingIntake={checkingIntake}

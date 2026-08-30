@@ -2,6 +2,7 @@ import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { parsePhoneValue } from '@/utils/phone';
+import { getDateOfBirthError } from '@/utils/applicantDetails';
 
 const inputClassName =
   'h-11 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:border-[#6EE7B7] focus:bg-white';
@@ -79,6 +80,8 @@ function ApplicantFieldInput({ field, value, onChange }) {
   }
 
   if (field.fieldType === 'date') {
+    const dateError = getDateOfBirthError(field, value);
+
     return (
       <div>
         {label}
@@ -87,8 +90,15 @@ function ApplicantFieldInput({ field, value, onChange }) {
           value={value}
           onChange={onChange}
           placeholder={field.placeholder || 'Select date'}
+          invalid={Boolean(dateError)}
         />
-        {field.helpText ? <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p> : null}
+        {dateError ? (
+          <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
+            {dateError}
+          </p>
+        ) : field.helpText ? (
+          <p className="mt-1 text-xs text-[#6B7280]">{field.helpText}</p>
+        ) : null}
       </div>
     );
   }

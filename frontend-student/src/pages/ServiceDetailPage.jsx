@@ -10,7 +10,7 @@ import { StudentServiceJourney } from '@/components/services/StudentServiceJourn
 import { EmptyState, PageShell } from '@/components/ui/PortalCard';
 import { ServiceDetailSkeleton } from '@/components/skeletons';
 import { studentApi } from '@/api/student.api';
-import { applicantDetailsToMap } from '@/utils/applicantDetails';
+import { applicantDetailsToMap, getApplicantDetailsAgeError } from '@/utils/applicantDetails';
 import {
   serializeApplicantDetailsForSubmit,
   validateApplicantPhoneFields,
@@ -124,6 +124,12 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
     );
     if (phoneFieldError) {
       toast.error(phoneFieldError);
+      return null;
+    }
+
+    const ageError = getApplicantDetailsAgeError(offering, applicantDetails);
+    if (ageError) {
+      toast.error(ageError);
       return null;
     }
 

@@ -1,6 +1,75 @@
 import { APPLICANT_FIELD_TYPE } from '../enums/offering.enums.js';
 import { validatePhoneNumber } from './phone.helper.js';
 
+export const MIN_APPLICANT_AGE_YEARS = 15;
+export const MIN_APPLICANT_AGE_ERROR =
+  'You must be at least 15 years old to apply for this course.';
+
+/**
+ * @param {{ fieldType?: string, fieldKey?: string, label?: string }} field
+ */
+export function isDateOfBirthField(field) {
+  if (!field || field.fieldType !== APPLICANT_FIELD_TYPE.DATE) return false;
+
+  const key = String(field.fieldKey ?? '')
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  const label = String(field.label ?? '').toLowerCase();
+
+  return (
+    key.includes('date_of_birth') ||
+    key === 'dob' ||
+    key.includes('birth_date') ||
+    key.includes('birthdate') ||
+    label.includes('date of birth') ||
+    label.includes('birth date') ||
+    /\bdob\b/.test(label)
+  );
+}
+
+/**
+ * @param {string} iso YYYY-MM-DD
+ * @param {Date} [now]
+ * @returns {number | null}
+ */
+export function ageFromIsoDate(iso, now = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? '').trim());
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  let age = now.getFullYear() - year;
+  const monthNow = now.getMonth() + 1;
+  const dayNow = now.getDate();
+  if (monthNow < month || (monthNow === month && dayNow < day)) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+/**
+ * @param {{ fieldType?: string, fieldKey?: string, label?: string }} field
+ * @param {unknown} value
+ * @param {Date} [now]
+ */
+export function getDateOfBirthAgeError(field, value, now = new Date()) {
+  if (!isDateOfBirthField(field)) return null;
+
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return null;
+
+  const age = ageFromIsoDate(trimmed, now);
+  if (age === null || age < MIN_APPLICANT_AGE_YEARS) {
+    return MIN_APPLICANT_AGE_ERROR;
+  }
+
+  return null;
+}
+
 /**
  * @param {string} label
  */
@@ -45,6 +114,12 @@ export function validateApplicantDetails(fields = [], rawDetails = {}) {
     if (field.fieldType === APPLICANT_FIELD_TYPE.DATE) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
         errors.push(`${field.label} must be a valid date`);
+        continue;
+      }
+
+      const ageError = getDateOfBirthAgeError(field, stringValue);
+      if (ageError) {
+        errors.push(ageError);
         continue;
       }
     }

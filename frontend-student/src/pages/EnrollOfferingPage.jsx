@@ -15,6 +15,7 @@ import {
   validateApplicantPhoneFields,
   validatePhoneInput,
 } from '@/utils/phone';
+import { getApplicantDetailsAgeError } from '@/utils/applicantDetails';
 import { studentApi } from '@/api/student.api';
 import {
   formatOfferingWindow,
@@ -107,6 +108,12 @@ export function EnrollOfferingPage() {
     );
     if (phoneFieldError) {
       toast.error(phoneFieldError);
+      return;
+    }
+
+    const ageError = getApplicantDetailsAgeError(offering, applicantDetails);
+    if (ageError) {
+      toast.error(ageError);
       return;
     }
 

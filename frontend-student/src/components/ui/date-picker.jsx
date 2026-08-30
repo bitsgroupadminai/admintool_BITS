@@ -27,6 +27,7 @@ const triggerSizes = {
  *   className?: string;
  *   size?: 'default' | 'compact';
  *   required?: boolean;
+ *   invalid?: boolean;
  *   'aria-label'?: string;
  * }} props
  */
@@ -40,6 +41,7 @@ export function DatePicker({
   className,
   size = 'default',
   required = false,
+  invalid = false,
   'aria-label': ariaLabel,
 }) {
   const generatedId = useId();
@@ -103,12 +105,15 @@ export function DatePicker({
           aria-expanded={open}
           aria-haspopup="dialog"
           onClick={() => !disabled && setOpen((current) => !current)}
+          aria-invalid={invalid || undefined}
           className={cn(
             'flex w-full items-center justify-between gap-2 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] text-left text-[#052E1C] outline-none transition',
             'hover:border-[#6EE7B7] hover:bg-[#EDFAF3]',
             'focus-visible:border-[#0A6640] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#6EE7B7]/25',
             'disabled:cursor-not-allowed disabled:opacity-50',
             open && 'border-[#0A6640] bg-white ring-2 ring-[#6EE7B7]/25',
+            invalid && 'border-[#FECACA] bg-[#FEF2F2] hover:border-[#FCA5A5] hover:bg-[#FEF2F2]',
+            invalid && open && 'border-[#B91C1C] ring-2 ring-[#FECACA]/60',
             triggerSizes[size],
           )}
         >

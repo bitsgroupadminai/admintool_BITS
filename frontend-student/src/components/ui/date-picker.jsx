@@ -2,10 +2,12 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
+  MONTH_INDEXES,
   WEEKDAY_LABELS,
   buildCalendarDays,
+  buildYearOptions,
   formatDisplayDate,
-  formatMonthLabel,
+  formatMonthName,
   isSameDay,
   parseIsoDate,
   toIsoDate,
@@ -47,7 +49,10 @@ export function DatePicker({
   const generatedId = useId();
   const id = idProp ?? generatedId;
   const rootRef = useRef(null);
+  const yearListRef = useRef(null);
+  const selectedYearRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState('year');
   const selectedDate = parseIsoDate(value);
   const [viewDate, setViewDate] = useState(() => selectedDate ?? new Date());
 
@@ -56,6 +61,12 @@ export function DatePicker({
       setViewDate(selectedDate);
     }
   }, [value]);
+
+  useEffect(() => {
+    if (open) {
+      setPanel('year');
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -78,14 +89,38 @@ export function DatePicker({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open || panel !== 'year') return;
+    const list = yearListRef.current;
+    const item = selectedYearRef.current;
+    if (!list || !item) return;
+    list.scrollTop = item.offsetTop - list.clientHeight / 2 + item.clientHeight / 2;
+  }, [open, panel, viewDate]);
+
   const cells = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
+  const years = useMemo(() => buildYearOptions(), []);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const viewYear = viewDate.getFullYear();
+  const viewMonth = viewDate.getMonth();
 
   const selectDate = (iso) => {
     onChange(iso);
     setOpen(false);
   };
+
+  const selectYear = (year) => {
+    setViewDate((current) => new Date(year, current.getMonth(), 1));
+    setPanel('month');
+  };
+
+  const selectMonth = (monthIndex) => {
+    setViewDate((current) => new Date(current.getFullYear(), monthIndex, 1));
+    setPanel('day');
+  };
+
+  const headerButtonClass =
+    'rounded-lg px-2 py-1 text-sm font-semibold text-[#052E1C] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]';
 
   return (
     <div className={className}>
@@ -133,60 +168,164 @@ export function DatePicker({
             className="absolute left-0 right-0 z-[60] mt-1.5 min-w-[280px] overflow-hidden rounded-xl border border-[#C4E8D4] bg-white shadow-[0_12px_32px_rgba(5,46,28,0.14)]"
           >
             <div className="flex items-center justify-between border-b border-[#E2EEE8] px-3 py-2.5">
-              <button
-                type="button"
-                aria-label="Previous month"
-                onClick={() =>
-                  setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
-                }
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <p className="text-sm font-semibold text-[#052E1C]">{formatMonthLabel(viewDate)}</p>
-              <button
-                type="button"
-                aria-label="Next month"
-                onClick={() =>
-                  setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
-                }
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 px-3 pt-2 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-[#10B981]">
-              {WEEKDAY_LABELS.map((dayLabel) => (
-                <span key={dayLabel} className="py-1">
-                  {dayLabel}
-                </span>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 p-3 pt-1">
-              {cells.map((cell) => {
-                const isSelected = value === cell.iso;
-                const isToday = isSameDay(cell.date, today);
-
-                return (
+              {panel === 'year' ? (
+                <>
                   <button
-                    key={cell.iso}
                     type="button"
-                    onClick={() => selectDate(cell.iso)}
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-lg text-sm transition',
-                      !cell.inCurrentMonth && 'text-[#A8BDB5]',
-                      cell.inCurrentMonth && 'text-[#052E1C] hover:bg-[#F0FAF5]',
-                      isToday && !isSelected && 'ring-1 ring-[#6EE7B7]',
-                      isSelected && 'bg-[#0A6640] font-semibold text-white hover:bg-[#084F31]',
-                    )}
+                    aria-label="Earlier years"
+                    onClick={() =>
+                      setViewDate((current) => new Date(current.getFullYear() - 12, current.getMonth(), 1))
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
                   >
-                    {cell.date.getDate()}
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                );
-              })}
+                  <p className="text-sm font-semibold text-[#052E1C]">Choose year</p>
+                  <button
+                    type="button"
+                    aria-label="Later years"
+                    onClick={() =>
+                      setViewDate((current) => new Date(current.getFullYear() + 12, current.getMonth(), 1))
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : panel === 'month' ? (
+                <>
+                  <span className="h-8 w-8" aria-hidden />
+                  <button
+                    type="button"
+                    className={headerButtonClass}
+                    onClick={() => setPanel('year')}
+                  >
+                    {viewYear}
+                  </button>
+                  <span className="h-8 w-8" aria-hidden />
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous month"
+                    onClick={() =>
+                      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-center gap-0.5">
+                    <button type="button" className={headerButtonClass} onClick={() => setPanel('month')}>
+                      {formatMonthName(viewDate)}
+                    </button>
+                    <button type="button" className={headerButtonClass} onClick={() => setPanel('year')}>
+                      {viewYear}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Next month"
+                    onClick={() =>
+                      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B6358] transition hover:bg-[#F0FAF5] hover:text-[#0A6640]"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
+
+            {panel === 'year' ? (
+              <div ref={yearListRef} className="grid max-h-[17.5rem] grid-cols-3 gap-1 overflow-y-auto p-3">
+                {years.map((year) => {
+                  const isSelected = year === viewYear;
+                  const isCurrentYear = year === today.getFullYear();
+
+                  return (
+                    <button
+                      key={year}
+                      type="button"
+                      ref={isSelected ? selectedYearRef : undefined}
+                      onClick={() => selectYear(year)}
+                      className={cn(
+                        'rounded-lg px-2 py-2 text-sm transition',
+                        'text-[#052E1C] hover:bg-[#F0FAF5]',
+                        isCurrentYear && !isSelected && 'ring-1 ring-[#6EE7B7]',
+                        isSelected && 'bg-[#0A6640] font-semibold text-white hover:bg-[#084F31]',
+                      )}
+                    >
+                      {year}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {panel === 'month' ? (
+              <div className="grid grid-cols-3 gap-1 p-3">
+                {MONTH_INDEXES.map((monthIndex) => {
+                  const monthDate = new Date(viewYear, monthIndex, 1);
+                  const isSelected = monthIndex === viewMonth;
+                  const isCurrentMonth =
+                    monthIndex === today.getMonth() && viewYear === today.getFullYear();
+
+                  return (
+                    <button
+                      key={monthIndex}
+                      type="button"
+                      onClick={() => selectMonth(monthIndex)}
+                      className={cn(
+                        'rounded-lg px-2 py-2.5 text-sm transition',
+                        'text-[#052E1C] hover:bg-[#F0FAF5]',
+                        isCurrentMonth && !isSelected && 'ring-1 ring-[#6EE7B7]',
+                        isSelected && 'bg-[#0A6640] font-semibold text-white hover:bg-[#084F31]',
+                      )}
+                    >
+                      {formatMonthName(monthDate)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {panel === 'day' ? (
+              <>
+                <div className="grid grid-cols-7 gap-1 px-3 pt-2 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-[#10B981]">
+                  {WEEKDAY_LABELS.map((dayLabel) => (
+                    <span key={dayLabel} className="py-1">
+                      {dayLabel}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 p-3 pt-1">
+                  {cells.map((cell) => {
+                    const isSelected = value === cell.iso;
+                    const isToday = isSameDay(cell.date, today);
+
+                    return (
+                      <button
+                        key={cell.iso}
+                        type="button"
+                        onClick={() => selectDate(cell.iso)}
+                        className={cn(
+                          'flex h-9 w-9 items-center justify-center rounded-lg text-sm transition',
+                          !cell.inCurrentMonth && 'text-[#A8BDB5]',
+                          cell.inCurrentMonth && 'text-[#052E1C] hover:bg-[#F0FAF5]',
+                          isToday && !isSelected && 'ring-1 ring-[#6EE7B7]',
+                          isSelected && 'bg-[#0A6640] font-semibold text-white hover:bg-[#084F31]',
+                        )}
+                      >
+                        {cell.date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
 
             <div className="flex items-center justify-between border-t border-[#E2EEE8] px-3 py-2">
               <button

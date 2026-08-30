@@ -38,6 +38,22 @@ export function formatMonthLabel(date, locale = 'en-IN') {
   }).format(date);
 }
 
+export function formatMonthName(date, locale = 'en-IN') {
+  return new Intl.DateTimeFormat(locale, { month: 'long' }).format(date);
+}
+
+export const MONTH_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+export function buildYearOptions(now = new Date(), pastYears = 120, futureYears = 10) {
+  const latest = now.getFullYear() + futureYears;
+  const earliest = now.getFullYear() - pastYears;
+  const years = [];
+  for (let year = latest; year >= earliest; year -= 1) {
+    years.push(year);
+  }
+  return years;
+}
+
 export function isSameDay(a, b) {
   return (
     a.getFullYear() === b.getFullYear() &&

@@ -46,5 +46,16 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(normalizeApiError(error)),
+  async (error) => {
+    const data = error.response?.data;
+    if (typeof Blob !== 'undefined' && data instanceof Blob) {
+      try {
+        const parsed = JSON.parse(await data.text());
+        error.response.data = parsed;
+      } catch {
+        // Keep the original blob when the body is not JSON.
+      }
+    }
+    return Promise.reject(normalizeApiError(error));
+  },
 );

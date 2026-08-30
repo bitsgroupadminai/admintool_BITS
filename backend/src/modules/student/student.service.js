@@ -1,4 +1,3 @@
-import fs from 'fs/promises';
 import { Institute } from '../institutes/institute.model.js';
 import { Service } from '../services/service.model.js';
 import { Offering } from '../offerings/offering.model.js';
@@ -25,6 +24,11 @@ import {
   validateUploadedFile,
 } from '../../shared/helpers/applicationDocument.helper.js';
 import { streamDocumentFile } from '../applications/application.service.js';
+import {
+  deleteStoredApplicationDocument,
+  persistUploadedApplicationFile,
+  removeStoredApplicationFile,
+} from '../../shared/services/applicationFile.storage.js';
 import { notifyEnrollmentIntakeReceived, notifyApplicationSubmitted, notifyApplicationStatusChange } from '../../shared/templates/applicationEmails.js';
 import { emitApplicationUpdated, emitDashboardUpdated } from '../../shared/helpers/realtime.helper.js';
 import { createNotification } from '../notifications/notification.service.js';
@@ -419,19 +423,15 @@ async function attachIntakeDocumentToApplication(application, offering, file) {
     (document) => document.requirementId.toString() === requirementId,
   );
   if (existingIndex >= 0) {
-    await removeStoredApplicationFile(application.documents[existingIndex].filePath);
+    await deleteStoredApplicationDocument(application.documents[existingIndex]);
     application.documents.splice(existingIndex, 1);
   }
 
+  const stored = await persistUploadedApplicationFile(file);
   application.documents.push({
     requirementId: requirement._id,
     requirementName: requirement.name,
-    originalName: file.originalname,
-    storedName: file.filename,
-    mimeType: file.mimetype,
-    sizeBytes: file.size,
-    filePath: file.path,
-    uploadedAt: new Date(),
+    ...stored,
   });
 }
 
@@ -494,16 +494,16 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
   });
 
   if (existing) {
-    if (existing.status === APPLICATION_STATUS.PENDING_AUTHORIZATION) {
-      if (intakeDocumentFile) {
-        await removeStoredApplicationFile(intakeDocumentFile.path);
-      }
+    if (existing.status === APPLICATION_STATUS.PENDING_AUTHORIZATION && !intakeDocumentFile) {
       throw new AppError(
         'Your authorization request is already pending institute review. Please wait for an email update instead of submitting again.',
         409,
       );
     }
-    if (existing.status !== APPLICATION_STATUS.DRAFT) {
+    if (
+      existing.status !== APPLICATION_STATUS.DRAFT &&
+      existing.status !== APPLICATION_STATUS.PENDING_AUTHORIZATION
+    ) {
       if (intakeDocumentFile) {
         await removeStoredApplicationFile(intakeDocumentFile.path);
       }
@@ -931,15 +931,6 @@ async function getStudentEditableApplication(instituteId, user, serviceId, offer
   return { offering, application };
 }
 
-async function removeStoredApplicationFile(filePath) {
-  if (!filePath) return;
-  try {
-    await fs.unlink(filePath);
-  } catch {
-    // Ignore missing files during cleanup.
-  }
-}
-
 async function getVisibleServiceOffering(instituteId, serviceId, offeringId, user = null) {
   const service = await Service.findOne({
     _id: serviceId,
@@ -1113,19 +1104,15 @@ export async function uploadStudentApplicationDocument(
     (document) => document.requirementId.toString() === requirementId,
   );
   if (existingIndex >= 0) {
-    await removeStoredApplicationFile(application.documents[existingIndex].filePath);
+    await deleteStoredApplicationDocument(application.documents[existingIndex]);
     application.documents.splice(existingIndex, 1);
   }
 
+  const stored = await persistUploadedApplicationFile(file);
   application.documents.push({
     requirementId: requirement._id,
     requirementName: requirement.name,
-    originalName: file.originalname,
-    storedName: file.filename,
-    mimeType: file.mimetype,
-    sizeBytes: file.size,
-    filePath: file.path,
-    uploadedAt: new Date(),
+    ...stored,
   });
 
   await application.save();
@@ -1167,7 +1154,7 @@ export async function removeStudentApplicationDocument(
     assertRequirementEditable(offering, application, requirement);
   }
 
-  await removeStoredApplicationFile(application.documents[existingIndex].filePath);
+  await deleteStoredApplicationDocument(application.documents[existingIndex]);
   application.documents.splice(existingIndex, 1);
   await application.save();
 

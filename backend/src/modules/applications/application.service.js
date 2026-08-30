@@ -1,4 +1,3 @@
-import { createReadStream } from 'fs';
 import { Application } from './application.model.js';
 import { Service } from '../services/service.model.js';
 import { Offering } from '../offerings/offering.model.js';
@@ -23,8 +22,11 @@ import {
   findApplicationDocument,
   formatDocumentRequirements,
   getDocumentUploadProgress,
-  resolveStoredApplicationFilePath,
 } from '../../shared/helpers/applicationDocument.helper.js';
+import {
+  applicationFileExists,
+  openApplicationFileStream,
+} from '../../shared/services/applicationFile.storage.js';
 import {
   applyWorkflowOutcome,
   canUserActOnWorkflowStep,
@@ -817,8 +819,16 @@ export async function streamAssignedApplicationDocument(
 }
 
 export async function streamDocumentFile(document, res, options = {}) {
-  const filePath = resolveStoredApplicationFilePath(document);
-  if (!filePath) {
+  const exists = await applicationFileExists(document);
+  if (!exists) {
+    throw new AppError(
+      'The uploaded file is no longer on the server. Ask the applicant to upload it again.',
+      404,
+    );
+  }
+
+  const stream = openApplicationFileStream(document);
+  if (!stream) {
     throw new AppError(
       'The uploaded file is no longer on the server. Ask the applicant to upload it again.',
       404,
@@ -829,7 +839,24 @@ export async function streamDocumentFile(document, res, options = {}) {
   res.setHeader('Content-Type', document.mimeType || 'application/octet-stream');
   res.setHeader(
     'Content-Disposition',
-    `${disposition}; filename="${encodeURIComponent(document.originalName)}"`,
+    `${disposition}; filename="${encodeURIComponent(document.originalName || 'document')}"`,
   );
-  createReadStream(filePath).pipe(res);
+
+  await new Promise((resolve, reject) => {
+    stream.on('error', (err) => {
+      if (!res.headersSent) {
+        reject(
+          new AppError(
+            'The uploaded file is no longer on the server. Ask the applicant to upload it again.',
+            404,
+          ),
+        );
+        return;
+      }
+      reject(err);
+    });
+    res.on('finish', resolve);
+    res.on('close', resolve);
+    stream.pipe(res);
+  });
 }

@@ -73,6 +73,10 @@ const applicationDocumentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    storageId: {
+      type: String,
+      trim: true,
+    },
     uploadedAt: {
       type: Date,
       default: Date.now,

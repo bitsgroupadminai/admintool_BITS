@@ -311,12 +311,17 @@ function SidebarFooter({ user, collapsed = false }) {
   );
 }
 
-export function PublicLayout({ children, instituteName, instituteId }) {
+export function PublicLayout({ children, instituteName, instituteId, fillViewport = false }) {
   const programmesPath = instituteId ? `/${instituteId}/enroll` : '/';
 
   return (
-    <div className="min-h-screen bg-[#F4FAF7]">
-      <header className="border-b border-[#E2EEE8]/80 bg-white/85 backdrop-blur-md shadow-[0_1px_8px_rgba(10,102,64,0.05)]">
+    <div
+      className={cn(
+        'flex min-h-dvh flex-col bg-[#F4FAF7]',
+        fillViewport && 'lg:h-dvh lg:overflow-hidden',
+      )}
+    >
+      <header className="shrink-0 border-b border-[#E2EEE8]/80 bg-white/85 backdrop-blur-md shadow-[0_1px_8px_rgba(10,102,64,0.05)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <Link to={instituteId ? `/${instituteId}` : '/'} className="flex items-center gap-3">
             <BrandMark />
@@ -349,7 +354,9 @@ export function PublicLayout({ children, instituteName, instituteId }) {
           </div>
         </div>
       </header>
-      <main>{children}</main>
+      <main className={cn(fillViewport && 'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden')}>
+        {children}
+      </main>
     </div>
   );
 }

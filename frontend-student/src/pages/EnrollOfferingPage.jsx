@@ -139,25 +139,25 @@ export function EnrollOfferingPage() {
 
   if (loading) {
     return (
-      <PublicLayout instituteName={institute?.name} instituteId={instituteId}>
+      <PublicLayout fillViewport instituteName={institute?.name} instituteId={instituteId}>
         <EnrollmentOfferingSkeleton />
       </PublicLayout>
     );
   }
 
   return (
-    <PublicLayout instituteName={institute?.name} instituteId={instituteId}>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+    <PublicLayout fillViewport instituteName={institute?.name} instituteId={instituteId}>
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 sm:px-6 lg:h-full lg:min-h-0 lg:overflow-hidden">
         <Link
           to={`/${instituteId}/enroll`}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A6640]"
+          className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-[#0A6640]"
         >
           <ArrowLeft className="h-4 w-4" />
           All programmes
         </Link>
 
-        <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.75fr)] lg:items-start">
-          <div className="min-w-0 space-y-8">
+        <div className="mt-5 grid min-h-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.75fr)] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+          <div className="min-w-0 space-y-8 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
             <div className="rounded-xl border border-[#D1EEE0] bg-white/90 p-6 shadow-sm">
               <div className="flex flex-col gap-5">
                 <div className="min-w-0">
@@ -228,8 +228,8 @@ export function EnrollOfferingPage() {
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-6 lg:z-10 lg:max-h-[calc(100vh-3rem)] lg:self-start">
-            <div className="lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <aside className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pb-4 lg:scroll-pb-6">
+            <div className="lg:pb-2">
               <ApplicationPanel
                 visible
                 offering={offering}

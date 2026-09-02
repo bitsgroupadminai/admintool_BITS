@@ -24,13 +24,6 @@ export function ServiceDetailSkeleton() {
 
         <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.7fr)]">
           <div className="space-y-6">
-            <div className="rounded-2xl border border-[#E2EEE8] bg-[#F9FCFB] p-5">
-              <Skeleton className="h-5 w-48" />
-              <div className="mt-3 space-y-2">
-                <Skeleton className="h-11 w-full rounded-xl" />
-                <Skeleton className="h-11 w-full rounded-xl" />
-              </div>
-            </div>
             <div className="space-y-2">
               <Skeleton className="h-5 w-56" />
               <Skeleton className="h-4 w-full max-w-md" />

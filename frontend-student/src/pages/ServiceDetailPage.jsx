@@ -14,7 +14,6 @@ import {
   serializeApplicantDetailsForSubmit,
   validateApplicantPhoneFields,
 } from '@/utils/phone';
-import { formatEligibilityRule } from '@/utils/eligibility';
 import { formatOfferingWindow, formatVisitAccessLabel } from '@/utils/offering';
 import { useSocketEvent } from '@/contexts/SocketContext';
 import { WS_EVENTS } from '@/lib/socket';
@@ -277,13 +276,6 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
         }
       >
         <div className="space-y-6">
-          <SimpleList
-            icon={ListChecks}
-            title="Before you apply, make sure"
-            items={(offering.eligibilityRules ?? []).map((rule) => formatEligibilityRule(rule))}
-            empty="No special checks listed for this option."
-          />
-
           <div>
             <h3 className="text-base font-bold text-[#052E1C]">How you complete this request</h3>
             <p className="mt-1 text-sm text-[#4B6358]">
@@ -343,31 +335,6 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
         ) : null}
       </div>
     </section>
-  );
-}
-
-function SimpleList({ icon: Icon, title, items, empty }) {
-  return (
-    <div className="rounded-2xl border border-[#E2EEE8] bg-[#F9FCFB] p-5">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-[#0A6640]" />
-        <h3 className="text-sm font-bold text-[#052E1C]">{title}</h3>
-      </div>
-      {items.length > 0 ? (
-        <ul className="mt-3 space-y-2">
-          {items.map((item) => (
-            <li
-              key={item}
-              className="rounded-xl border border-[#E2EEE8] bg-white px-3 py-2.5 text-sm text-[#4B6358]"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-sm text-[#4B6358]">{empty}</p>
-      )}
-    </div>
   );
 }
 

@@ -85,7 +85,10 @@ export function StepDocumentsAccordion({
                 Start your request below so you can upload each file here, then complete your
                 details and submit this step.
               </p>
-              <DocumentList documents={offering.documentRequirements} />
+              <DocumentList
+                documents={offering.documentRequirements}
+                eligibilityRules={offering.eligibilityRules}
+              />
             </div>
           )}
         </div>

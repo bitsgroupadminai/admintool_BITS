@@ -11,6 +11,7 @@ import {
   validateFileForRequirement,
 } from '@/utils/applicationDocuments';
 import { downloadStudentDocument, isPreviewableMimeType } from '@/utils/documentFile';
+import { groupEligibilityNotesByDocument, documentEligibilityKey } from '@/utils/eligibility';
 
 function DocumentUploadRow({
   requirement,
@@ -21,6 +22,7 @@ function DocumentUploadRow({
   onRemove,
   onPreview,
   onDownload,
+  eligibilityNotes = [],
 }) {
   const inputRef = useRef(null);
   const [selectedName, setSelectedName] = useState('');
@@ -72,6 +74,21 @@ function DocumentUploadRow({
               </span>
             )}
           </div>
+
+          {eligibilityNotes.length > 0 ? (
+            <div className="mt-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
+                This file should confirm
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {eligibilityNotes.map((note) => (
+                  <li key={note} className="text-[11px] leading-snug text-[#4B6358]">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <p className="mt-1 text-xs text-[#4B6358]">
             Accepted: {(requirement.allowedTypes ?? ['pdf']).map((type) => type.toUpperCase()).join(', ')}
@@ -165,6 +182,10 @@ export function ApplicationDocumentUpload({
   const [previewDocument, setPreviewDocument] = useState(null);
   const requirements = offering?.documentRequirements ?? [];
   const uploadedMap = getUploadedDocumentMap(application);
+  const eligibilityNotesByDocument = groupEligibilityNotesByDocument(
+    requirements,
+    offering?.eligibilityRules,
+  );
   const canEdit =
     application?.status === 'draft' || application?.status === 'needs_correction';
   const missingRequired = getMissingRequiredDocuments(offering, application);
@@ -250,6 +271,7 @@ export function ApplicationDocumentUpload({
               onRemove={handleRemove}
               onPreview={setPreviewDocument}
               onDownload={handleDownload}
+              eligibilityNotes={eligibilityNotesByDocument.get(documentEligibilityKey(requirement)) ?? []}
             />
           ))}
         </div>

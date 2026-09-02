@@ -40,12 +40,12 @@ function describeReviewStep(step, index, { documentsComplete, status, isFeeStep,
 
   if (index === 0) {
     if (status === 'needs_correction') {
-      return 'Update the requested documents below, then resubmit so verification can continue.';
+      return 'Update the requested documents below, then complete your details and resubmit so verification can continue.';
     }
     if (!status || status === 'draft') {
       return documentsComplete
-        ? 'Documents are ready. Submit your request on the right to start institute verification.'
-        : 'Upload the required documents below. This is a prerequisite before verification can begin.';
+        ? 'Documents are ready. Complete your details below and submit this step to start institute verification.'
+        : 'Upload the required documents below, then complete your details and submit this step.';
     }
     if (step.state === 'current') {
       return 'The institute is working on this step now.';
@@ -215,9 +215,6 @@ export function getPrimaryAction(application, offering, applicantDetails = {}) {
   const detailsComplete = areApplicantDetailsComplete(offering, applicantDetails);
 
   if (!application) {
-    if (hasApplicantFields && !detailsComplete) {
-      return null;
-    }
     return { type: 'start', label: 'Start my request' };
   }
 

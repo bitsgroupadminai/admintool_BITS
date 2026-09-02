@@ -9,7 +9,7 @@ import { StudentServiceJourney } from '@/components/services/StudentServiceJourn
 import { EmptyState, PageShell } from '@/components/ui/PortalCard';
 import { ServiceDetailSkeleton } from '@/components/skeletons';
 import { studentApi } from '@/api/student.api';
-import { applicantDetailsToMap, getApplicantDetailsAgeError } from '@/utils/applicantDetails';
+import { applicantDetailsToMap, getApplicantDetailsAgeError, areApplicantDetailsComplete } from '@/utils/applicantDetails';
 import {
   serializeApplicantDetailsForSubmit,
   validateApplicantPhoneFields,
@@ -138,16 +138,31 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
   const handleStart = async () => {
     setStarting(true);
     try {
-      const payloadDetails = prepareApplicantDetailsPayload();
-      if (!payloadDetails) {
-        setStarting(false);
-        return;
+      let payloadDetails = {};
+      if (areApplicantDetailsComplete(offering, applicantDetails)) {
+        const payload = prepareApplicantDetailsPayload();
+        if (!payload) {
+          setStarting(false);
+          return;
+        }
+        payloadDetails = payload;
+      } else {
+        const ageError = getApplicantDetailsAgeError(offering, applicantDetails);
+        if (ageError) {
+          toast.error(ageError);
+          setStarting(false);
+          return;
+        }
+        payloadDetails = serializeApplicantDetailsForSubmit(
+          offering?.applicantFields ?? [],
+          applicantDetails,
+        );
       }
 
       await studentApi.startServiceApplication(serviceId, offering.id, {
         applicantDetails: payloadDetails,
       });
-      toast.success('Draft saved — submit when you are ready');
+      toast.success('Draft saved — upload your documents, then submit when you are ready');
       await onRefresh();
     } catch (err) {
       toast.error(err.message || 'Could not start your request');
@@ -254,7 +269,13 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
         </div>
       </div>
 
-      <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+      <div
+        className={
+          ['queue_only', 'hybrid', 'appointment_only'].includes(offering.queueMode)
+            ? 'grid gap-6 p-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'
+            : 'p-6'
+        }
+      >
         <div className="space-y-6">
           <SimpleList
             icon={ListChecks}
@@ -279,42 +300,47 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
                 onUploadDocument={handleUploadDocument}
                 onRemoveDocument={handleRemoveDocument}
                 onRefresh={onRefresh}
+                afterDocuments={
+                  <ServiceRequestPanel
+                    embedInStep
+                    serviceId={serviceId}
+                    offeringId={offering.id}
+                    offering={offering}
+                    application={offering.application}
+                    applicantDetails={applicantDetails}
+                    onApplicantDetailChange={(fieldKey, value) =>
+                      setApplicantDetails((current) => ({ ...current, [fieldKey]: value }))
+                    }
+                    onSaveApplicantDetails={handleSaveApplicantDetails}
+                    onStart={handleStart}
+                    onSubmit={handleSubmit}
+                    onResubmit={handleResubmit}
+                    onUploadDocument={handleUploadDocument}
+                    onRemoveDocument={handleRemoveDocument}
+                    onRefresh={onRefresh}
+                    starting={starting}
+                    submitting={submitting}
+                    resubmitting={resubmitting}
+                    savingDetails={savingDetails}
+                    onWithdraw={handleWithdraw}
+                    withdrawing={withdrawing}
+                  />
+                }
               />
             </div>
           </div>
         </div>
 
-        <div className="xl:sticky xl:top-24 xl:self-start space-y-6">
-          <ServiceRequestPanel
-            serviceId={serviceId}
-            offeringId={offering.id}
-            offering={offering}
-            application={offering.application}
-            applicantDetails={applicantDetails}
-            onApplicantDetailChange={(fieldKey, value) =>
-              setApplicantDetails((current) => ({ ...current, [fieldKey]: value }))
-            }
-            onSaveApplicantDetails={handleSaveApplicantDetails}
-            onStart={handleStart}
-            onSubmit={handleSubmit}
-            onResubmit={handleResubmit}
-            onUploadDocument={handleUploadDocument}
-            onRemoveDocument={handleRemoveDocument}
-            onRefresh={onRefresh}
-            starting={starting}
-            submitting={submitting}
-            resubmitting={resubmitting}
-            savingDetails={savingDetails}
-            onWithdraw={handleWithdraw}
-            withdrawing={withdrawing}
-          />
-          <QueueAppointmentPanel
-            serviceId={serviceId}
-            offering={offering}
-            application={offering.application}
-            onRefresh={onRefresh}
-          />
-        </div>
+        {['queue_only', 'hybrid', 'appointment_only'].includes(offering.queueMode) ? (
+          <div className="xl:sticky xl:top-24 xl:self-start space-y-6">
+            <QueueAppointmentPanel
+              serviceId={serviceId}
+              offering={offering}
+              application={offering.application}
+              onRefresh={onRefresh}
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   );

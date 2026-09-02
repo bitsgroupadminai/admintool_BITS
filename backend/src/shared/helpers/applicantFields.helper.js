@@ -86,8 +86,10 @@ export function slugifyApplicantFieldKey(label) {
 /**
  * @param {Array<{ fieldKey: string, label: string, fieldType: string, required?: boolean, options?: string[] }>} fields
  * @param {Record<string, unknown>} rawDetails
+ * @param {{ requireComplete?: boolean }} [options]
  */
-export function validateApplicantDetails(fields = [], rawDetails = {}) {
+export function validateApplicantDetails(fields = [], rawDetails = {}, options = {}) {
+  const requireComplete = options.requireComplete !== false;
   const errors = [];
   const details = [];
 
@@ -97,7 +99,7 @@ export function validateApplicantDetails(fields = [], rawDetails = {}) {
       rawValue === undefined || rawValue === null ? '' : String(rawValue).trim();
     const isEmpty = stringValue === '';
 
-    if (field.required && isEmpty) {
+    if (requireComplete && field.required && isEmpty) {
       errors.push(`${field.label} is required`);
       continue;
     }

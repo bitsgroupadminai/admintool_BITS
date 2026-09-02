@@ -22,7 +22,7 @@ export function ServiceDetailSkeleton() {
           </div>
         </div>
 
-        <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.7fr)]">
           <div className="space-y-6">
             <div className="rounded-2xl border border-[#E2EEE8] bg-[#F9FCFB] p-5">
               <Skeleton className="h-5 w-48" />
@@ -43,13 +43,6 @@ export function ServiceDetailSkeleton() {
           </div>
 
           <div className="space-y-6">
-            <SectionCardSkeleton className="space-y-4">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-10 w-full rounded-xl" />
-              <Skeleton className="h-10 w-full rounded-xl" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </SectionCardSkeleton>
             <SectionCardSkeleton className="space-y-3">
               <Skeleton className="h-5 w-44" />
               <Skeleton className="h-4 w-full" />

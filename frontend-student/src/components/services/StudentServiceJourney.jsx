@@ -28,6 +28,7 @@ export function StudentServiceJourney({
   onUploadDocument,
   onRemoveDocument,
   onRefresh,
+  afterDocuments,
 }) {
   const hasReviewWorkflow = Boolean(
     application?.workflow?.steps?.length || offering?.workflowSteps?.length,
@@ -86,6 +87,7 @@ export function StudentServiceJourney({
                     onRefresh={onRefresh}
                   />
                 ) : null}
+                {showDocuments && afterDocuments ? afterDocuments : null}
                 {showPayment ? (
                   <div className="mt-4">
                     <PaymentPanel

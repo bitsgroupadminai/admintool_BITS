@@ -33,6 +33,7 @@ export function ServiceRequestPanel({
   savingDetails,
   onWithdraw,
   withdrawing,
+  embedInStep = false,
 }) {
   const action = getPrimaryAction(application, offering, applicantDetails);
   const statusLabel = getApplicationStatusLabel(application?.status);
@@ -61,19 +62,29 @@ export function ServiceRequestPanel({
   const isBusy = starting || submitting || resubmitting || savingDetails;
 
   return (
-    <div className="rounded-2xl border border-[#C4E8D4] bg-gradient-to-br from-[#F0FAF5] to-white p-6">
+    <div
+      className={
+        embedInStep
+          ? 'mt-4 rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] p-4'
+          : 'rounded-2xl border border-[#C4E8D4] bg-gradient-to-br from-[#F0FAF5] to-white p-6'
+      }
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#10B981]">
             Your request
           </p>
-          <h3 className="mt-1 text-lg font-bold text-[#052E1C]">Complete this service</h3>
+          <h3 className="mt-1 text-lg font-bold text-[#052E1C]">
+            {embedInStep ? 'Complete this step' : 'Complete this service'}
+          </h3>
           <p className="mt-1 text-sm text-[#4B6358]">
             {application?.status === 'draft'
-              ? 'Fill in your details, upload documents in step 1 on the left, then submit when everything is ready.'
+              ? 'Fill in your details, then submit when your documents are uploaded.'
               : application?.status === 'needs_correction'
-                ? 'Update the requested documents in step 1 on the left, then resubmit for review.'
-                : 'Follow the steps on the left, then start and submit when you are ready.'}
+                ? 'Update the requested documents above, then resubmit for review.'
+                : application
+                  ? 'Your request is in progress. You can review your details below.'
+                  : 'Start your request so you can upload documents above, then fill in your details and submit.'}
           </p>
         </div>
         <span
@@ -108,8 +119,8 @@ export function ServiceRequestPanel({
           <p className="text-sm font-semibold text-[#052E1C]">Your information</p>
           <p className="mt-1 text-xs text-[#4B6358]">
             {application
-              ? 'Update these details before you submit your request.'
-              : 'Complete these details before starting your request.'}
+              ? 'Update these details before you submit this step.'
+              : 'You can fill these in after you start and upload documents, or before you start.'}
           </p>
           <div className="mt-4">
             <ApplicantDetailsForm
@@ -193,7 +204,7 @@ export function ServiceRequestPanel({
         </p>
       ) : canEditDocuments && !documentsComplete ? (
         <p className="mt-5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-          Upload all required documents in step 1 before submitting
+          Upload all required documents above before submitting
           {missingRequired.length > 0 ? `: ${missingRequired.map((item) => item.name).join(', ')}` : '.'}
         </p>
       ) : canEditDocuments && hasApplicantFields && !detailsComplete ? (
@@ -208,7 +219,7 @@ export function ServiceRequestPanel({
           {application?.status === 'submitted' || application?.status === 'in_review'
             ? 'Your request is with the institute. You will be notified when there is an update.'
             : application?.status === 'needs_correction'
-              ? 'Update the requested documents in step 1, then resubmit when everything is ready.'
+              ? 'Update the requested documents above, then resubmit when everything is ready.'
               : application?.status === 'admitted'
                 ? 'This request has been approved. Contact your institute if you need anything else.'
                 : application?.status === 'rejected'

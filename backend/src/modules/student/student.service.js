@@ -1019,6 +1019,7 @@ export async function startStudentServiceApplication(
   const { details, errors } = validateApplicantDetails(
     offering.applicantFields,
     applicantDetails ?? {},
+    { requireComplete: false },
   );
   if (errors.length) {
     throw new AppError(errors[0], 400);

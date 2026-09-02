@@ -20,7 +20,7 @@ export function StepDocumentsAccordion({
   const stats = getDocumentProgressStats(offering, application);
   const canEdit =
     application?.status === 'draft' || application?.status === 'needs_correction';
-  const [open, setOpen] = useState(canEdit && !stats.complete);
+  const [open, setOpen] = useState((!application || canEdit) && !stats.complete);
   const percent =
     stats.requiredCount === 0 ? 100 : Math.round((stats.uploadedCount / stats.requiredCount) * 100);
   const summaryNames =
@@ -82,7 +82,8 @@ export function StepDocumentsAccordion({
           ) : (
             <div>
               <p className="mb-3 text-xs text-[#4B6358]">
-                Start your request on the right, then upload each file here before step 1 can begin.
+                Start your request below so you can upload each file here, then complete your
+                details and submit this step.
               </p>
               <DocumentList documents={offering.documentRequirements} />
             </div>

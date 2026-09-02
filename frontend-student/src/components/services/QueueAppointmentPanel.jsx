@@ -20,6 +20,7 @@ import {
 
 import { AppointmentSlotPicker } from './AppointmentSlotPicker';
 import { PaymentPanel } from './PaymentPanel';
+import { hasWorkflowFeeStep, isFeePaymentStep } from '@/utils/payment';
 
 
 
@@ -88,10 +89,7 @@ function statusLabel(status) {
 function getWorkflowNextStep(application, offering) {
   const current = application?.workflow?.currentStep;
   if (current) {
-    const isFeeStep =
-      offering?.paymentConfig?.enabled &&
-      offering?.paymentConfig?.timing === 'workflow_step' &&
-      offering?.paymentConfig?.workflowStepId === current.stepId;
+    const isFeeStep = isFeePaymentStep(current, offering, application);
 
     return {
       title: current.name,
@@ -173,7 +171,7 @@ export function QueueAppointmentPanel({ serviceId, offering, application, onRefr
     visitCompleted &&
     (application?.payment?.required ||
       workflowNext.isFeeStep ||
-      (offering?.paymentConfig?.enabled && offering?.paymentConfig?.timing === 'workflow_step'));
+      hasWorkflowFeeStep(offering, application));
 
 
 
@@ -765,15 +763,14 @@ export function QueueAppointmentPanel({ serviceId, offering, application, onRefr
                   onPaid={onRefresh}
                   forceShow
                 />
-              ) : offering?.paymentConfig?.enabled &&
-                offering?.paymentConfig?.timing === 'workflow_step' &&
+              ) : hasWorkflowFeeStep(offering, application) &&
                 application?.payment?.status !== 'paid' ? (
                 <p className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-sm text-[#1E40AF]">
                   {offering.paymentConfig.label || 'Admission fee'} (
                   {offering.paymentConfig.amount
                     ? `₹${Number(offering.paymentConfig.amount).toLocaleString('en-IN')}`
                     : 'fee'}
-                  ) will appear here once the institute moves your request to the fee step.
+                  ) will appear in the fee payment step once the institute moves your request there.
                 </p>
               ) : null}
             </div>

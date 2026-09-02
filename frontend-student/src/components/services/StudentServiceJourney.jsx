@@ -1,7 +1,9 @@
 import { Check, Circle, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildStudentServiceSteps, isDocumentPrerequisiteStep } from '@/utils/studentJourney';
+import { isFeePaymentStep } from '@/utils/payment';
 import { StepDocumentsAccordion } from '@/components/services/StepDocumentsAccordion';
+import { PaymentPanel } from '@/components/services/PaymentPanel';
 
 const stateStyles = {
   complete: {
@@ -37,6 +39,7 @@ export function StudentServiceJourney({
       {steps.map((step, index) => {
         const styles = stateStyles[step.state] ?? stateStyles.upcoming;
         const showDocuments = isDocumentPrerequisiteStep(step, index, hasReviewWorkflow);
+        const showPayment = isFeePaymentStep(step, offering, application);
 
         return (
           <li
@@ -82,6 +85,18 @@ export function StudentServiceJourney({
                     onRemove={onRemoveDocument}
                     onRefresh={onRefresh}
                   />
+                ) : null}
+                {showPayment ? (
+                  <div className="mt-4">
+                    <PaymentPanel
+                      serviceId={serviceId}
+                      offeringId={offeringId}
+                      offering={offering}
+                      application={application}
+                      onPaid={onRefresh}
+                      embedInStep
+                    />
+                  </div>
                 ) : null}
               </div>
             </div>

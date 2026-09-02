@@ -48,6 +48,41 @@ function normalizePaymentConfig(config) {
   };
 }
 
+function getOfferingWorkflowSteps(offering, application) {
+  if (application?.workflow?.steps?.length) {
+    return application.workflow.steps;
+  }
+  return offering?.workflowSteps ?? [];
+}
+
+/**
+ * Prefer a dedicated fee/payment workflow step over pay-before-submit when
+ * the offering already has one (e.g. "Fee Payment" as step 5).
+ */
+function findWorkflowFeeStep(offering, application, config = null) {
+  const steps = getOfferingWorkflowSteps(offering, application);
+  const configuredId = config?.workflowStepId || offering?.paymentConfig?.workflowStepId;
+  if (configuredId) {
+    const match = steps.find((step) => step.stepId === configuredId);
+    if (match) return match;
+  }
+  return (
+    steps.find((step) => /fee|payment/i.test(String(step.name || ''))) ?? null
+  );
+}
+
+function resolvePaymentConfig(offering, application) {
+  const config = normalizePaymentConfig(offering?.paymentConfig);
+  if (!config.enabled) return config;
+  const feeStep = findWorkflowFeeStep(offering, application, config);
+  if (!feeStep) return config;
+  return {
+    ...config,
+    timing: PAYMENT_TIMING.WORKFLOW_STEP,
+    workflowStepId: feeStep.stepId,
+  };
+}
+
 export function formatPaymentConfig(config) {
   const normalized = normalizePaymentConfig(config ?? {});
   if (!normalized.enabled) {
@@ -92,7 +127,7 @@ async function findPaidPayment(applicationId, purpose, workflowStepId = null) {
  * @param {import('../applications/application.model.js').Application} application
  */
 export async function getApplicationPaymentState(offering, application) {
-  const config = normalizePaymentConfig(offering.paymentConfig);
+  const config = resolvePaymentConfig(offering, application);
   if (!config.enabled) {
     return {
       required: false,
@@ -169,7 +204,7 @@ async function assertApplicationOwnership(application, userEmail) {
 }
 
 async function advanceWorkflowAfterPayment(application, offering, user, instituteId) {
-  const config = normalizePaymentConfig(offering.paymentConfig);
+  const config = resolvePaymentConfig(offering, application);
   if (config.timing !== PAYMENT_TIMING.WORKFLOW_STEP || !config.workflowStepId) {
     return { enqueueAiVerification: false };
   }
@@ -228,7 +263,7 @@ async function advanceWorkflowAfterPayment(application, offering, user, institut
  * @param {string} instituteId
  */
 export async function unlockWorkflowPaymentAfterVisit(application, offering, instituteId) {
-  const config = normalizePaymentConfig(offering.paymentConfig);
+  const config = resolvePaymentConfig(offering, application);
   if (!config.enabled || config.timing !== PAYMENT_TIMING.WORKFLOW_STEP || !config.workflowStepId) {
     return { unlocked: false };
   }
@@ -292,11 +327,6 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
     throw new AppError('Service option not found', 404);
   }
 
-  const config = normalizePaymentConfig(offering.paymentConfig);
-  if (!config.enabled) {
-    throw new AppError('This service option does not require payment', 400);
-  }
-
   const application = await Application.findOne({
     instituteId,
     serviceId,
@@ -305,6 +335,11 @@ export async function createServicePaymentOrder(instituteId, user, serviceId, of
   });
   if (!application) {
     throw new AppError('Start your request before paying', 400);
+  }
+
+  const config = resolvePaymentConfig(offering, application);
+  if (!config.enabled) {
+    throw new AppError('This service option does not require payment', 400);
   }
 
   await assertApplicationOwnership(application, applicantEmail);

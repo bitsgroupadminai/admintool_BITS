@@ -1,7 +1,7 @@
 import { formatQueueMode } from '@/utils/offering';
 import { areAllRequiredDocumentsUploaded } from '@/utils/applicationDocuments';
 import { areApplicantDetailsComplete, applicantDetailsToMap } from '@/utils/applicantDetails';
-import { isPaymentPending } from '@/utils/payment';
+import { isFeePaymentStep, isPaymentPaid, isPaymentPending } from '@/utils/payment';
 
 const STATUS_LABELS = {
   draft: 'Draft saved',
@@ -27,7 +27,17 @@ export function isDocumentPrerequisiteStep(step, index, hasReviewWorkflow) {
   return step?.id === 'documents';
 }
 
-function describeReviewStep(step, index, { documentsComplete, status }) {
+function describeReviewStep(step, index, { documentsComplete, status, isFeeStep, paymentPaid }) {
+  if (isFeeStep) {
+    if (paymentPaid || step.state === 'complete') {
+      return 'Fee received. You can continue with your request.';
+    }
+    if (step.state === 'current') {
+      return 'Pay the course fee below to complete this step.';
+    }
+    return 'The course fee is collected at this step after earlier steps finish.';
+  }
+
   if (index === 0) {
     if (status === 'needs_correction') {
       return 'Update the requested documents below, then resubmit so verification can continue.';
@@ -59,14 +69,21 @@ export function buildStudentServiceSteps(offering, application) {
   const documentsComplete = areAllRequiredDocumentsUploaded(offering, application);
   const status = application?.status ?? null;
 
+  const paymentPaid = isPaymentPaid(application);
+
   if (application?.workflow?.steps?.length) {
     return application.workflow.steps.map((step, index) => ({
       id: step.stepId,
       title: step.name,
       description: describeReviewStep(
-        { state: step.state },
+        { state: step.state, id: step.stepId },
         index,
-        { documentsComplete, status },
+        {
+          documentsComplete,
+          status,
+          isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
+          paymentPaid,
+        },
       ),
       state: step.state,
     }));
@@ -84,7 +101,16 @@ export function buildStudentServiceSteps(offering, application) {
       return {
         id: step.stepId,
         title: step.name,
-        description: describeReviewStep({ state }, index, { documentsComplete, status }),
+        description: describeReviewStep(
+          { state, id: step.stepId },
+          index,
+          {
+            documentsComplete,
+            status,
+            isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
+            paymentPaid,
+          },
+        ),
         state,
       };
     });
@@ -202,7 +228,7 @@ export function getPrimaryAction(application, offering, applicantDetails = {}) {
     if (!areAllRequiredDocumentsUploaded(offering, application)) {
       return null;
     }
-    if (isPaymentPending(application)) {
+    if (isPaymentPending(application, offering)) {
       return null;
     }
     return { type: 'submit', label: 'Submit for review' };

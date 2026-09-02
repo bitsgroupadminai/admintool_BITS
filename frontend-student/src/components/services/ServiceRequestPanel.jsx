@@ -10,7 +10,7 @@ import {
 import { getApplicationStatusLabel, getPrimaryAction } from '@/utils/studentJourney';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { PaymentPanel } from '@/components/services/PaymentPanel';
-import { isPaymentPending } from '@/utils/payment';
+import { isPaymentPending, shouldShowPaymentPanel } from '@/utils/payment';
 import { formatPhoneForDisplay } from '@/utils/phone';
 
 export function ServiceRequestPanel({
@@ -44,7 +44,8 @@ export function ServiceRequestPanel({
   const missingApplicantFields = getMissingApplicantFields(offering, applicantDetails);
   const canEditDocuments =
     application?.status === 'draft' || application?.status === 'needs_correction';
-  const paymentPending = isPaymentPending(application);
+  const paymentPending = isPaymentPending(application, offering);
+  const showPaymentInPanel = shouldShowPaymentPanel(application, offering);
   const showApplicantForm =
     hasApplicantFields && (!application || canEditDocuments);
   const showSavedApplicantSummary =
@@ -154,7 +155,7 @@ export function ServiceRequestPanel({
         </div>
       ) : null}
 
-      {(offering?.paymentConfig?.enabled || application?.payment?.required) ? (
+      {showPaymentInPanel ? (
         <div className="mt-5">
           <PaymentPanel
             serviceId={serviceId}

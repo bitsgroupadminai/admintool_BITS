@@ -4,7 +4,6 @@ import { ArrowLeft, CalendarDays, CreditCard, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { StudentLayout } from '@/components/StudentLayout';
 import { ServiceRequestPanel } from '@/components/services/ServiceRequestPanel';
-import { EligibilityPreview } from '@/components/eligibility/EligibilityPreview';
 import { QueueAppointmentPanel } from '@/components/services/QueueAppointmentPanel';
 import { StudentServiceJourney } from '@/components/services/StudentServiceJourney';
 import { EmptyState, PageShell } from '@/components/ui/PortalCard';
@@ -286,7 +285,6 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
         </div>
 
         <div className="xl:sticky xl:top-24 xl:self-start space-y-6">
-          <EligibilityPreview offeringId={offering.id} />
           <ServiceRequestPanel
             serviceId={serviceId}
             offeringId={offering.id}

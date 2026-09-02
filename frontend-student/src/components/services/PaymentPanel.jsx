@@ -2,14 +2,11 @@ import { useState } from 'react';
 import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { paymentsApi } from '@/api/payments.api';
-import { loadRazorpayScript } from '@/utils/payment';
-
-function isAtWorkflowFeeStep(application, offering) {
-  if (offering?.paymentConfig?.timing !== 'workflow_step') return false;
-  const stepId = offering?.paymentConfig?.workflowStepId;
-  if (!stepId) return false;
-  return application?.workflow?.currentStep?.stepId === stepId;
-}
+import {
+  hasWorkflowFeeStep,
+  isAtWorkflowFeeStep,
+  loadRazorpayScript,
+} from '@/utils/payment';
 
 export function PaymentPanel({
   serviceId,
@@ -18,6 +15,7 @@ export function PaymentPanel({
   application,
   onPaid,
   forceShow = false,
+  embedInStep = false,
 }) {
   const [paying, setPaying] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -32,8 +30,11 @@ export function PaymentPanel({
     (config.amount ? `₹${Number(config.amount).toLocaleString('en-IN')}` : '');
 
   const atWorkflowFeeStep = isAtWorkflowFeeStep(application, offering);
+  const workflowFeeStep = hasWorkflowFeeStep(offering, application);
   const paymentDue =
-    payment?.required === true || forceShow || atWorkflowFeeStep;
+    (!workflowFeeStep && payment?.required === true) ||
+    forceShow ||
+    atWorkflowFeeStep;
 
   if (payment?.status === 'paid') {
     return (
@@ -51,17 +52,21 @@ export function PaymentPanel({
     );
   }
 
-  if (!paymentDue && application) {
+  if (!embedInStep && !paymentDue && application) {
     return null;
   }
 
   const paymentsConfigured =
-    forceShow || atWorkflowFeeStep
+    forceShow || atWorkflowFeeStep || embedInStep
       ? true
       : payment?.configured !== false;
-  const canPay = Boolean(application?.id) && paymentsConfigured && payment?.status !== 'paid';
+  const canPay =
+    Boolean(application?.id) &&
+    paymentsConfigured &&
+    payment?.status !== 'paid' &&
+    (embedInStep ? atWorkflowFeeStep || forceShow : paymentDue);
 
-  const showFeePreview = !application && config.timing === 'before_submit';
+  const showFeePreview = !canPay && !atWorkflowFeeStep && !forceShow;
 
   const handlePay = async () => {
     if (!application?.id) {
@@ -133,7 +138,9 @@ export function PaymentPanel({
             <p className="text-sm font-semibold text-[#1E3A8A]">{label}</p>
             <p className="mt-1 text-lg font-bold text-[#1E40AF]">{amountDisplay}</p>
             <p className="mt-2 text-xs text-[#1D4ED8]">
-              Start your request first, then pay this fee before submitting.
+              {embedInStep || workflowFeeStep
+                ? 'Pay this fee when you reach this step.'
+                : 'Start your request first, then pay this fee before submitting.'}
             </p>
           </div>
         </div>
@@ -141,8 +148,9 @@ export function PaymentPanel({
     );
   }
 
-  const helperText =
-    config.timing === 'before_submit'
+  const helperText = workflowFeeStep
+    ? 'Pay this fee to complete this step.'
+    : config.timing === 'before_submit'
       ? 'Pay this fee before you submit your request for review.'
       : 'Your visit is complete. Pay now to continue your admission.';
 

@@ -94,7 +94,7 @@ export function EnrollOfferingPage() {
     }
 
     if (intakeStatus?.canSubmit === false) {
-      toast.error(intakeStatus.message || 'You cannot submit another request right now.');
+      setShowFieldErrors(true);
       return;
     }
 

@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, Loader2, Send } from 'lucide-react';
+import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import { formatQueueMode } from '@/utils/offering';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { IntakeDocumentInput } from '@/components/enrollment/IntakeDocumentInput';
@@ -24,8 +24,8 @@ export function ApplicationPanel({
   intakeStatus,
   checkingIntake,
 }) {
-  const blocked = intakeStatus?.canSubmit === false;
-  const pending = intakeStatus?.status === 'pending_authorization';
+  const intakeEmailError =
+    intakeStatus?.canSubmit === false ? intakeStatus.message : null;
   const formValues = {
     applicantName,
     applicantEmail,
@@ -48,27 +48,7 @@ export function ApplicationPanel({
         portal access to complete enrollment.
       </p>
 
-      {blocked && intakeStatus?.message ? (
-        <div
-          className={`mt-5 rounded-xl border p-4 ${
-            pending
-              ? 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]'
-              : 'border-[#E2EEE8] bg-[#F9FCFB] text-[#4B6358]'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">
-                {pending ? 'Authorization pending' : 'Request already on file'}
-              </p>
-              <p className="mt-1 text-sm leading-relaxed">{intakeStatus.message}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {offering && !blocked ? (
+      {offering ? (
         <div className="mt-5 rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#10B981]">
             Before you start
@@ -83,9 +63,8 @@ export function ApplicationPanel({
         </div>
       ) : null}
 
-      {!blocked ? (
-        <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
-          <div>
+      <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
+        <div>
             <label htmlFor="applicant-name" className="mb-1.5 block text-sm font-medium text-[#052E1C]">
               Full name
             </label>
@@ -120,18 +99,18 @@ export function ApplicationPanel({
               value={applicantEmail}
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="you@email.com"
-              aria-invalid={Boolean(fieldErrors.applicantEmail) || undefined}
+              aria-invalid={Boolean(fieldErrors.applicantEmail || intakeEmailError) || undefined}
               className={`h-11 w-full rounded-xl border bg-[#F0FAF5] px-4 text-sm text-[#052E1C] outline-none transition focus:bg-white disabled:opacity-60 ${
-                fieldErrors.applicantEmail
+                fieldErrors.applicantEmail || intakeEmailError
                   ? 'border-[#FECACA] bg-[#FEF2F2] focus:border-[#FCA5A5]'
                   : 'border-[#C4E8D4] focus:border-[#6EE7B7]'
               }`}
               autoComplete="email"
               disabled={submitting}
             />
-            {fieldErrors.applicantEmail ? (
+            {fieldErrors.applicantEmail || intakeEmailError ? (
               <p className="mt-1.5 text-xs font-medium text-[#B91C1C]" role="alert">
-                {fieldErrors.applicantEmail}
+                {fieldErrors.applicantEmail || intakeEmailError}
               </p>
             ) : checkingIntake ? (
               <p className="mt-1.5 text-xs text-[#6B7280]">Checking existing request…</p>
@@ -194,7 +173,6 @@ export function ApplicationPanel({
             admin approval.
           </p>
         </form>
-      ) : null}
     </div>
   );
 }

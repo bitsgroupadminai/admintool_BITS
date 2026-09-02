@@ -485,6 +485,22 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
   }
 
   const email = payload.applicantEmail.toLowerCase();
+  const existingStudent = await User.findOne({
+    email,
+    instituteId,
+    role: ROLES.STUDENT,
+    isActive: true,
+  }).select('_id');
+  if (existingStudent) {
+    if (intakeDocumentFile) {
+      await removeStoredApplicationFile(intakeDocumentFile.path);
+    }
+    throw new AppError(
+      'This email is already registered as a student. Enter a different email, or log in to the student portal.',
+      409,
+    );
+  }
+
   const existing = await Application.findOne({
     instituteId,
     serviceId: service._id,
@@ -496,7 +512,7 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
   if (existing) {
     if (existing.status === APPLICATION_STATUS.PENDING_AUTHORIZATION && !intakeDocumentFile) {
       throw new AppError(
-        'Your authorization request is already pending institute review. Please wait for an email update instead of submitting again.',
+        'This email already has a pending authorization request. Enter a different email, or wait for the institute to review it.',
         409,
       );
     }
@@ -507,7 +523,10 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
       if (intakeDocumentFile) {
         await removeStoredApplicationFile(intakeDocumentFile.path);
       }
-      throw new AppError('An application already exists for this programme with this email', 400);
+      throw new AppError(
+        'This email already has an application for this programme. Enter a different email.',
+        400,
+      );
     }
   }
 
@@ -570,12 +589,32 @@ export async function getEnrollmentIntakeStatus(instituteId, offeringId, email) 
       instituteId,
     }).select('serviceId');
 
-    const application = await Application.findOne({
-      instituteId,
-      ...(offering ? { serviceId: offering.serviceId } : {}),
-      offeringId,
-      applicantEmail: email.toLowerCase(),
-    }).select('status applicantName createdAt updatedAt');
+    const normalizedEmail = email.toLowerCase();
+    const [application, existingStudent] = await Promise.all([
+      Application.findOne({
+        instituteId,
+        ...(offering ? { serviceId: offering.serviceId } : {}),
+        offeringId,
+        applicantEmail: normalizedEmail,
+      }).select('status applicantName createdAt updatedAt'),
+      User.findOne({
+        email: normalizedEmail,
+        instituteId,
+        role: ROLES.STUDENT,
+        isActive: true,
+      }).select('_id'),
+    ]);
+
+    if (existingStudent) {
+      return {
+        hasIntake: Boolean(application),
+        canSubmit: false,
+        status: application?.status ?? 'existing_student',
+        message:
+          'This email is already registered as a student. Enter a different email, or log in to the student portal.',
+        submittedAt: application?.updatedAt ?? null,
+      };
+    }
 
     if (!application) {
       return {
@@ -592,7 +631,7 @@ export async function getEnrollmentIntakeStatus(instituteId, offeringId, email) 
         canSubmit: false,
         status: application.status,
         message:
-          'Your authorization request is already pending. The institute will email you once it is reviewed.',
+          'This email already has a pending authorization request. Enter a different email, or wait for the institute to review it.',
         submittedAt: application.createdAt,
       };
     }
@@ -612,7 +651,7 @@ export async function getEnrollmentIntakeStatus(instituteId, offeringId, email) 
       hasIntake: true,
       canSubmit: false,
       status: application.status,
-      message: 'An application already exists for this programme with your email.',
+      message: 'This email already has an application for this programme. Enter a different email.',
       submittedAt: application.updatedAt,
     };
   });

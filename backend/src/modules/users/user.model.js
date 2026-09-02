@@ -72,8 +72,9 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ instituteId: 1, role: 1 });
-// Email is unique per institute (multi-tenant), not globally across the platform.
-userSchema.index({ instituteId: 1, email: 1 }, { unique: true });
+// Same email may be used by a student and a staff/admin in one institute
+// (e.g. a parent’s address). One account per role per institute.
+userSchema.index({ instituteId: 1, email: 1, role: 1 }, { unique: true });
 
 export const User = mongoose.model('User', userSchema);
 
@@ -86,6 +87,11 @@ export async function ensureUserEmailIndexes() {
     await User.collection.dropIndex('email_1');
   } catch {
     // Index may already be absent
+  }
+  try {
+    await User.collection.dropIndex('instituteId_1_email_1');
+  } catch {
+    // Replaced by instituteId + email + role
   }
   await User.syncIndexes();
 }

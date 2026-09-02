@@ -42,7 +42,7 @@ export function LoginPage() {
   const onSubmit = async (values) => {
     setSubmitting(true);
     try {
-      const { data } = await authApi.login(values);
+      const { data } = await authApi.login({ ...values, portal });
       const user = data.data.user;
       setUser(user);
       if (user.role === "admin" && !user.institute?.setupCompleted) {

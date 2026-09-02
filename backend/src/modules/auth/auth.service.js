@@ -60,11 +60,26 @@ export async function signupAdmin(payload) {
 }
 
 /**
+ * @param {'student' | 'admin' | 'staff' | undefined} portal
+ * @returns {string[] | null}
+ */
+function preferredRolesForPortal(portal) {
+  if (portal === 'student') return [ROLES.STUDENT];
+  if (portal === 'admin' || portal === 'staff') return [ROLES.ADMIN, ROLES.STAFF];
+  return null;
+}
+
+/**
  * @param {import('./auth.validator.js').loginSchema['_output']} payload
  */
 export async function loginUser(payload) {
   const email = payload.email.toLowerCase();
-  const candidates = await User.find({ email, isActive: true }).select('+passwordHash');
+  let candidates = await User.find({ email, isActive: true }).select('+passwordHash');
+
+  const preferredRoles = preferredRolesForPortal(payload.portal);
+  if (preferredRoles) {
+    candidates = candidates.filter((candidate) => preferredRoles.includes(candidate.role));
+  }
 
   if (!candidates.length) {
     throw new AppError(INVALID_CREDENTIALS_MSG, 401);

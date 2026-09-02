@@ -24,6 +24,7 @@ export const signupSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  portal: z.enum(['student', 'admin', 'staff']).optional(),
 });
 
 export const updateProfileSchema = z

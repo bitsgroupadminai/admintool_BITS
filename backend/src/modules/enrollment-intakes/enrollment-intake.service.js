@@ -213,6 +213,7 @@ export async function approveEnrollmentIntake(instituteId, intakeId, reviewer, p
   let studentUser = await User.findOne({
     email: application.applicantEmail,
     instituteId,
+    role: ROLES.STUDENT,
   });
   let temporaryPassword;
 
@@ -231,9 +232,6 @@ export async function approveEnrollmentIntake(instituteId, intakeId, reviewer, p
       mustChangePassword: true,
     });
   } else {
-    if (studentUser.role !== ROLES.STUDENT) {
-      throw new AppError('This email is already used by a non-student account in this institute', 409);
-    }
     studentUser.name = application.applicantName;
     studentUser.enrolledOfferingId = offering._id;
     studentUser.enrolledProgrammeName = offering.name;

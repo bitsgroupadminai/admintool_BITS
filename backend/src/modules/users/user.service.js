@@ -62,7 +62,11 @@ export async function createStaffUser(instituteId, payload) {
   const email = payload.email.toLowerCase();
   const staffRole = await resolveStaffRole(instituteId, payload.staffRole);
 
-  const existing = await User.findOne({ email, instituteId });
+  const existing = await User.findOne({
+    email,
+    instituteId,
+    role: { $in: [ROLES.ADMIN, ROLES.STAFF] },
+  });
   if (existing) {
     throw new AppError('A user with this email already exists in this institute', 409);
   }
@@ -123,7 +127,12 @@ export async function updateStaffUser(staffId, instituteId, payload) {
   if (payload.email) {
     const email = payload.email.toLowerCase();
     if (email !== user.email) {
-      const existing = await User.findOne({ email, instituteId, _id: { $ne: user._id } });
+      const existing = await User.findOne({
+        email,
+        instituteId,
+        role: { $in: [ROLES.ADMIN, ROLES.STAFF] },
+        _id: { $ne: user._id },
+      });
       if (existing) {
         throw new AppError('A user with this email already exists in this institute', 409);
       }
@@ -306,9 +315,9 @@ export async function listEnrollmentProgrammes(instituteId) {
  */
 export async function createStudentUser(instituteId, payload) {
   const email = payload.email.toLowerCase();
-  const existing = await User.findOne({ email, instituteId });
+  const existing = await User.findOne({ email, instituteId, role: ROLES.STUDENT });
   if (existing) {
-    throw new AppError('A user with this email already exists in this institute', 409);
+    throw new AppError('A student with this email already exists in this institute', 409);
   }
 
   const service = await Service.findOne({
@@ -488,9 +497,14 @@ export async function updateStudentUser(studentId, instituteId, payload) {
   if (payload.email) {
     const email = payload.email.toLowerCase();
     if (email !== user.email) {
-      const existing = await User.findOne({ email, instituteId, _id: { $ne: user._id } });
+      const existing = await User.findOne({
+        email,
+        instituteId,
+        role: ROLES.STUDENT,
+        _id: { $ne: user._id },
+      });
       if (existing) {
-        throw new AppError('A user with this email already exists in this institute', 409);
+        throw new AppError('A student with this email already exists in this institute', 409);
       }
       user.email = email;
     }

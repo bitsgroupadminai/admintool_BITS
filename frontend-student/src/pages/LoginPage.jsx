@@ -48,7 +48,7 @@ export function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { data } = await authApi.login({ email, password });
+      const { data } = await authApi.login({ email, password, portal: 'student' });
       const user = data.data.user;
       if (user.role !== 'student') {
         toast.error('This portal is for enrolled students only');

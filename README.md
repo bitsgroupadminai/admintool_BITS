@@ -113,7 +113,7 @@ STUDENT_CLIENT_URL=http://localhost:5174
 | Email notifications | `RESEND_API_KEY`, `EMAIL_FROM` (SMTP `SMTP_*` is backup) |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 | Google Meet appointments | `GOOGLE_OAUTH_*` |
-| Turn on AI verification worker | `AI_VERIFICATION_ENABLED=true` |
+| Turn on AI verification worker | `AI_VERIFICATION_ENABLED=true` (default when an OpenAI key is set; set `false` to skip student-document checks) |
 
 Without optional keys, the core workflow still runs. AI/email/payment features are limited or skipped.
 

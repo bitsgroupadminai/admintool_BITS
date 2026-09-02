@@ -65,7 +65,7 @@ const envSchema = z.object({
   /** Master switch for AI-driven verification of application documents & eligibility. */
   AI_VERIFICATION_ENABLED: z
     .enum(['true', 'false'])
-    .default('false')
+    .default('true')
     .transform((value) => value === 'true'),
   /** Confidence at/above which a passing AI verdict auto-approves the step. */
   AI_VERIFY_AUTO_APPROVE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
@@ -207,6 +207,7 @@ console.log(
     hasMongo: Boolean(env.MONGODB_URI),
     hasRedis: Boolean(env.REDIS_URL),
     hasOpenAI: Boolean(env.OPENAI_API_KEY),
+    aiVerificationEnabled: env.AI_VERIFICATION_ENABLED,
     hasPinecone: Boolean(env.PINECONE_API_KEY),
     hasSmtp: Boolean(env.SMTP_USER && env.SMTP_PASS),
     hasResend: Boolean(env.RESEND_API_KEY),

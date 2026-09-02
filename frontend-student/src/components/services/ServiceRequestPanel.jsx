@@ -1,17 +1,13 @@
 import { Send, Sparkles } from 'lucide-react';
 import {
   areAllRequiredDocumentsUploaded,
-  getDocumentProgressLabel,
   getMissingRequiredDocuments,
-  getRequiredDocuments,
 } from '@/utils/applicationDocuments';
 import {
   areApplicantDetailsComplete,
   getMissingApplicantFields,
 } from '@/utils/applicantDetails';
 import { getApplicationStatusLabel, getPrimaryAction } from '@/utils/studentJourney';
-import { ApplicationDocumentUpload } from '@/components/services/ApplicationDocumentUpload';
-import { DocumentList } from '@/components/enrollment/DocumentList';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { PaymentPanel } from '@/components/services/PaymentPanel';
 import { isPaymentPending } from '@/utils/payment';
@@ -40,7 +36,6 @@ export function ServiceRequestPanel({
 }) {
   const action = getPrimaryAction(application, offering, applicantDetails);
   const statusLabel = getApplicationStatusLabel(application?.status);
-  const requiredDocuments = getRequiredDocuments(offering?.documentRequirements ?? []);
   const documentsComplete = areAllRequiredDocumentsUploaded(offering, application);
   const missingRequired = getMissingRequiredDocuments(offering, application);
   const applicantFields = offering?.applicantFields ?? [];
@@ -50,7 +45,6 @@ export function ServiceRequestPanel({
   const canEditDocuments =
     application?.status === 'draft' || application?.status === 'needs_correction';
   const paymentPending = isPaymentPending(application);
-  const showUploadPanel = Boolean(application) && requiredDocuments.length > 0 && canEditDocuments;
   const showApplicantForm =
     hasApplicantFields && (!application || canEditDocuments);
   const showSavedApplicantSummary =
@@ -75,10 +69,10 @@ export function ServiceRequestPanel({
           <h3 className="mt-1 text-lg font-bold text-[#052E1C]">Complete this service</h3>
           <p className="mt-1 text-sm text-[#4B6358]">
             {application?.status === 'draft'
-              ? 'Upload required documents, then submit when everything is ready.'
+              ? 'Fill in your details, upload documents in step 1 on the left, then submit when everything is ready.'
               : application?.status === 'needs_correction'
-                ? 'Update the requested items, then resubmit for review.'
-                : 'Follow the steps below, then start and submit when you are ready.'}
+                ? 'Update the requested documents in step 1 on the left, then resubmit for review.'
+                : 'Follow the steps on the left, then start and submit when you are ready.'}
           </p>
         </div>
         <span
@@ -160,32 +154,6 @@ export function ServiceRequestPanel({
         </div>
       ) : null}
 
-      {!application && (offering?.documentRequirements?.length ?? 0) > 0 ? (
-        <div className="mt-5 rounded-xl border border-[#E2EEE8] bg-white p-4">
-          <p className="text-sm font-semibold text-[#052E1C]">Documents you will need</p>
-          <p className="mt-1 text-xs text-[#4B6358]">
-            Start your request first, then upload each required file here.
-          </p>
-          <div className="mt-3">
-            <DocumentList documents={offering.documentRequirements} />
-          </div>
-        </div>
-      ) : null}
-
-      {showUploadPanel ? (
-        <div className="mt-5 rounded-xl border border-[#E2EEE8] bg-white p-4">
-          <ApplicationDocumentUpload
-            serviceId={serviceId}
-            offeringId={offeringId}
-            offering={offering}
-            application={application}
-            onUpload={onUploadDocument}
-            onRemove={onRemoveDocument}
-            onRefresh={onRefresh}
-          />
-        </div>
-      ) : null}
-
       {(offering?.paymentConfig?.enabled || application?.payment?.required) ? (
         <div className="mt-5">
           <PaymentPanel
@@ -196,12 +164,6 @@ export function ServiceRequestPanel({
             onPaid={onRefresh}
           />
         </div>
-      ) : null}
-
-      {canEditDocuments && requiredDocuments.length > 0 ? (
-        <p className="mt-4 text-xs font-medium text-[#4B6358]">
-          {getDocumentProgressLabel(offering, application)}
-        </p>
       ) : null}
 
       {action ? (
@@ -230,7 +192,7 @@ export function ServiceRequestPanel({
         </p>
       ) : canEditDocuments && !documentsComplete ? (
         <p className="mt-5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-          Upload all required documents before submitting
+          Upload all required documents in step 1 before submitting
           {missingRequired.length > 0 ? `: ${missingRequired.map((item) => item.name).join(', ')}` : '.'}
         </p>
       ) : canEditDocuments && hasApplicantFields && !detailsComplete ? (
@@ -245,7 +207,7 @@ export function ServiceRequestPanel({
           {application?.status === 'submitted' || application?.status === 'in_review'
             ? 'Your request is with the institute. You will be notified when there is an update.'
             : application?.status === 'needs_correction'
-              ? 'Update the requested documents, then resubmit when everything is ready.'
+              ? 'Update the requested documents in step 1, then resubmit when everything is ready.'
               : application?.status === 'admitted'
                 ? 'This request has been approved. Contact your institute if you need anything else.'
                 : application?.status === 'rejected'

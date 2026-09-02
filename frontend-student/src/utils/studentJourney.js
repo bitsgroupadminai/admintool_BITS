@@ -17,33 +17,85 @@ export function getApplicationStatusLabel(status) {
 }
 
 /**
+ * Documents are a prerequisite of the first review step, not a separate numbered step.
+ * @param {{ id?: string }} step
+ * @param {number} index
+ * @param {boolean} hasReviewWorkflow
+ */
+export function isDocumentPrerequisiteStep(step, index, hasReviewWorkflow) {
+  if (hasReviewWorkflow) return index === 0;
+  return step?.id === 'documents';
+}
+
+function describeReviewStep(step, index, { documentsComplete, status }) {
+  if (index === 0) {
+    if (status === 'needs_correction') {
+      return 'Update the requested documents below, then resubmit so verification can continue.';
+    }
+    if (!status || status === 'draft') {
+      return documentsComplete
+        ? 'Documents are ready. Submit your request on the right to start institute verification.'
+        : 'Upload the required documents below. This is a prerequisite before verification can begin.';
+    }
+    if (step.state === 'current') {
+      return 'The institute is working on this step now.';
+    }
+    if (step.state === 'complete') {
+      return 'This step is complete.';
+    }
+  }
+
+  if (step.state === 'current') return 'The institute is working on this step now.';
+  if (step.state === 'complete') return 'This step is complete.';
+  return 'This step will happen after earlier steps finish.';
+}
+
+/**
  * Student-facing steps for completing a service request (not institute backend workflow).
  * @param {Object} offering
  * @param {{ status?: string, documentsComplete?: boolean, workflow?: Object } | null} application
  */
 export function buildStudentServiceSteps(offering, application) {
+  const documentsComplete = areAllRequiredDocumentsUploaded(offering, application);
+  const status = application?.status ?? null;
+
   if (application?.workflow?.steps?.length) {
-    return application.workflow.steps.map((step) => ({
+    return application.workflow.steps.map((step, index) => ({
       id: step.stepId,
       title: step.name,
-      description:
-        step.state === 'current'
-          ? 'The institute is working on this step now.'
-          : step.state === 'complete'
-            ? 'This step is complete.'
-            : 'This step will happen after earlier steps finish.',
+      description: describeReviewStep(
+        { state: step.state },
+        index,
+        { documentsComplete, status },
+      ),
       state: step.state,
     }));
+  }
+
+  const offeringSteps = [...(offering?.workflowSteps ?? [])].sort(
+    (left, right) => (left.order ?? 0) - (right.order ?? 0),
+  );
+  if (offeringSteps.length) {
+    return offeringSteps.map((step, index) => {
+      const state =
+        index === 0 && (!status || status === 'draft' || status === 'needs_correction')
+          ? 'current'
+          : 'upcoming';
+      return {
+        id: step.stepId,
+        title: step.name,
+        description: describeReviewStep({ state }, index, { documentsComplete, status }),
+        state,
+      };
+    });
   }
 
   const requiredDocs =
     offering?.documentRequirements?.filter((doc) => doc.required !== false) ?? [];
   const hasApplicantFields = (offering?.applicantFields?.length ?? 0) > 0;
-  const status = application?.status ?? null;
   const hasDraft = status === 'draft';
   const needsCorrection = status === 'needs_correction';
   const isSubmitted = ['submitted', 'in_review', 'admitted', 'rejected', 'needs_correction'].includes(status);
-  const documentsComplete = areAllRequiredDocumentsUploaded(offering, application);
   const applicantDetailsComplete = areApplicantDetailsComplete(
     offering,
     applicantDetailsToMap(application?.applicantDetails),

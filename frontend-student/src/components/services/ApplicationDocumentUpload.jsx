@@ -159,6 +159,7 @@ export function ApplicationDocumentUpload({
   onUpload,
   onRemove,
   onRefresh,
+  compact = false,
 }) {
   const [uploadingId, setUploadingId] = useState(null);
   const [previewDocument, setPreviewDocument] = useState(null);
@@ -215,25 +216,27 @@ export function ApplicationDocumentUpload({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold text-[#052E1C]">Upload your documents</p>
-            <p className="mt-1 text-xs text-[#4B6358]">
-              {canEdit
-                ? 'Upload every required document before you submit your request.'
-                : 'View or download the documents attached to your submitted request.'}
-            </p>
+        {compact ? null : (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-[#052E1C]">Upload your documents</p>
+              <p className="mt-1 text-xs text-[#4B6358]">
+                {canEdit
+                  ? 'Upload every required document before you submit your request.'
+                  : 'View or download the documents attached to your submitted request.'}
+              </p>
+            </div>
+            <span
+              className={
+                missingRequired.length === 0
+                  ? 'rounded-full bg-[#ECFDF5] px-3 py-1 text-xs font-semibold text-[#0A6640]'
+                  : 'rounded-full bg-[#FEF3C7] px-3 py-1 text-xs font-semibold text-[#92400E]'
+              }
+            >
+              {progressLabel}
+            </span>
           </div>
-          <span
-            className={
-              missingRequired.length === 0
-                ? 'rounded-full bg-[#ECFDF5] px-3 py-1 text-xs font-semibold text-[#0A6640]'
-                : 'rounded-full bg-[#FEF3C7] px-3 py-1 text-xs font-semibold text-[#92400E]'
-            }
-          >
-            {progressLabel}
-          </span>
-        </div>
+        )}
 
         <div className="space-y-3">
           {requirements.map((requirement) => (

@@ -272,7 +272,15 @@ function OfferingSection({ serviceId, offering, index, onRefresh }) {
                 : 'These are the steps you need to follow to complete your side of the request.'}
             </p>
             <div className="mt-5">
-              <StudentServiceJourney offering={offering} application={offering.application} />
+              <StudentServiceJourney
+                offering={offering}
+                application={offering.application}
+                serviceId={serviceId}
+                offeringId={offering.id}
+                onUploadDocument={handleUploadDocument}
+                onRemoveDocument={handleRemoveDocument}
+                onRefresh={onRefresh}
+              />
             </div>
           </div>
         </div>

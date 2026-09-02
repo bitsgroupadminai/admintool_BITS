@@ -90,6 +90,21 @@ export function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+export function getDocumentProgressStats(offering, application) {
+  const required = getRequiredDocuments(offering?.documentRequirements ?? []);
+  const requiredCount = required.length;
+  const pendingCount = getMissingRequiredDocuments(offering, application).length;
+  const uploadedCount = Math.max(0, requiredCount - pendingCount);
+
+  return {
+    requiredCount,
+    uploadedCount,
+    pendingCount,
+    complete: requiredCount === 0 || pendingCount === 0,
+    requiredNames: required.map((item) => item.name).filter(Boolean),
+  };
+}
+
 export function getDocumentProgressLabel(offering, application) {
   const requiredCount =
     application?.requiredDocumentCount ??

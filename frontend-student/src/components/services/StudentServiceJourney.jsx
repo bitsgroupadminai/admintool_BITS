@@ -1,6 +1,7 @@
 import { Check, Circle, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { buildStudentServiceSteps } from '@/utils/studentJourney';
+import { buildStudentServiceSteps, isDocumentPrerequisiteStep } from '@/utils/studentJourney';
+import { StepDocumentsAccordion } from '@/components/services/StepDocumentsAccordion';
 
 const stateStyles = {
   complete: {
@@ -17,13 +18,26 @@ const stateStyles = {
   },
 };
 
-export function StudentServiceJourney({ offering, application }) {
+export function StudentServiceJourney({
+  offering,
+  application,
+  serviceId,
+  offeringId,
+  onUploadDocument,
+  onRemoveDocument,
+  onRefresh,
+}) {
+  const hasReviewWorkflow = Boolean(
+    application?.workflow?.steps?.length || offering?.workflowSteps?.length,
+  );
   const steps = buildStudentServiceSteps(offering, application);
 
   return (
     <ol className="space-y-4">
       {steps.map((step, index) => {
         const styles = stateStyles[step.state] ?? stateStyles.upcoming;
+        const showDocuments = isDocumentPrerequisiteStep(step, index, hasReviewWorkflow);
+
         return (
           <li
             key={step.id}
@@ -58,6 +72,17 @@ export function StudentServiceJourney({ offering, application }) {
                 </p>
                 <h4 className={cn('mt-1 text-base font-bold', styles.title)}>{step.title}</h4>
                 <p className="mt-2 text-sm leading-relaxed text-[#4B6358]">{step.description}</p>
+                {showDocuments ? (
+                  <StepDocumentsAccordion
+                    offering={offering}
+                    application={application}
+                    serviceId={serviceId}
+                    offeringId={offeringId}
+                    onUpload={onUploadDocument}
+                    onRemove={onRemoveDocument}
+                    onRefresh={onRefresh}
+                  />
+                ) : null}
               </div>
             </div>
           </li>

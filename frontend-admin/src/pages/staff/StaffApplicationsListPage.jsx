@@ -185,6 +185,7 @@ export function StaffApplicationsListPage() {
           columns={columns}
           rows={applications}
           getRowKey={(row) => row.id}
+          getRowHref={(row) => `/staff/applications/${row.id}`}
           loading={loading}
           emptyTitle="No assigned requests"
           emptyDescription="When admin assigns a request to you, it will appear here."

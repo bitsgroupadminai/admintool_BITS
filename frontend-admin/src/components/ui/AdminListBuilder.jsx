@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronLeft,
@@ -30,8 +31,10 @@ export function AdminListBuilder({
   onPageChange,
   onLimitChange,
   pageSizeOptions = [10, 20, 50],
+  getRowHref,
 }) {
   const [openFilterKey, setOpenFilterKey] = useState(null);
+  const navigate = useNavigate();
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_4px_24px_rgba(10,102,64,0.07)]">
@@ -174,21 +177,70 @@ export function AdminListBuilder({
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={getRowKey(row)} className="transition hover:bg-[#F9FCFB]">
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={cn(
-                        'whitespace-nowrap px-5 py-4 text-sm text-[#4B6358] sm:px-6',
-                        column.cellClassName,
-                      )}
-                    >
-                      {column.render ? column.render(row) : row[column.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              rows.map((row) => {
+                const href = getRowHref?.(row);
+                return (
+                  <tr
+                    key={getRowKey(row)}
+                    className={cn(
+                      'transition hover:bg-[#F9FCFB]',
+                      href && 'cursor-pointer focus-visible:bg-[#F0FAF5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0A6640]',
+                    )}
+                    tabIndex={href ? 0 : undefined}
+                    role={href ? 'link' : undefined}
+                    onClick={
+                      href
+                        ? (event) => {
+                            if (event.target.closest('a, button, input, select, textarea, label')) {
+                              return;
+                            }
+                            if (event.metaKey || event.ctrlKey || event.button === 1) {
+                              window.open(href, '_blank', 'noopener,noreferrer');
+                              return;
+                            }
+                            navigate(href);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={
+                      href
+                        ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              navigate(href);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    {columns.map((column) => {
+                      const content = column.render ? column.render(row) : row[column.key];
+                      const isActionColumn = column.key === 'actions' || column.disableRowLink;
+                      return (
+                        <td
+                          key={column.key}
+                          className={cn(
+                            'whitespace-nowrap px-5 py-4 text-sm text-[#4B6358] sm:px-6',
+                            column.cellClassName,
+                          )}
+                        >
+                          {href && !isActionColumn ? (
+                            <Link
+                              to={href}
+                              tabIndex={-1}
+                              className="block cursor-pointer text-inherit no-underline"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            content
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

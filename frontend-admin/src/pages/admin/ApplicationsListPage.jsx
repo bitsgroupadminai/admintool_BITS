@@ -257,6 +257,7 @@ export function ApplicationsListPage() {
           columns={columns}
           rows={applications}
           getRowKey={(row) => row.id}
+          getRowHref={(row) => `/admin/applications/${row.id}`}
           loading={loading}
           emptyTitle="No requests found"
           emptyDescription="Students will appear here after they submit a service request."

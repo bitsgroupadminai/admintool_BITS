@@ -150,6 +150,7 @@ export function EnrollmentIntakesListPage() {
           columns={columns}
           rows={intakes}
           getRowKey={(row) => row.id}
+          getRowHref={(row) => `/admin/enrollment-intakes/${row.id}`}
           loading={loading}
           emptyTitle="No pending intakes"
           emptyDescription="New enrollment requests will appear here when students start an application."

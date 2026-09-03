@@ -12,6 +12,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  Beaker,
 } from 'lucide-react';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +47,8 @@ export function InstituteSettingsPage() {
   const [portalSubmitting, setPortalSubmitting] = useState(false);
   const [autoAssignConfig, setAutoAssignConfig] = useState({ enabled: true, strategy: 'least_loaded' });
   const [autoAssignSaving, setAutoAssignSaving] = useState(false);
+  const [aiVerificationConfig, setAiVerificationConfig] = useState({ allowSampleDocuments: false });
+  const [aiVerificationSaving, setAiVerificationSaving] = useState(false);
   const [institute, setInstitute] = useState(null);
   const [operationsCalendar, setOperationsCalendar] = useState({
     defaultOperatingDays: [1, 2, 3, 4, 5],
@@ -75,17 +78,21 @@ export function InstituteSettingsPage() {
     async function load() {
       if (!user?.instituteId) return;
       try {
-        const [instituteRes, autoAssignRes, calendarRes, erpRes] = await Promise.all([
+        const [instituteRes, autoAssignRes, calendarRes, erpRes, aiVerificationRes] = await Promise.all([
           instituteApi.get(user.instituteId),
           settingsApi.getAutoAssignment(user.instituteId).catch(() => null),
           settingsApi.getOperationsCalendar(user.instituteId).catch(() => null),
           erpApi.getStatus().catch(() => null),
+          settingsApi.getAiVerification(user.instituteId).catch(() => null),
         ]);
         const inst = instituteRes.data.data.institute;
         setInstitute(inst);
         reset({ name: inst.name });
         if (autoAssignRes?.data?.data?.autoAssignment) {
           setAutoAssignConfig(autoAssignRes.data.data.autoAssignment);
+        }
+        if (aiVerificationRes?.data?.data?.aiVerification) {
+          setAiVerificationConfig(aiVerificationRes.data.data.aiVerification);
         }
         if (calendarRes?.data?.data?.operationsCalendar) {
           setOperationsCalendar(calendarRes.data.data.operationsCalendar);
@@ -126,6 +133,35 @@ export function InstituteSettingsPage() {
       toast.error(err.message || 'Failed to update portal host');
     } finally {
       setPortalSubmitting(false);
+    }
+  };
+
+  const onToggleSampleDocuments = async (enabled) => {
+    if (enabled) {
+      const ok = await confirm({
+        title: 'Enable sample-document testing?',
+        description:
+          'AI review will accept unofficial and AI-generated sample documents. Turn this off before real students use the portal.',
+        confirmLabel: 'Enable testing mode',
+      });
+      if (!ok) return;
+    }
+
+    setAiVerificationSaving(true);
+    try {
+      const { data } = await settingsApi.updateAiVerification(user.instituteId, {
+        allowSampleDocuments: enabled,
+      });
+      setAiVerificationConfig(data.data.aiVerification);
+      toast.success(
+        enabled
+          ? 'Sample-document testing is on. AI will not reject unofficial generated files.'
+          : 'Sample-document testing is off. AI will use strict live verification.',
+      );
+    } catch (err) {
+      toast.error(err.message || 'Failed to update AI testing mode');
+    } finally {
+      setAiVerificationSaving(false);
     }
   };
 
@@ -257,7 +293,7 @@ export function InstituteSettingsPage() {
             Institute settings
           </h1>
           <p className="mt-1.5 text-sm text-[#4B6358]">
-            Manage institute details, student portal host, assignment rules, and ERP sync
+            Manage institute details, student portal host, assignment rules, AI testing, and ERP sync
           </p>
         </div>
 
@@ -363,6 +399,49 @@ export function InstituteSettingsPage() {
                 >
                   {autoAssignSaving ? 'Saving...' : 'Save assignment rules'}
                 </button>
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-[#C4E8D4] bg-white/85 shadow-[0_4px_24px_rgba(10,102,64,0.07)]">
+              <div className="flex items-center gap-3 border-b border-[#E2EEE8] px-6 py-5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F0FAF5] text-[#0A6640]">
+                  <Beaker className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#052E1C]">AI document testing</h2>
+                  <p className="text-xs text-[#4B6358]">
+                    For unofficial sample files while you try the portal — turn off before live admissions
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4 px-6 py-5">
+                <p className="text-sm text-[#4B6358]">
+                  When this is on, AI review still checks document type and student name, but it will not
+                  reject files for looking AI-generated, watermarked, unofficial, or missing seals and
+                  letterhead.
+                </p>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(aiVerificationConfig.allowSampleDocuments)}
+                    onChange={(e) => onToggleSampleDocuments(e.target.checked)}
+                    disabled={aiVerificationSaving}
+                    className="mt-0.5 h-4 w-4 rounded border-[#C4E8D4] accent-[#0A6640]"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[#052E1C]">
+                      Accept AI-generated sample documents
+                    </span>
+                    <span className="mt-0.5 block text-xs text-[#6B7280]">
+                      {aiVerificationSaving ? 'Saving…' : 'Saves as soon as you toggle it'}
+                    </span>
+                  </span>
+                </label>
+                {aiVerificationConfig.allowSampleDocuments ? (
+                  <div className="rounded-xl border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
+                    Testing mode is active. Turn this off before real students apply.
+                  </div>
+                ) : null}
               </div>
             </section>
 

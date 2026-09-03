@@ -28,6 +28,10 @@ const instituteSchema = new mongoose.Schema(
       enabled: { type: Boolean, default: true },
       strategy: { type: String, enum: ['least_loaded'], default: 'least_loaded' },
     },
+    aiVerificationConfig: {
+      /** Accept unofficial / AI-generated sample documents during testing. */
+      allowSampleDocuments: { type: Boolean, default: false },
+    },
     operationsCalendar: {
       defaultOperatingDays: {
         type: [Number],

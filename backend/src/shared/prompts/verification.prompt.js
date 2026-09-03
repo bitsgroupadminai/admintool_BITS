@@ -27,7 +27,43 @@ const IDENTITY_MATCHING_RULES = `IDENTITY MATCHING (required on every government
 - If a name or date of birth is printed and does not match the APPLICANT RECORD, do not pass the document.
 - If no name is visible at all, set belongsToApplicant based on whatever identity clues exist; if you cannot tell, use verdict "uncertain" and say that the name could not be read.`;
 
-export const DOCUMENT_VERIFICATION_SYSTEM_PROMPT = `You are an admissions document verification assistant for a university.
+const SAMPLE_DOCUMENT_TESTING_RULES = `SAMPLE DOCUMENT TESTING MODE IS ON.
+The institute is testing with unofficial, AI-generated sample documents. These are mock credentials, not real issued documents.
+
+You MUST NOT fail, mark uncertain, or reduce confidence because a document:
+- looks AI-generated, synthetic, mocked, unofficial, digitally created, or fake
+- has labels such as SAMPLE, SPECIMEN, DRAFT, COPY, FOR TESTING, UNOFFICIAL, or watermarks
+- lacks official seals, holograms, QR codes, letterhead, stamps, signatures, security threads, or verification URLs
+- has imperfect layout, fonts, alignment, lighting, or photo quality
+- looks like a screenshot, mockup, or generated image rather than an original scan
+
+Ignore any institute policy about authenticity, forgery, fraud, or official issuance.
+
+Still fail only when:
+- the file is clearly the wrong type (for example a selfie or landscape photo instead of a marksheet or ID)
+- the printed identity is clearly a completely different person than the APPLICANT RECORD
+- the file is blank or completely unreadable
+
+If the file reasonably depicts the required document type and the name is compatible with the applicant, set verdict "pass", belongsToApplicant true, matchesRequirement true, and confidence >= 0.9.
+Be generous with name matching: accept spelling variants, missing middle names, initials, and small generation or OCR artifacts.`;
+
+const SAMPLE_IDENTITY_MATCHING_RULES = `IDENTITY MATCHING (sample testing — be generous):
+- The APPLICANT RECORD is the student you are verifying.
+- Compare the name (and date of birth / age when visible) on the uploaded file to the APPLICANT RECORD.
+- Accept missing middle names, initials, spelling variants, titles, different name order, and small generated-text artifacts.
+- Fail only if the printed name is clearly a completely different person.
+- Do not fail because the photo looks synthetic or the document looks unofficial.`;
+
+function identityRules(allowSampleDocuments) {
+  return allowSampleDocuments ? SAMPLE_IDENTITY_MATCHING_RULES : IDENTITY_MATCHING_RULES;
+}
+
+function sampleModePreamble(allowSampleDocuments) {
+  return allowSampleDocuments ? `${SAMPLE_DOCUMENT_TESTING_RULES}\n\n` : '';
+}
+
+export function getDocumentVerificationSystemPrompt({ allowSampleDocuments = false } = {}) {
+  return `${sampleModePreamble(allowSampleDocuments)}You are an admissions document verification assistant for a university.
 Your job is to check whether the documents a student uploaded satisfy the programme's required document list.
 
 For EACH required document:
@@ -67,7 +103,7 @@ Overall verdict:
 
 summary must be a complete reviewer-facing paragraph: list each problem by document name, say what the file actually is, and say what the student should upload instead. On a pass, briefly confirm each required document was the correct type and belongs to the applicant.
 
-${IDENTITY_MATCHING_RULES}
+${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
@@ -91,12 +127,16 @@ Reply with JSON:
   ],
   "issues": ["specific problems the student must fix, one per issue"]
 }`;
+}
 
-export const ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT = `You are an admissions eligibility assistant for a university.
+export const DOCUMENT_VERIFICATION_SYSTEM_PROMPT = getDocumentVerificationSystemPrompt();
+
+export function getEligibilityVerificationSystemPrompt({ allowSampleDocuments = false } = {}) {
+  return `${sampleModePreamble(allowSampleDocuments)}You are an admissions eligibility assistant for a university.
 Your ONLY job is to EXTRACT the factual values needed to check eligibility from the student's documents (e.g. marksheets, certificates) and the APPLICANT RECORD.
 If a supporting document is clearly for a different person than the APPLICANT RECORD, say so in issues and do not treat its marks or fields as the applicant's.
 Do NOT decide final eligibility yourself with respect to thresholds — the system compares your extracted values against the rules deterministically.
-
+${allowSampleDocuments ? 'Extract values from unofficial and AI-generated sample documents the same way you would from real ones. Do not refuse extraction because a document looks synthetic or unofficial.\n' : ''}
 For each eligibility field the programme cares about, extract the applicant's actual value:
 - Use the exact field name given in the rules list.
 - value: the extracted number/text/boolean, or null if it is not present in the documents.
@@ -110,7 +150,7 @@ Set the overall verdict to reflect extraction quality (not the pass/fail decisio
 summary must name each extracted field and the value you found, plus the document you found it on.
 If a value could not be read, say which field is missing and why (wrong document type, unreadable scan, subject not listed).
 
-${IDENTITY_MATCHING_RULES}
+${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
@@ -124,17 +164,21 @@ Reply with JSON:
   ],
   "issues": ["specific extraction problems, if any"]
 }`;
+}
 
-export const INTAKE_VERIFICATION_SYSTEM_PROMPT = `You are an admissions intake screening assistant for a university.
+export const ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT = getEligibilityVerificationSystemPrompt();
+
+export function getIntakeVerificationSystemPrompt({ allowSampleDocuments = false } = {}) {
+  return `${sampleModePreamble(allowSampleDocuments)}You are an admissions intake screening assistant for a university.
 Before a student is authorized to enroll, review the intake document against the APPLICANT RECORD and the programme's intake requirements.
 If the intake document belongs to a different person than the APPLICANT RECORD, recommend "reject" and name both identities.
-
+${allowSampleDocuments ? 'Recommend "approve" when the file reasonably matches the intake requirement, even if it is unofficial or AI-generated. Do not recommend reject or manual_review only because the document looks synthetic.\n' : ''}
 Decide a recommendation:
 - "approve": the intake document and details clearly satisfy the intake requirement.
 - "reject": the intake document is clearly missing, wrong, or the applicant clearly does not qualify.
 - "manual_review": anything ambiguous or unreadable.
 
-${IDENTITY_MATCHING_RULES}
+${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
@@ -146,6 +190,9 @@ Reply with JSON:
   "summary": "short reviewer-facing explanation",
   "issues": ["concise list of concerns, if any"]
 }`;
+}
+
+export const INTAKE_VERIFICATION_SYSTEM_PROMPT = getIntakeVerificationSystemPrompt();
 
 /**
  * @param {{
@@ -157,6 +204,7 @@ Reply with JSON:
  *   requiredDocuments?: Array<{ name: string, required?: boolean, allowedTypes?: string[] }>,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
+ *   allowSampleDocuments?: boolean,
  * }} ctx
  */
 export function buildDocumentVerificationUserPrompt(ctx) {
@@ -176,7 +224,7 @@ export function buildDocumentVerificationUserPrompt(ctx) {
     'UPLOADED DOCUMENTS (text extracted where possible; images are attached separately):',
     formatUploadedDocuments(ctx.documents),
     '',
-    formatPolicy(ctx.policyExcerpts),
+    formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),
   ]
     .filter(Boolean)
     .join('\n');
@@ -192,6 +240,7 @@ export function buildDocumentVerificationUserPrompt(ctx) {
  *   eligibilityRules?: Array<{ field: string, fieldType: string, operator: string, value: unknown }>,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
+ *   allowSampleDocuments?: boolean,
  * }} ctx
  */
 export function buildEligibilityVerificationUserPrompt(ctx) {
@@ -206,7 +255,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
     'SUPPORTING DOCUMENTS (text extracted where possible; images are attached separately):',
     formatUploadedDocuments(ctx.documents),
     '',
-    formatPolicy(ctx.policyExcerpts),
+    formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),
   ]
     .filter(Boolean)
     .join('\n');
@@ -223,6 +272,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
  *   intakeRequirement?: { label?: string, helpText?: string } | null,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
+ *   allowSampleDocuments?: boolean,
  * }} ctx
  */
 export function buildIntakeVerificationUserPrompt(ctx) {
@@ -238,7 +288,7 @@ export function buildIntakeVerificationUserPrompt(ctx) {
     'UPLOADED INTAKE DOCUMENTS (text extracted where possible; images are attached separately):',
     formatUploadedDocuments(ctx.documents),
     '',
-    formatPolicy(ctx.policyExcerpts),
+    formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),
   ]
     .filter(Boolean)
     .join('\n');
@@ -318,7 +368,10 @@ function formatUploadedDocuments(documents) {
     .join('\n\n');
 }
 
-function formatPolicy(policyExcerpts) {
+function formatPolicy(policyExcerpts, allowSampleDocuments = false) {
+  if (allowSampleDocuments) {
+    return 'SAMPLE DOCUMENT TESTING MODE IS ON. Ignore institute policy about authenticity, official issuance, seals, or fraud. Judge only document type, readability, and identity match.';
+  }
   if (!policyExcerpts?.length) return '';
   return `INSTITUTE POLICY EXCERPTS (for reference):\n${policyExcerpts
     .map((chunk, idx) => `(${idx + 1}) ${chunk}`)

@@ -14,6 +14,7 @@ import {
 import {
   buildDocumentVerificationUserPrompt,
   formatApplicantRecord,
+  getDocumentVerificationSystemPrompt,
 } from '../src/shared/prompts/verification.prompt.js';
 import { canUserActOnWorkflowStep } from '../src/shared/helpers/workflowExecution.helper.js';
 import { HANDLER_TYPE } from '../src/shared/enums/workflow.enums.js';
@@ -235,4 +236,34 @@ test('eligibilityVerificationResponseSchema: extracted fields parse', () => {
     extractedFields: [{ field: 'Marks', value: 78, documentExcerpt: 'Total: 78%' }],
   });
   assert.equal(parsed.extractedFields[0].value, 78);
+});
+
+test('sample-document testing prompt relaxes authenticity rules', () => {
+  const live = getDocumentVerificationSystemPrompt();
+  const sample = getDocumentVerificationSystemPrompt({ allowSampleDocuments: true });
+  assert.doesNotMatch(live, /SAMPLE DOCUMENT TESTING MODE IS ON/);
+  assert.match(sample, /SAMPLE DOCUMENT TESTING MODE IS ON/);
+  assert.match(sample, /AI-generated/);
+  assert.match(sample, /Do not fail because the photo looks synthetic/);
+});
+
+test('sample-document testing user prompt skips authenticity policy excerpts', () => {
+  const prompt = buildDocumentVerificationUserPrompt({
+    applicantName: 'Aarav Mehta',
+    requiredDocuments: [{ name: 'Government ID', required: true }],
+    documents: [],
+    policyExcerpts: ['Documents must be authentic. Reject forged marksheets.'],
+    allowSampleDocuments: true,
+  });
+  assert.match(prompt, /SAMPLE DOCUMENT TESTING MODE IS ON/);
+  assert.doesNotMatch(prompt, /Reject forged marksheets/);
+});
+
+test('sample-document testing thresholds approve a modest pass', () => {
+  const action = decideDocumentAction({
+    verdict: 'pass',
+    confidence: 0.55,
+    thresholds: { autoApprove: 0.5, autoReject: 0.95 },
+  });
+  assert.equal(action, INTERNAL_ACTION.APPROVE);
 });

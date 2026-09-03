@@ -20,6 +20,10 @@ const operationsCalendarSchema = z.object({
   exceptions: z.array(calendarExceptionSchema).max(120).optional(),
 });
 
+const aiVerificationSchema = z.object({
+  allowSampleDocuments: z.boolean().optional(),
+});
+
 export async function getAutoAssignment(req, res, next) {
   try {
     const config = await instituteSettingsService.getAutoAssignmentConfig(
@@ -41,6 +45,32 @@ export async function updateAutoAssignment(req, res, next) {
       payload,
     );
     sendSuccess(res, 200, 'Auto-assignment config updated', { autoAssignment: config });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAiVerification(req, res, next) {
+  try {
+    const config = await instituteSettingsService.getAiVerificationConfig(
+      req.params.id,
+      req.user.instituteId,
+    );
+    sendSuccess(res, 200, 'AI verification config', { aiVerification: config });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateAiVerification(req, res, next) {
+  try {
+    const payload = aiVerificationSchema.parse(req.body);
+    const config = await instituteSettingsService.updateAiVerificationConfig(
+      req.params.id,
+      req.user.instituteId,
+      payload,
+    );
+    sendSuccess(res, 200, 'AI verification config updated', { aiVerification: config });
   } catch (err) {
     next(err);
   }

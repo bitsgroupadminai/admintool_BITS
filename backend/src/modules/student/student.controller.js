@@ -198,7 +198,7 @@ export async function uploadServiceApplicationDocument(req, res, next) {
   try {
     const application = await studentService.uploadStudentApplicationDocument(
       req.user.instituteId,
-      { email: req.user.email },
+      { email: req.user.email, name: req.user.name },
       req.params.serviceId,
       req.params.offeringId,
       req.params.requirementId,

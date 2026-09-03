@@ -7,6 +7,8 @@ import { ROLES } from '../../shared/constants/roles.js';
 import { createSession, destroySession, getSession, touchSession } from '../../core/services/session.service.js';
 import { toAuthUserDto } from './auth.dto.js';
 import { deleteAvatarFile } from '../../shared/helpers/avatar.helper.js';
+import { Application } from '../applications/application.model.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 
 const INVALID_CREDENTIALS_MSG = 'Invalid email or password';
 const SALT_ROUNDS = 12;
@@ -179,7 +181,17 @@ export async function updateCurrentUserProfile(userId, payload, sessionId) {
   }
 
   if (payload.name?.trim()) {
-    user.name = payload.name.trim();
+    const nextName = payload.name.trim();
+    const nameChanged = user.name !== nextName;
+    user.name = nextName;
+
+    if (nameChanged && user.role === ROLES.STUDENT) {
+      await Application.updateMany(
+        { instituteId: user.instituteId, applicantEmail: String(user.email).toLowerCase() },
+        { $set: { applicantName: nextName } },
+      );
+      await flushInstituteReadCache(user.instituteId.toString());
+    }
   }
 
   if (payload.newPassword) {

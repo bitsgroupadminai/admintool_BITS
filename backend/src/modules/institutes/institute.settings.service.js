@@ -14,6 +14,10 @@ const DEFAULT_OPERATIONS_CALENDAR = {
   exceptions: [],
 };
 
+const DEFAULT_AI_VERIFICATION = {
+  allowSampleDocuments: false,
+};
+
 /**
  * @param {string} instituteId
  * @param {string} userInstituteId
@@ -48,6 +52,41 @@ export async function readAutoAssignmentConfig(instituteId) {
   const institute = await Institute.findById(instituteId).select('autoAssignmentConfig');
   if (!institute) return DEFAULT_AUTO_ASSIGNMENT;
   return institute.autoAssignmentConfig ?? DEFAULT_AUTO_ASSIGNMENT;
+}
+
+/**
+ * @param {string} instituteId
+ * @param {string} userInstituteId
+ */
+export async function getAiVerificationConfig(instituteId, userInstituteId) {
+  const institute = await getInstituteForUser(instituteId, userInstituteId);
+  return institute.aiVerificationConfig ?? DEFAULT_AI_VERIFICATION;
+}
+
+/**
+ * @param {string} instituteId
+ * @param {string} userInstituteId
+ * @param {{ allowSampleDocuments?: boolean }} payload
+ */
+export async function updateAiVerificationConfig(instituteId, userInstituteId, payload) {
+  const institute = await getInstituteForUser(instituteId, userInstituteId);
+  const current = institute.aiVerificationConfig ?? DEFAULT_AI_VERIFICATION;
+  institute.aiVerificationConfig = {
+    allowSampleDocuments: payload.allowSampleDocuments ?? current.allowSampleDocuments,
+  };
+  await institute.save();
+  await flushInstituteReadCache(instituteId);
+  return institute.aiVerificationConfig;
+}
+
+/**
+ * Read AI verification config for internal use (no auth check).
+ * @param {string} instituteId
+ */
+export async function readAiVerificationConfig(instituteId) {
+  const institute = await Institute.findById(instituteId).select('aiVerificationConfig');
+  if (!institute) return DEFAULT_AI_VERIFICATION;
+  return institute.aiVerificationConfig ?? DEFAULT_AI_VERIFICATION;
 }
 
 /**

@@ -16,6 +16,8 @@ router.post('/:id/setup/complete', instituteController.completeSetup);
 router.post('/:id/student-portal-host', instituteController.designateStudentPortalHost);
 router.get('/:id/auto-assignment', instituteSettingsController.getAutoAssignment);
 router.patch('/:id/auto-assignment', instituteSettingsController.updateAutoAssignment);
+router.get('/:id/ai-verification', instituteSettingsController.getAiVerification);
+router.patch('/:id/ai-verification', instituteSettingsController.updateAiVerification);
 router.get('/:id/operations-calendar', instituteSettingsController.getOperationsCalendar);
 router.patch('/:id/operations-calendar', instituteSettingsController.updateOperationsCalendar);
 

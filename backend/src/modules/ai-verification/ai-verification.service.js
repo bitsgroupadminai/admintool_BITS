@@ -23,9 +23,9 @@ import { emitApplicationUpdated } from '../../shared/helpers/realtime.helper.js'
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 import { logger } from '../../core/logger/index.js';
 import {
-  DOCUMENT_VERIFICATION_SYSTEM_PROMPT,
-  ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT,
-  INTAKE_VERIFICATION_SYSTEM_PROMPT,
+  getDocumentVerificationSystemPrompt,
+  getEligibilityVerificationSystemPrompt,
+  getIntakeVerificationSystemPrompt,
   buildDocumentVerificationUserPrompt,
   buildEligibilityVerificationUserPrompt,
   buildIntakeVerificationUserPrompt,
@@ -36,7 +36,9 @@ import {
   intakeVerificationResponseSchema,
 } from '../../shared/schemas/verification.schemas.js';
 import { AiDecision, AI_DECISION_HANDLER, AI_DECISION_ACTION } from './aiDecision.model.js';
-import { AI_VERIFICATION_MODEL, AI_VERIFY_THRESHOLDS, isAiVerificationEnabled } from './ai-verification.config.js';
+import { AI_VERIFICATION_MODEL, AI_VERIFY_THRESHOLDS, SAMPLE_DOCUMENT_TESTING_THRESHOLDS, isAiVerificationEnabled } from './ai-verification.config.js';
+import { loadCurrentStudentName } from '../../shared/helpers/applicantIdentity.helper.js';
+import { readAiVerificationConfig } from '../institutes/institute.settings.service.js';
 import {
   INTERNAL_ACTION,
   decideDocumentAction,
@@ -79,6 +81,9 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
   }
 
   const policyExcerpts = await loadPolicyExcerpts(application, offering);
+  const allowSampleDocuments = Boolean(
+    (await readAiVerificationConfig(instituteId)).allowSampleDocuments,
+  );
   const processedSteps = [];
   let guard = 0;
 
@@ -90,7 +95,13 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
     const step = getCurrentWorkflowStep(application);
     if (!step || step.handledBy?.type !== HANDLER_TYPE.AI) break;
 
-    const outcome = await evaluateAiStep({ application, offering, step, policyExcerpts });
+    const outcome = await evaluateAiStep({
+      application,
+      offering,
+      step,
+      policyExcerpts,
+      allowSampleDocuments,
+    });
     await applyAiOutcome({ instituteId, application, offering, step, outcome });
     processedSteps.push({ stepId: step.stepId, action: outcome.action });
 
@@ -125,15 +136,27 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
  * Runs the model for one AI step and returns the intended action.
  * @returns {Promise<{ action: string, note: string, correctionRequiredDocuments: string[], decision: object }>}
  */
-async function evaluateAiStep({ application, offering, step, policyExcerpts }) {
+async function evaluateAiStep({ application, offering, step, policyExcerpts, allowSampleDocuments = false }) {
   const handler = step.handledBy?.assignee;
 
   try {
     if (handler === AI_HANDLER.ELIGIBILITY_SCREENING) {
-      return await evaluateEligibilityStep({ application, offering, step, policyExcerpts });
+      return await evaluateEligibilityStep({
+        application,
+        offering,
+        step,
+        policyExcerpts,
+        allowSampleDocuments,
+      });
     }
     // Default to document verification for document_verification and any other AI assignee.
-    return await evaluateDocumentStep({ application, offering, step, policyExcerpts });
+    return await evaluateDocumentStep({
+      application,
+      offering,
+      step,
+      policyExcerpts,
+      allowSampleDocuments,
+    });
   } catch (err) {
     logger.error(
       { err, applicationId: application._id.toString(), stepId: step.stepId },
@@ -152,9 +175,27 @@ async function evaluateAiStep({ application, offering, step, policyExcerpts }) {
   }
 }
 
-async function evaluateDocumentStep({ application, offering, step, policyExcerpts }) {
+async function refreshApplicantNameFromProfile(application) {
+  const liveName = await loadCurrentStudentName(
+    application.instituteId,
+    application.applicantEmail,
+  );
+  if (liveName && liveName !== application.applicantName) {
+    application.applicantName = liveName;
+  }
+}
+
+async function evaluateDocumentStep({
+  application,
+  offering,
+  step,
+  policyExcerpts,
+  allowSampleDocuments = false,
+}) {
+  await refreshApplicantNameFromProfile(application);
   const { docs, images, anyUnreadable } = await gatherApplicationDocuments(application);
   const requiredDocuments = formatDocumentRequirements(offering.documentRequirements ?? []);
+  const promptOptions = { allowSampleDocuments };
 
   const user = buildDocumentVerificationUserPrompt({
     applicantName: application.applicantName,
@@ -164,11 +205,12 @@ async function evaluateDocumentStep({ application, offering, step, policyExcerpt
     applicantFields: offering.applicantFields,
     requiredDocuments,
     documents: docs,
-    policyExcerpts,
+    policyExcerpts: allowSampleDocuments ? [] : policyExcerpts,
+    allowSampleDocuments,
   });
 
   const raw = await callModel({
-    system: DOCUMENT_VERIFICATION_SYSTEM_PROMPT,
+    system: getDocumentVerificationSystemPrompt(promptOptions),
     user,
     images,
     schema: documentVerificationResponseSchema,
@@ -182,8 +224,8 @@ async function evaluateDocumentStep({ application, offering, step, policyExcerpt
   const action = decideDocumentAction({
     verdict: raw.verdict,
     confidence: raw.confidence,
-    thresholds: AI_VERIFY_THRESHOLDS,
-    forceEscalate: anyUnreadable && raw.verdict === 'pass',
+    thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
+    forceEscalate: allowSampleDocuments ? false : anyUnreadable && raw.verdict === 'pass',
   });
 
   return {
@@ -204,7 +246,14 @@ async function evaluateDocumentStep({ application, offering, step, policyExcerpt
   };
 }
 
-async function evaluateEligibilityStep({ application, offering, step, policyExcerpts }) {
+async function evaluateEligibilityStep({
+  application,
+  offering,
+  step,
+  policyExcerpts,
+  allowSampleDocuments = false,
+}) {
+  await refreshApplicantNameFromProfile(application);
   const { docs, images } = await gatherApplicationDocuments(application);
   const eligibilityRules = (offering.eligibilityRules ?? []).map((rule) => ({
     field: rule.field,
@@ -238,11 +287,12 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
     applicantFields: offering.applicantFields,
     eligibilityRules,
     documents: docs,
-    policyExcerpts,
+    policyExcerpts: allowSampleDocuments ? [] : policyExcerpts,
+    allowSampleDocuments,
   });
 
   const raw = await callModel({
-    system: ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT,
+    system: getEligibilityVerificationSystemPrompt({ allowSampleDocuments }),
     user,
     images,
     schema: eligibilityVerificationResponseSchema,
@@ -254,7 +304,7 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
     confidence: raw.confidence,
     extractedFields: raw.extractedFields ?? [],
     eligibilityRules,
-    thresholds: AI_VERIFY_THRESHOLDS,
+    thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
   });
 
   const comparisonIssues = formatEligibilityComparisonIssues(evaluation, raw.extractedFields ?? []);
@@ -383,8 +433,15 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
   if (!offering) return { skipped: 'offering_not_found' };
 
   try {
+    await refreshApplicantNameFromProfile(application);
+    if (application.isModified('applicantName')) {
+      await application.save();
+    }
+    const allowSampleDocuments = Boolean(
+      (await readAiVerificationConfig(instituteId)).allowSampleDocuments,
+    );
     const { docs, images } = await gatherApplicationDocuments(application);
-    const policyExcerpts = await loadPolicyExcerpts(application, offering);
+    const policyExcerpts = allowSampleDocuments ? [] : await loadPolicyExcerpts(application, offering);
     const intakeRequirement = getIntakeDocumentRequirement(offering);
 
     const user = buildIntakeVerificationUserPrompt({
@@ -399,10 +456,11 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
         : null,
       documents: docs,
       policyExcerpts,
+      allowSampleDocuments,
     });
 
     const raw = await callModel({
-      system: INTAKE_VERIFICATION_SYSTEM_PROMPT,
+      system: getIntakeVerificationSystemPrompt({ allowSampleDocuments }),
       user,
       images,
       schema: intakeVerificationResponseSchema,

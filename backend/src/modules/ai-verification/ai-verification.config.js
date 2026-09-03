@@ -14,4 +14,10 @@ export const AI_VERIFY_THRESHOLDS = {
   autoReject: env.AI_VERIFY_AUTO_REJECT_THRESHOLD,
 };
 
+/** Looser gates while testing with unofficial / AI-generated sample documents. */
+export const SAMPLE_DOCUMENT_TESTING_THRESHOLDS = {
+  autoApprove: 0.5,
+  autoReject: 0.95,
+};
+
 export const AI_VERIFICATION_MODEL = env.OPENAI_VERIFICATION_MODEL;

@@ -11,7 +11,7 @@ import { SERVICE_STATUS } from '../../shared/enums/service.enums.js';
 import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
 import { getOfferingCompleteness } from '../../shared/helpers/offeringCompleteness.helper.js';
-import { validateApplicantDetails } from '../../shared/helpers/applicantFields.helper.js';
+import { applyCurrentStudentName } from '../../shared/helpers/applicantIdentity.helper.js';
 import { normalizeMobileNumber, formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import {
   findDocumentRequirement,
@@ -1052,6 +1052,7 @@ export async function startStudentServiceApplication(
       throw new AppError('You already submitted a request for this option', 400);
     }
     existing.applicantDetails = details;
+    await applyCurrentStudentName(existing, user);
     await existing.save();
     await flushInstituteReadCache(instituteId);
     return {
@@ -1108,6 +1109,7 @@ export async function updateStudentServiceApplicationDetails(
   }
 
   application.applicantDetails = details;
+  await applyCurrentStudentName(application, user);
   await application.save();
 
   await flushInstituteReadCache(instituteId);
@@ -1140,6 +1142,7 @@ export async function uploadStudentApplicationDocument(
     serviceId,
     offeringId,
   );
+  await applyCurrentStudentName(application, user);
 
   const requirement = findDocumentRequirement(offering, requirementId);
   if (!requirement) {
@@ -1241,6 +1244,8 @@ export async function submitStudentServiceApplication(instituteId, user, service
     throw new AppError('This request has already been submitted', 400);
   }
 
+  await applyCurrentStudentName(application, user);
+
   await assertStudentEligibleForUser(offering, user, instituteId);
 
   const missingRequired = getMissingRequiredDocuments(offering, application);
@@ -1339,6 +1344,8 @@ export async function resubmitStudentServiceApplication(instituteId, user, servi
   if (application.status !== APPLICATION_STATUS.NEEDS_CORRECTION) {
     throw new AppError('This request is not waiting for corrections', 400);
   }
+
+  await applyCurrentStudentName(application, user);
 
   const missingRequired = getMissingRequiredDocuments(offering, application);
   if (missingRequired.length > 0) {

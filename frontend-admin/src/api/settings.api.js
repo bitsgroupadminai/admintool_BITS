@@ -5,6 +5,10 @@ export const settingsApi = {
     apiClient.get(`/institutes/${instituteId}/auto-assignment`),
   updateAutoAssignment: (instituteId, data) =>
     apiClient.patch(`/institutes/${instituteId}/auto-assignment`, data),
+  getAiVerification: (instituteId) =>
+    apiClient.get(`/institutes/${instituteId}/ai-verification`),
+  updateAiVerification: (instituteId, data) =>
+    apiClient.patch(`/institutes/${instituteId}/ai-verification`, data),
   getOperationsCalendar: (instituteId) =>
     apiClient.get(`/institutes/${instituteId}/operations-calendar`),
   updateOperationsCalendar: (instituteId, data) =>

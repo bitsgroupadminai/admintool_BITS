@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, Download, Eye, FileUp, Loader2, Trash2, UploadCloud } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Download, Eye, FileUp, HelpCircle, Loader2, Trash2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { DocumentPreviewModal } from '@/components/services/DocumentPreviewModal';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/utils/applicationDocuments';
 import { downloadStudentDocument, isPreviewableMimeType } from '@/utils/documentFile';
 import { groupEligibilityNotesByDocument, documentEligibilityKey } from '@/utils/eligibility';
+import { getDocumentAiErrors, getDocumentAiStatus } from '@/utils/aiDocumentFinding';
 
 function DocumentUploadRow({
   requirement,
@@ -54,26 +55,53 @@ function DocumentUploadRow({
   };
 
   const isUploaded = Boolean(uploadedDocument);
+  const aiStatus = getDocumentAiStatus(aiFinding);
+  const aiErrors = getDocumentAiErrors(aiFinding, requirement.name);
+  const failedAi = aiStatus?.tone === 'fail' || aiStatus?.tone === 'uncertain';
+  const StatusIcon = failedAi
+    ? aiStatus.tone === 'uncertain'
+      ? HelpCircle
+      : AlertCircle
+    : isUploaded
+      ? CheckCircle2
+      : FileUp;
+  const statusIconClass = failedAi
+    ? aiStatus.tone === 'uncertain'
+      ? 'text-[#D97706]'
+      : 'text-[#B91C1C]'
+    : isUploaded
+      ? 'text-[#0A6640]'
+      : 'text-[#9CA3AF]';
+  const aiBoxClass =
+    aiStatus?.tone === 'fail'
+      ? 'border-[#FECACA] bg-[#FEF2F2]'
+      : aiStatus?.tone === 'uncertain'
+        ? 'border-[#FDE68A] bg-[#FFFBEB]'
+        : 'border-[#D4E5D0] bg-[#F6FAF5]';
+  const aiTitleClass =
+    aiStatus?.tone === 'fail'
+      ? 'text-[#991B1B]'
+      : aiStatus?.tone === 'uncertain'
+        ? 'text-[#92400E]'
+        : 'text-[#0A6640]';
 
   return (
     <div className="rounded-xl border border-[#E2EEE8] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          {isUploaded ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0A6640]" />
-          ) : (
-            <FileUp className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
-          )}
-          <p className="truncate text-sm font-semibold text-[#052E1C]">{requirement.name}</p>
-          {requirement.required !== false ? (
-            <span className="shrink-0 rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#92400E]">
-              Required
-            </span>
-          ) : (
-            <span className="shrink-0 rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
-              Optional
-            </span>
-          )}
+        <div className="flex min-w-0 items-start gap-2">
+          <StatusIcon className={`mt-0.5 h-4 w-4 shrink-0 ${statusIconClass}`} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#052E1C]">{requirement.name}</p>
+            {requirement.required !== false ? (
+              <span className="mt-1 inline-flex rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#92400E]">
+                Required
+              </span>
+            ) : (
+              <span className="mt-1 inline-flex rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
+                Optional
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -135,41 +163,40 @@ function DocumentUploadRow({
       </div>
 
       {aiPending || aiFinding ? (
-        <div className="mt-3 rounded-lg border border-[#D4E5D0] bg-[#F6FAF5] px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
-            AI verification
-          </p>
+        <div className={`mt-3 rounded-lg border px-3 py-2 ${aiBoxClass}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className={`text-[10px] font-bold uppercase tracking-wide ${aiTitleClass}`}>
+              AI check for {requirement.name}
+            </p>
+            {aiPending ? null : aiStatus ? (
+              <span className={`text-xs font-bold ${aiTitleClass}`}>{aiStatus.label}</span>
+            ) : null}
+          </div>
           {aiPending ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8]">
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8]">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Verifying this document...
             </p>
+          ) : aiStatus?.tone === 'pass' ? (
+            <p className="mt-2 text-xs leading-relaxed text-[#065F46]">
+              This file looks like a valid {requirement.name}.
+            </p>
           ) : (
-            <>
-              <p className="mt-1 text-xs font-semibold text-[#052E1C]">
-                {aiFinding.verdict === 'pass'
-                  ? 'Passed'
-                  : aiFinding.verdict === 'fail'
-                    ? 'Failed'
-                    : aiFinding.verdict === 'uncertain'
-                      ? 'Needs a closer look'
-                      : 'Checked'}
-              </p>
-              {aiFinding.observedContent ? (
-                <p className="mt-1 text-xs text-[#334155]">
-                  <span className="font-semibold">What was uploaded: </span>
-                  {aiFinding.observedContent}
-                </p>
-              ) : null}
-              {aiFinding.issue ? (
-                <p className="mt-1 text-xs leading-relaxed text-[#4B6358]">{aiFinding.issue}</p>
-              ) : null}
-            </>
+            <dl className="mt-2 space-y-2">
+              {aiErrors.map((error) => (
+                <div key={error.label}>
+                  <dt className={`text-[10px] font-bold uppercase tracking-wide ${aiTitleClass}`}>
+                    {error.label}
+                  </dt>
+                  <dd className="mt-0.5 text-xs leading-relaxed text-[#334155]">{error.text}</dd>
+                </div>
+              ))}
+            </dl>
           )}
         </div>
       ) : null}
 
-      {eligibilityNotes.length > 0 ? (
+      {eligibilityNotes.length > 0 && !failedAi ? (
         <div className="mt-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
             This file should confirm
@@ -244,6 +271,9 @@ export function ApplicationDocumentUpload({
       verdict: finding.verdict,
       issue: finding.issue,
       observedContent: finding.observedContent,
+      matchesRequirement: finding.matchesRequirement,
+      belongsToApplicant: finding.belongsToApplicant,
+      legible: finding.legible,
     };
   };
 

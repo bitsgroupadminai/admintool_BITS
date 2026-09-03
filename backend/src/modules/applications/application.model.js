@@ -159,6 +159,16 @@ const applicationSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    rollbackNote: {
+      type: String,
+      trim: true,
+    },
+    rolledBackToStepId: {
+      type: String,
+    },
+    rolledBackAt: {
+      type: Date,
+    },
     autoAssignedAt: {
       type: Date,
     },

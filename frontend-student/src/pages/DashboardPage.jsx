@@ -57,6 +57,18 @@ function RequestCard({ application }) {
         </p>
       ) : null}
 
+      {application.rolledBackAt ? (
+        <div className="mt-4 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+          <p className="font-semibold">Your progress was sent back</p>
+          {application.rollbackNote ? (
+            <p className="mt-1">{application.rollbackNote}</p>
+          ) : null}
+          <p className="mt-1 text-xs text-[#92400E]">
+            Please open this request, review what is needed, and resubmit.
+          </p>
+        </div>
+      ) : null}
+
       {application.status === 'draft' && application.requiredDocumentCount > 0 ? (
         <p className="mt-4 text-sm text-[#4B6358]">
           Documents uploaded: {application.uploadedRequiredCount} of{' '}

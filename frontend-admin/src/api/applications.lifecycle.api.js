@@ -9,6 +9,8 @@ export const applicationLifecycleApi = {
   transfer: (id, data) => apiClient.patch(`/applications/${id}/transfer`, data),
   escalate: (id, data, role = 'admin') =>
     apiClient.patch(`/${role === 'staff' ? 'staff/applications' : 'applications'}/${id}/escalate`, data),
+  rollback: (id, data, role = 'admin') =>
+    apiClient.patch(`/${role === 'staff' ? 'staff/applications' : 'applications'}/${id}/rollback`, data),
   claim: (id) => apiClient.patch(`/staff/applications/${id}/claim`),
   listUnassigned: (params) => apiClient.get('/staff/applications/unassigned', { params }),
 };

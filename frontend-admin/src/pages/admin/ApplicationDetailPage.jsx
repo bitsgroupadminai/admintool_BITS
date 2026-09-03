@@ -137,6 +137,8 @@ export function ApplicationDetailPage() {
                     applicationId={id}
                     status={application.status}
                     role="admin"
+                    workflowSteps={application.workflow?.steps}
+                    currentStep={application.workflow?.currentStep}
                     onUpdated={loadApplication}
                   />
                   <div className="mt-8 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">

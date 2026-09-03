@@ -346,6 +346,9 @@ async function recordEnrollmentIntake(application, offering, instituteId) {
   application.workflowHistory = [];
   application.correctionNote = undefined;
   application.correctionRequiredDocuments = [];
+  application.rollbackNote = undefined;
+  application.rolledBackToStepId = undefined;
+  application.rolledBackAt = undefined;
   application.assignedTo = undefined;
   application.assignedAt = undefined;
   application.assignedBy = undefined;
@@ -700,6 +703,8 @@ export async function listStudentApplications(instituteId, userEmail) {
         uploadedRequiredCount: progress.uploadedRequiredCount,
         requiredDocumentCount: progress.requiredDocumentCount,
         correctionNote: application.correctionNote ?? '',
+        rollbackNote: application.rollbackNote ?? '',
+        rolledBackAt: application.rolledBackAt ?? null,
       };
     });
   });
@@ -927,6 +932,9 @@ async function enrichStudentApplication(application, offering) {
     workflow: workflowSteps,
     correctionNote: application.correctionNote ?? '',
     correctionRequiredDocuments: application.correctionRequiredDocuments ?? [],
+    rollbackNote: application.rollbackNote ?? '',
+    rolledBackToStepId: application.rolledBackToStepId ?? null,
+    rolledBackAt: application.rolledBackAt ?? null,
     payment: await getApplicationPaymentState(offering, application),
     visitPlanning,
   };
@@ -1252,6 +1260,9 @@ export async function submitStudentServiceApplication(instituteId, user, service
   application.workflowHistory = [];
   application.correctionNote = undefined;
   application.correctionRequiredDocuments = [];
+  application.rollbackNote = undefined;
+  application.rolledBackToStepId = undefined;
+  application.rolledBackAt = undefined;
 
   let enqueueAiVerification = false;
   if (workflowSnapshot.length > 0) {
@@ -1329,6 +1340,9 @@ export async function resubmitStudentServiceApplication(instituteId, user, servi
   application.status = APPLICATION_STATUS.IN_REVIEW;
   application.correctionNote = undefined;
   application.correctionRequiredDocuments = [];
+  application.rollbackNote = undefined;
+  application.rolledBackToStepId = undefined;
+  application.rolledBackAt = undefined;
 
   const enqueueAiVerification = settleAiWorkflowSteps(application, {
     userId: user.userId ?? user._id?.toString?.() ?? 'system',

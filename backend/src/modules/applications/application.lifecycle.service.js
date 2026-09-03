@@ -6,8 +6,11 @@ import { ROLES } from '../../shared/constants/roles.js';
 import { createNotification } from '../notifications/notification.service.js';
 import { emitApplicationUpdated } from '../../shared/helpers/realtime.helper.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
-import { notifyApplicationStatusChange } from '../../shared/templates/applicationEmails.js';
-
+import {
+  notifyApplicationStatusChange,
+  notifyApplicationRollback,
+} from '../../shared/templates/applicationEmails.js';
+import { getWorkflowSteps, getCurrentWorkflowStep } from '../../shared/helpers/workflowExecution.helper.js';
 const TERMINAL_STATUSES = new Set([
   APPLICATION_STATUS.ADMITTED,
   APPLICATION_STATUS.REJECTED,
@@ -309,6 +312,107 @@ export async function claimApplication(instituteId, applicationId, staffUser) {
     link: `/staff/applications/${application._id.toString()}`,
     metadata: { applicationId: application._id.toString() },
   });
+
+  await emitLifecycleUpdate(application, instituteId);
+  return application;
+}
+
+const ROLLBACK_ALLOWED_STATUSES = new Set([
+  APPLICATION_STATUS.IN_REVIEW,
+  APPLICATION_STATUS.NEEDS_CORRECTION,
+  APPLICATION_STATUS.PENDING_AI_REVIEW,
+]);
+
+/**
+ * Roll a student's application back to an earlier workflow step.
+ * The student is notified by email and sees the reason on their dashboard.
+ *
+ * @param {string} instituteId
+ * @param {string} applicationId
+ * @param {string} targetStepId — the stepId to roll back to
+ * @param {Object} actor — { userId, name, role }
+ * @param {string} [note] — optional reason shown to student
+ */
+export async function rollbackToStep(instituteId, applicationId, targetStepId, actor, note = '') {
+  const application = await getApplicationForActor(instituteId, applicationId, actor);
+
+  if (!ROLLBACK_ALLOWED_STATUSES.has(application.status)) {
+    throw new AppError('This request cannot be rolled back in its current state', 400);
+  }
+
+  const steps = getWorkflowSteps(application);
+  const currentStep = getCurrentWorkflowStep(application);
+  const targetStep = steps.find((step) => step.stepId === targetStepId);
+
+  if (!targetStep) {
+    throw new AppError('Target step not found in workflow', 400);
+  }
+
+  if (!currentStep || targetStep.order >= currentStep.order) {
+    throw new AppError('Can only roll back to an earlier step', 400);
+  }
+
+  // Record in history
+  application.workflowHistory.push({
+    stepId: currentStep.stepId,
+    stepName: currentStep.name,
+    outcome: 'rolled_back',
+    actedBy: actor.userId,
+    actedByName: actor.name,
+    actedByRole: actor.role,
+    note: note?.trim() || `Rolled back to step: ${targetStep.name}`,
+    createdAt: new Date(),
+  });
+
+  // Move the application back — use NEEDS_CORRECTION so the student can edit documents and resubmit
+  application.currentStepId = targetStepId;
+  application.status = APPLICATION_STATUS.NEEDS_CORRECTION;
+  application.correctionNote = note?.trim() || undefined;
+  application.correctionRequiredDocuments = [];
+
+  // Store rollback metadata so the student sees a banner
+  application.rollbackNote = note?.trim() || '';
+  application.rolledBackToStepId = targetStepId;
+  application.rolledBackAt = new Date();
+
+  // Reset SLA timers for the new current step
+  application.currentStepStartedAt = new Date();
+  if (targetStep.slaValue && targetStep.slaUnit) {
+    const ms =
+      targetStep.slaUnit === 'hours'
+        ? targetStep.slaValue * 3_600_000
+        : targetStep.slaValue * 86_400_000;
+    application.currentStepDueAt = new Date(Date.now() + ms);
+  } else {
+    application.currentStepDueAt = undefined;
+  }
+  application.slaBreached = false;
+
+  await application.save();
+
+  // Email the student
+  notifyApplicationRollback(application, targetStep.name, note).catch(() => {});
+
+  // Notify student in-app
+  const studentUser = await User.findOne({
+    instituteId,
+    email: application.applicantEmail,
+    role: ROLES.STUDENT,
+  }).select('_id');
+
+  if (studentUser) {
+    await createNotification({
+      instituteId,
+      userId: studentUser._id.toString(),
+      type: 'rollback',
+      title: 'Your request was sent back',
+      body: note
+        ? `Your progress was rolled back to "${targetStep.name}": ${note}`
+        : `Your progress was rolled back to "${targetStep.name}". Please check your request.`,
+      link: `/services/${application.serviceId.toString()}`,
+      metadata: { applicationId: application._id.toString() },
+    });
+  }
 
   await emitLifecycleUpdate(application, instituteId);
   return application;

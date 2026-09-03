@@ -386,6 +386,61 @@ export function buildStaffWelcomeEmail(params) {
   };
 }
 
+/**
+ * @param {Object} application
+ * @param {string} targetStepName — human name of the step rolled back to
+ * @param {string} [reason]
+ */
+export async function notifyApplicationRollback(application, targetStepName, reason = '') {
+  const studentPortalUrl = getStudentPortalUrl();
+  const instituteName = 'Your institute';
+  const subject = `${instituteName}: Your request needs attention`;
+
+  const reasonLine = reason
+    ? `<br/><br/><strong>Reason:</strong> ${reason}`
+    : '';
+
+  const text = [
+    `Hello ${application.applicantName},`,
+    '',
+    `Your request progress was sent back to the step "${targetStepName}".`,
+    ...(reason ? [`Reason: ${reason}`] : []),
+    '',
+    'Please open your dashboard, review what is needed, and resubmit.',
+    '',
+    `Student portal: ${studentPortalUrl}/services`,
+    '',
+    `— ${instituteName}`,
+  ].join('\n');
+
+  const email = {
+    subject,
+    text,
+    html: buildHtmlEmail({
+      headline: 'Your request was sent back',
+      intro: `Hello ${application.applicantName},`,
+      body: `Your request progress was sent back to the step <strong>"${targetStepName}"</strong>.${reasonLine}<br/><br/>Please open your dashboard, review what is needed, and resubmit.`,
+      ctaLabel: 'Open student portal',
+      ctaUrl: `${studentPortalUrl}/services`,
+      instituteName,
+    }),
+  };
+
+  try {
+    return await queueEmailNotification({
+      to: application.applicantEmail,
+      type: 'application-rollback',
+      ...email,
+    });
+  } catch (err) {
+    logger.error(
+      { err, to: application.applicantEmail, applicationId: application._id },
+      'Failed to queue rollback email',
+    );
+    return null;
+  }
+}
+
 export async function notifyStaffAccountCreated({
   name,
   email,

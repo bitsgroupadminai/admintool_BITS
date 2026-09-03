@@ -6,6 +6,11 @@ const noteSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const rollbackSchema = z.object({
+  targetStepId: z.string().min(1),
+  note: z.string().max(1000).optional(),
+});
+
 const transferSchema = z.object({
   staffUserId: z.string().min(1),
   note: z.string().max(500).optional(),
@@ -105,6 +110,24 @@ export async function listUnassigned(req, res, next) {
       limit: req.query.limit ? Number(req.query.limit) : 20,
     });
     sendSuccess(res, 200, 'Unassigned requests', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rollback(req, res, next) {
+  try {
+    const payload = rollbackSchema.parse(req.body);
+    const application = await lifecycleService.rollbackToStep(
+      req.user.instituteId,
+      req.params.id,
+      payload.targetStepId,
+      req.user,
+      payload.note,
+    );
+    sendSuccess(res, 200, 'Request rolled back', {
+      application: { id: application._id.toString(), status: application.status },
+    });
   } catch (err) {
     next(err);
   }

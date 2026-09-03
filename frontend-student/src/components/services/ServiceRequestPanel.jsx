@@ -114,6 +114,18 @@ export function ServiceRequestPanel({
         </div>
       ) : null}
 
+      {application?.rolledBackAt ? (
+        <div className="mt-5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-4">
+          <p className="text-sm font-semibold text-[#991B1B]">Your progress was sent back</p>
+          {application.rollbackNote ? (
+            <p className="mt-2 text-sm text-[#7F1D1D]">{application.rollbackNote}</p>
+          ) : null}
+          <p className="mt-2 text-xs text-[#7F1D1D]">
+            Please review what is needed and resubmit when ready.
+          </p>
+        </div>
+      ) : null}
+
       {showApplicantForm ? (
         <div className="mt-5 rounded-xl border border-[#E2EEE8] bg-white p-4">
           <p className="text-sm font-semibold text-[#052E1C]">Your information</p>

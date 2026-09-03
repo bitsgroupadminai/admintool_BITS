@@ -30,7 +30,7 @@ const navItems = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/services", label: "Services", icon: Layers },
   { to: "/admin/enrollment-intakes", label: "Enrollment intakes", icon: UserCheck },
-  { to: "/admin/applications", label: "Requests", icon: ClipboardList },
+  { to: "/admin/applications", label: "Service requests", icon: ClipboardList },
   { to: "/admin/payments", label: "Payments", icon: CreditCard },
   { to: "/admin/queue", label: "Queue monitor", icon: Ticket },
   { to: "/admin/appointments", label: "Appointments", icon: CalendarDays },

@@ -120,9 +120,11 @@ function DocumentVerificationPanel({
                   {aiMatch.finding.observedContent}
                 </p>
               ) : null}
-              {aiMatch.finding?.issue || aiMatch.decision?.summary ? (
-                <p className="mt-2 text-sm leading-relaxed text-[#334155]">
-                  {aiMatch.finding?.issue || aiMatch.decision.summary}
+              {aiMatch.finding?.issue ? (
+                <p className="mt-2 text-sm leading-relaxed text-[#334155]">{aiMatch.finding.issue}</p>
+              ) : aiMatch.finding?.verdict === 'pass' ? (
+                <p className="mt-2 text-sm text-[#4B6358]">
+                  This file matches the requirement and belongs to the applicant.
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-[#4B6358]">No issues flagged for this document.</p>
@@ -130,11 +132,6 @@ function DocumentVerificationPanel({
               {aiMatch.finding?.documentExcerpt ? (
                 <p className="mt-2 text-xs italic text-[#4B6358]">
                   Evidence: “{aiMatch.finding.documentExcerpt}”
-                </p>
-              ) : null}
-              {aiMatch.decision?.confidence != null ? (
-                <p className="mt-1 text-xs text-[#6B7280]">
-                  {Math.round(aiMatch.decision.confidence * 100)}% confidence
                 </p>
               ) : null}
             </>
@@ -263,6 +260,9 @@ export function ApplicationReviewContent({
 
   const otherAiDecisions = (application.aiDecisions ?? []).filter(
     (decision) => decision.handler !== 'document_verification',
+  );
+  const latestDocumentDecision = (application.aiDecisions ?? []).find(
+    (decision) => decision.handler === 'document_verification',
   );
 
   return (
@@ -443,6 +443,16 @@ export function ApplicationReviewContent({
         {(application.missingRequiredDocuments ?? []).length > 0 ? (
           <p className="mt-4 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
             Missing: {application.missingRequiredDocuments.map((item) => item.name).join(', ')}
+          </p>
+        ) : null}
+
+        {usesAiVerification && !pendingAi && latestDocumentDecision?.summary ? (
+          <p className="mt-4 rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] px-4 py-3 text-sm leading-relaxed text-[#334155]">
+            <span className="font-semibold text-[#052E1C]">Overall AI review: </span>
+            {latestDocumentDecision.summary}
+            {latestDocumentDecision.confidence != null
+              ? ` (${Math.round(latestDocumentDecision.confidence * 100)}% confidence)`
+              : ''}
           </p>
         ) : null}
 

@@ -263,7 +263,7 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
 
   return {
     action,
-    note: action === INTERNAL_ACTION.RETURN ? issues.join(' ') : summary,
+    note: action === INTERNAL_ACTION.RETURN ? issues.join('\n') : summary,
     correctionRequiredDocuments: [],
     decision: {
       handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
@@ -440,13 +440,15 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
 /* ------------------------------------------------------------------ */
 
 function buildNote(raw, action) {
-  const documentIssues = (raw.perDocument ?? [])
-    .map((doc) => doc.issue)
-    .filter(Boolean);
-  const issues = (raw.issues ?? []).length ? raw.issues : documentIssues;
+  const labeledIssues = (raw.perDocument ?? [])
+    .filter((doc) => doc.issue)
+    .map((doc) =>
+      doc.requirementName ? `${doc.requirementName}: ${doc.issue}` : doc.issue,
+    );
+  const issues = labeledIssues.length ? labeledIssues : raw.issues ?? [];
   if (action === INTERNAL_ACTION.RETURN) {
     return issues.length
-      ? issues.join(' ')
+      ? issues.join('\n')
       : raw.summary || 'Please review and re-upload the required documents.';
   }
   return raw.summary ?? '';

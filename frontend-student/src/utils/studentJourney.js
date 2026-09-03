@@ -167,8 +167,7 @@ export function buildStudentServiceSteps(offering, application) {
       id: 'documents',
       title: needsCorrection ? 'Update your documents' : 'Upload your documents',
       description: needsCorrection
-        ? application?.correctionNote ||
-          'The institute asked for corrections. Update the required files and resubmit.'
+        ? 'The institute asked for corrections. Update the files listed below, then resubmit.'
         : docDescription,
       state: !application
         ? 'upcoming'

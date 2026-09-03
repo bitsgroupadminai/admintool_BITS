@@ -15,6 +15,7 @@ import { DashboardSkeleton } from '@/components/skeletons';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { PageHeader, PageShell } from '@/components/ui/PortalCard';
 import { getApplicationStatusLabel } from '@/utils/studentJourney';
+import { CorrectionFeedback } from '@/components/services/CorrectionFeedback';
 import { useSocketEvent } from '@/contexts/SocketContext';
 import { WS_EVENTS } from '@/lib/socket';
 
@@ -52,9 +53,13 @@ function RequestCard({ application }) {
       </div>
 
       {application.status === 'needs_correction' && application.correctionNote ? (
-        <p className="mt-4 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-          {application.correctionNote}
-        </p>
+        <div className="mt-4">
+          <CorrectionFeedback
+            application={application}
+            note={application.correctionNote}
+            compact
+          />
+        </div>
       ) : null}
 
       {application.rolledBackAt ? (

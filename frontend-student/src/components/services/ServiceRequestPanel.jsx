@@ -12,6 +12,7 @@ import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsFo
 import { PaymentPanel } from '@/components/services/PaymentPanel';
 import { isPaymentPending, shouldShowPaymentPanel } from '@/utils/payment';
 import { formatPhoneForDisplay } from '@/utils/phone';
+import { CorrectionFeedback } from '@/components/services/CorrectionFeedback';
 
 export function ServiceRequestPanel({
   serviceId,
@@ -111,25 +112,19 @@ export function ServiceRequestPanel({
         </div>
       ) : application?.aiDecisions?.length &&
         !(application.status === 'needs_correction' && application.correctionNote) ? (
-        <div className="mt-5 rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
-          <p className="text-sm font-semibold text-[#052E1C]">Latest AI review</p>
-          <p className="mt-2 text-sm leading-relaxed text-[#334155]">
-            {application.aiDecisions[0].summary ||
-              (application.aiDecisions[0].issues ?? []).join(' ') ||
-              'Your documents were checked by AI. Open the documents section for details.'}
-          </p>
+        <div className="mt-5">
+          <CorrectionFeedback
+            title="Latest AI review"
+            application={application}
+            tone="muted"
+          />
         </div>
       ) : null}
 
-      {application?.status === 'needs_correction' && application?.correctionNote ? (
-        <div className="mt-5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-4">
-          <p className="text-sm font-semibold text-[#991B1B]">Correction requested</p>
-          <p className="mt-2 text-sm text-[#7F1D1D]">{application.correctionNote}</p>
-          {(application.correctionRequiredDocuments ?? []).length > 0 ? (
-            <p className="mt-2 text-xs text-[#7F1D1D]">
-              Update: {application.correctionRequiredDocuments.join(', ')}
-            </p>
-          ) : null}
+      {application?.status === 'needs_correction' &&
+      (application?.correctionNote || application?.aiDecisions?.length) ? (
+        <div className="mt-5">
+          <CorrectionFeedback application={application} />
         </div>
       ) : null}
 

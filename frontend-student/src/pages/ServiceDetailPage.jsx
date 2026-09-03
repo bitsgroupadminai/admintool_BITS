@@ -49,6 +49,17 @@ export function ServiceDetailPage() {
     [serviceId, loadService],
   );
 
+  useEffect(() => {
+    const pending = (service?.offerings ?? []).some(
+      (offering) => offering.application?.aiVerificationPending,
+    );
+    if (!pending) return undefined;
+    const timer = setInterval(() => {
+      loadService({ silent: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [service, loadService]);
+
   return (
     <StudentLayout>
       <PageShell>

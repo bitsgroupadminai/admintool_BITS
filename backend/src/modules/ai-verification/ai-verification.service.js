@@ -69,6 +69,12 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
   const initialStepId = application.currentStepId;
 
   if (application.status !== APPLICATION_STATUS.IN_REVIEW) {
+    if (application.aiVerificationPending) {
+      application.aiVerificationPending = false;
+      await application.save();
+      await flushInstituteReadCache(instituteId);
+      await emitAiVerificationUpdate(instituteId, application);
+    }
     return { skipped: 'not_in_review', status: application.status };
   }
 
@@ -92,15 +98,24 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
   }
 
   if (!processedSteps.length) {
+    if (application.aiVerificationPending) {
+      application.aiVerificationPending = false;
+      await application.save();
+      await flushInstituteReadCache(instituteId);
+      await emitAiVerificationUpdate(instituteId, application);
+    }
     return { skipped: 'no_ai_step', status: application.status };
   }
 
+  application.aiVerificationPending = false;
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
   await flushInstituteReadCache(instituteId);
 
   if (application.status !== initialStatus || application.currentStepId !== initialStepId) {
     await notifyOutcome(instituteId, application, offering);
+  } else {
+    await emitAiVerificationUpdate(instituteId, application);
   }
 
   return { processedSteps, status: application.status };
@@ -235,20 +250,24 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
     thresholds: AI_VERIFY_THRESHOLDS,
   });
 
-  const issues = evaluation.failures.length
-    ? evaluation.failures.map((field) => `Eligibility not met: ${field}`)
-    : raw.issues ?? [];
+  const comparisonIssues = formatEligibilityComparisonIssues(evaluation, raw.extractedFields ?? []);
+  const issues = comparisonIssues.length ? comparisonIssues : raw.issues ?? [];
+  const summary = buildEligibilitySummary(evaluation, raw.summary, issues);
 
   return {
     action,
-    note: action === INTERNAL_ACTION.RETURN ? issues.join('; ') : raw.summary,
+    note: action === INTERNAL_ACTION.RETURN ? issues.join(' ') : summary,
     correctionRequiredDocuments: [],
     decision: {
       handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
       action: mapAction(action),
-      verdict: raw.verdict,
+      verdict: !evaluation.eligible
+        ? 'fail'
+        : (evaluation.results ?? []).some((result) => result.status === 'unchecked')
+          ? 'uncertain'
+          : raw.verdict,
       confidence: raw.confidence,
-      summary: raw.summary,
+      summary,
       issues,
       extractedFields: raw.extractedFields ?? [],
       eligibilityResult: evaluation,
@@ -409,11 +428,76 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
 /* ------------------------------------------------------------------ */
 
 function buildNote(raw, action) {
+  const documentIssues = (raw.perDocument ?? [])
+    .map((doc) => doc.issue)
+    .filter(Boolean);
+  const issues = (raw.issues ?? []).length ? raw.issues : documentIssues;
   if (action === INTERNAL_ACTION.RETURN) {
-    const issues = raw.issues?.length ? raw.issues.join('; ') : raw.summary;
-    return issues || 'Please review and re-upload the required documents.';
+    return issues.length
+      ? issues.join(' ')
+      : raw.summary || 'Please review and re-upload the required documents.';
   }
   return raw.summary ?? '';
+}
+
+function formatEligibilityComparisonIssues(evaluation, extractedFields = []) {
+  const excerptByField = new Map(
+    extractedFields.map((field) => [
+      String(field.field ?? '')
+        .trim()
+        .toLowerCase(),
+      field.documentExcerpt,
+    ]),
+  );
+
+  return (evaluation.results ?? [])
+    .filter((result) => result.status === 'failed' || result.status === 'unchecked')
+    .map((result) => {
+      const excerpt = excerptByField.get(String(result.field ?? '').trim().toLowerCase());
+      return excerpt ? `${result.message} Evidence: "${excerpt}"` : result.message;
+    });
+}
+
+function buildEligibilitySummary(evaluation, extractionSummary, issues) {
+  if (!evaluation.eligible && issues.length) {
+    return issues.join(' ');
+  }
+  if (evaluation.eligible && (evaluation.results ?? []).length) {
+    const passed = evaluation.results
+      .filter((result) => result.status === 'passed')
+      .map((result) => result.message);
+    return passed.length ? passed.join(' ') : extractionSummary;
+  }
+  return extractionSummary || issues.join(' ');
+}
+
+async function emitAiVerificationUpdate(instituteId, application) {
+  try {
+    const studentUser = await User.findOne({
+      instituteId,
+      email: application.applicantEmail,
+      role: ROLES.STUDENT,
+    }).select('_id');
+
+    emitApplicationUpdated({
+      instituteId,
+      applicationId: application._id.toString(),
+      studentUserId: studentUser?._id?.toString() ?? null,
+      assigneeUserId: application.assignedTo?.toString() ?? null,
+      summary: {
+        status: application.status,
+        serviceId: application.serviceId.toString(),
+        offeringId: application.offeringId.toString(),
+        aiVerificationPending: Boolean(application.aiVerificationPending),
+        updatedAt: application.updatedAt,
+      },
+    });
+  } catch (err) {
+    logger.error(
+      { err, applicationId: application._id.toString() },
+      'Failed to emit AI verification update',
+    );
+  }
 }
 
 async function callModel({ system, user, images, schema }) {
@@ -525,6 +609,7 @@ async function notifyOutcome(instituteId, application, offering) {
         serviceId: application.serviceId.toString(),
         offeringId: application.offeringId.toString(),
         applicantName: application.applicantName,
+        aiVerificationPending: Boolean(application.aiVerificationPending),
         updatedAt: application.updatedAt,
       },
     });

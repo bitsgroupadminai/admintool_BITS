@@ -80,6 +80,30 @@ test('decideEligibilityAction: fails rule with high confidence returns for corre
   });
   assert.equal(action, INTERNAL_ACTION.RETURN);
   assert.equal(evaluation.eligible, false);
+  assert.match(
+    evaluation.results[0].message,
+    /Marks requires at least 60, but the value found is 42/,
+  );
+});
+
+test('documentVerificationResponseSchema: observedContent is optional with default', () => {
+  const parsed = documentVerificationResponseSchema.parse({
+    verdict: 'fail',
+    confidence: 0.92,
+    summary: 'The uploaded file is a selfie, which is not a government ID.',
+    perDocument: [
+      {
+        requirementName: 'Government ID',
+        present: true,
+        matchesRequirement: false,
+        verdict: 'fail',
+        observedContent: 'a selfie of a person',
+        issue:
+          'The uploaded file is a selfie of a person, which is not a Government ID. This does not meet the requirement.',
+      },
+    ],
+  });
+  assert.equal(parsed.perDocument[0].observedContent, 'a selfie of a person');
 });
 
 test('decideEligibilityAction: missing value (unchecked) escalates', () => {

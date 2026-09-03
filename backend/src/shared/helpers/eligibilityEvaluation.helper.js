@@ -29,6 +29,22 @@ function resolveStudentValue(field, profile) {
   return null;
 }
 
+function formatDisplayValue(value) {
+  if (value == null) return 'not found';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+export function describeEligibilityRequirement(operator, expected) {
+  const display = formatDisplayValue(expected);
+  if (operator === RULE_OPERATOR.GTE) return `at least ${display}`;
+  if (operator === RULE_OPERATOR.LTE) return `at most ${display}`;
+  if (operator === RULE_OPERATOR.GT) return `more than ${display}`;
+  if (operator === RULE_OPERATOR.LT) return `less than ${display}`;
+  if (operator === RULE_OPERATOR.NEQ) return `a value other than ${display}`;
+  return display;
+}
+
 function compareValues(actual, operator, expected, fieldType) {
   if (actual == null) {
     return null;
@@ -72,11 +88,16 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
     const actual = resolveStudentValue(rule.field, profile);
     const passed = compareValues(actual, rule.operator, rule.value, rule.fieldType);
 
+    const requirement = describeEligibilityRequirement(rule.operator, rule.value);
+
     if (passed === null) {
       results.push({
         field: rule.field,
         status: 'unchecked',
-        message: 'Your institute will verify this during review.',
+        actual,
+        expected: rule.value,
+        operator: rule.operator,
+        message: `${rule.field} requires ${requirement}, but this value could not be confirmed from the available information.`,
       });
       continue;
     }
@@ -85,7 +106,10 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
       results.push({
         field: rule.field,
         status: 'passed',
-        message: 'You meet this requirement.',
+        actual,
+        expected: rule.value,
+        operator: rule.operator,
+        message: `${rule.field} requires ${requirement}; the value found is ${formatDisplayValue(actual)}.`,
       });
       continue;
     }
@@ -94,7 +118,10 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
     results.push({
       field: rule.field,
       status: 'failed',
-      message: 'This requirement is not met based on your profile.',
+      actual,
+      expected: rule.value,
+      operator: rule.operator,
+      message: `${rule.field} requires ${requirement}, but the value found is ${formatDisplayValue(actual)}. This does not meet the eligibility criterion.`,
     });
   }
 

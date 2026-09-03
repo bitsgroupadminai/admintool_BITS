@@ -37,8 +37,9 @@ import {
 } from '../../shared/helpers/workflowExecution.helper.js';
 import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
 import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
+import { isAiVerificationEnabled } from '../ai-verification/ai-verification.config.js';
 import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
-import { OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
+import { HANDLER_TYPE, AI_HANDLER, OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
 import { logger } from '../../core/logger/index.js';
 
@@ -154,7 +155,7 @@ async function getInstituteApplication(instituteId, applicationId) {
  * Latest AI verification decisions per workflow step (excludes intake pre-screen),
  * newest first, for staff/admin review context.
  */
-async function loadApplicationAiDecisions(instituteId, applicationId) {
+export async function loadApplicationAiDecisions(instituteId, applicationId) {
   const decisions = await AiDecision.find({
     instituteId,
     applicationId,
@@ -176,6 +177,7 @@ async function loadApplicationAiDecisions(instituteId, applicationId) {
     issues: decision.issues ?? [],
     perDocument: decision.perDocument ?? [],
     extractedFields: decision.extractedFields ?? [],
+    eligibilityResult: decision.eligibilityResult ?? null,
     createdAt: decision.createdAt,
   }));
 }
@@ -530,6 +532,10 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
     });
   }
 
+  if (enqueueAiVerification) {
+    application.aiVerificationPending = true;
+  }
+
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
 
@@ -694,6 +700,103 @@ export async function assignApplication(
 
   await flushInstituteReadCache(instituteId);
   return formatApplicationDetail(application, context.service, context.offering, assignee, adminUser);
+}
+
+const REVERIFY_ALLOWED_STATUSES = new Set([
+  APPLICATION_STATUS.IN_REVIEW,
+  APPLICATION_STATUS.PENDING_AI_REVIEW,
+  APPLICATION_STATUS.NEEDS_CORRECTION,
+]);
+
+function findAiDocumentVerificationStep(application) {
+  const steps = getWorkflowSteps(application);
+  return (
+    steps.find(
+      (step) =>
+        step.handledBy?.type === HANDLER_TYPE.AI &&
+        (step.handledBy?.assignee === AI_HANDLER.DOCUMENT_VERIFICATION ||
+          /document/i.test(step.name ?? '')),
+    ) ?? steps.find((step) => step.handledBy?.type === HANDLER_TYPE.AI) ??
+    null
+  );
+}
+
+/**
+ * Re-run AI verification on the full document stack from the first AI document step.
+ */
+export async function reverifyApplicationWithAi(instituteId, applicationId, actor) {
+  if (!isAiVerificationEnabled()) {
+    throw new AppError('AI verification is not enabled', 400);
+  }
+
+  const application = await getInstituteApplication(instituteId, applicationId);
+  if (!REVERIFY_ALLOWED_STATUSES.has(application.status)) {
+    throw new AppError('This request cannot be re-verified in its current state', 400);
+  }
+
+  if (!(application.documents ?? []).length) {
+    throw new AppError('This request has no uploaded documents to verify', 400);
+  }
+
+  const targetStep = findAiDocumentVerificationStep(application);
+  if (!targetStep) {
+    throw new AppError('This request has no AI document verification step', 400);
+  }
+
+  application.currentStepId = targetStep.stepId;
+  application.status = APPLICATION_STATUS.IN_REVIEW;
+  application.correctionNote = undefined;
+  application.correctionRequiredDocuments = [];
+  application.aiVerificationPending = true;
+  application.currentStepStartedAt = new Date();
+  application.slaBreached = false;
+
+  application.workflowHistory = application.workflowHistory ?? [];
+  application.workflowHistory.push({
+    stepId: targetStep.stepId,
+    stepName: targetStep.name,
+    outcome: 'ai_reverify_requested',
+    actedBy: actor.userId,
+    actedByName: actor.name ?? '',
+    actedByRole: actor.role ?? '',
+    note: 'Admin requested AI to re-verify all uploaded documents.',
+    createdAt: new Date(),
+  });
+
+  await application.save();
+  await enqueueApplicationAiVerification(instituteId, application._id.toString());
+  await flushInstituteReadCache(instituteId);
+
+  const [context, assignee, aiDecisions] = await Promise.all([
+    loadApplicationContext(application, instituteId),
+    loadAssignee(application),
+    loadApplicationAiDecisions(instituteId, applicationId),
+  ]);
+
+  const studentUser = await User.findOne({
+    instituteId,
+    email: application.applicantEmail,
+    role: ROLES.STUDENT,
+  }).select('_id');
+
+  emitApplicationUpdated({
+    instituteId,
+    applicationId: application._id.toString(),
+    studentUserId: studentUser?._id?.toString() ?? null,
+    assigneeUserId: application.assignedTo?.toString() ?? null,
+    summary: {
+      status: application.status,
+      serviceId: application.serviceId.toString(),
+      offeringId: application.offeringId.toString(),
+      aiVerificationPending: true,
+      updatedAt: application.updatedAt,
+    },
+  });
+
+  return {
+    ...formatApplicationDetail(application, context.service, context.offering, assignee, actor),
+    aiDecisions,
+  };
 }
 
 async function finalizeSlaAction(application, instituteId, { staff, actionLabel }, user) {

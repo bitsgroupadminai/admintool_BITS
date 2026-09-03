@@ -262,5 +262,6 @@ export function formatRuntimeFields(application) {
     slaBreached: Boolean(application.slaBreached),
     autoAssignedAt: application.autoAssignedAt ?? null,
     slaOverdue: isSlaOverdue(application.currentStepDueAt),
+    aiVerificationPending: Boolean(application.aiVerificationPending),
   };
 }

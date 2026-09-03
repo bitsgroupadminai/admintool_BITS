@@ -102,6 +102,25 @@ export function ServiceRequestPanel({
         </span>
       </div>
 
+      {application?.aiVerificationPending ? (
+        <div className="mt-5 rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+          <p className="text-sm font-semibold text-[#1D4ED8]">AI is reviewing your documents</p>
+          <p className="mt-2 text-sm text-[#1E3A8A]">
+            You will see the updated verification results here when the review finishes.
+          </p>
+        </div>
+      ) : application?.aiDecisions?.length &&
+        !(application.status === 'needs_correction' && application.correctionNote) ? (
+        <div className="mt-5 rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
+          <p className="text-sm font-semibold text-[#052E1C]">Latest AI review</p>
+          <p className="mt-2 text-sm leading-relaxed text-[#334155]">
+            {application.aiDecisions[0].summary ||
+              (application.aiDecisions[0].issues ?? []).join(' ') ||
+              'Your documents were checked by AI. Open the documents section for details.'}
+          </p>
+        </div>
+      ) : null}
+
       {application?.status === 'needs_correction' && application?.correctionNote ? (
         <div className="mt-5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-4">
           <p className="text-sm font-semibold text-[#991B1B]">Correction requested</p>

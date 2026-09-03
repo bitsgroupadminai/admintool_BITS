@@ -10,6 +10,8 @@ import {
   staffApplicationsApi,
 } from '@/api/staffApplications.api';
 import { ApplicationReviewSkeleton } from '@/components/skeletons';
+import { useSocketEvent } from '@/contexts/SocketContext';
+import { WS_EVENTS } from '@/lib/socket';
 
 export function StaffApplicationDetailPage() {
   const { id } = useParams();
@@ -20,22 +22,36 @@ export function StaffApplicationDetailPage() {
   const [slaActionLoading, setSlaActionLoading] = useState(false);
   const [reviewingDocumentId, setReviewingDocumentId] = useState(null);
 
-  const loadApplication = useCallback(async () => {
-    setLoading(true);
+  const loadApplication = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await staffApplicationsApi.get(id);
       setApplication(data.data.application);
     } catch (err) {
-      toast.error(err.message || 'Failed to load assigned request');
-      navigate('/staff/applications');
+      if (!silent) {
+        toast.error(err.message || 'Failed to load assigned request');
+        navigate('/staff/applications');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id, navigate]);
 
   useEffect(() => {
     loadApplication();
   }, [loadApplication]);
+
+  useSocketEvent(WS_EVENTS.APPLICATION_UPDATED, () => {
+    loadApplication({ silent: true });
+  }, [loadApplication]);
+
+  useEffect(() => {
+    if (!application?.aiVerificationPending) return undefined;
+    const timer = setInterval(() => {
+      loadApplication({ silent: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [application?.aiVerificationPending, loadApplication]);
 
   const handleWorkflowAction = async (payload) => {
     setUpdating(true);

@@ -204,6 +204,10 @@ const applicationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    aiVerificationPending: {
+      type: Boolean,
+      default: false,
+    },
     documents: {
       type: [applicationDocumentSchema],
       default: [],

@@ -23,7 +23,7 @@ import {
   getMissingRequiredDocuments,
   validateUploadedFile,
 } from '../../shared/helpers/applicationDocument.helper.js';
-import { streamDocumentFile } from '../applications/application.service.js';
+import { streamDocumentFile, loadApplicationAiDecisions } from '../applications/application.service.js';
 import {
   deleteStoredApplicationDocument,
   persistUploadedApplicationFile,
@@ -926,6 +926,11 @@ async function enrichStudentApplication(application, offering) {
     }
   }
 
+  const aiDecisions = await loadApplicationAiDecisions(
+    application.instituteId.toString(),
+    application._id.toString(),
+  );
+
   return {
     ...formatStudentApplication(application),
     ...getDocumentUploadProgress(offering, application),
@@ -935,6 +940,8 @@ async function enrichStudentApplication(application, offering) {
     rollbackNote: application.rollbackNote ?? '',
     rolledBackToStepId: application.rolledBackToStepId ?? null,
     rolledBackAt: application.rolledBackAt ?? null,
+    aiDecisions,
+    aiVerificationPending: Boolean(application.aiVerificationPending),
     payment: await getApplicationPaymentState(offering, application),
     visitPlanning,
   };
@@ -1277,6 +1284,10 @@ export async function submitStudentServiceApplication(instituteId, user, service
     application.status = APPLICATION_STATUS.SUBMITTED;
   }
 
+  if (enqueueAiVerification) {
+    application.aiVerificationPending = true;
+  }
+
   await refreshApplicationRuntime(application, instituteId);
   await application.save();
 
@@ -1349,6 +1360,10 @@ export async function resubmitStudentServiceApplication(instituteId, user, servi
     name: user.name ?? 'Student',
     role: ROLES.STUDENT,
   });
+
+  if (enqueueAiVerification) {
+    application.aiVerificationPending = true;
+  }
 
   await refreshApplicationRuntime(application, instituteId);
   await application.save();

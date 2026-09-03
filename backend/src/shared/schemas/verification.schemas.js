@@ -21,16 +21,17 @@ const documentFindingSchema = z.object({
   legible: z.boolean().default(true),
   belongsToApplicant: z.boolean().default(true),
   verdict: verdictEnum,
-  issue: z.string().max(500).optional().default(''),
+  observedContent: z.string().max(400).optional().default(''),
+  issue: z.string().max(1200).optional().default(''),
   documentExcerpt: z.string().max(500).optional().default(''),
 });
 
 export const documentVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(1500),
+  summary: z.string().min(1).max(2500),
   perDocument: z.array(documentFindingSchema).max(30).default([]),
-  issues: z.array(z.string().min(1).max(500)).max(30).default([]),
+  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
 });
 
 const extractedFieldSchema = z.object({
@@ -42,15 +43,15 @@ const extractedFieldSchema = z.object({
 export const eligibilityVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(1500),
+  summary: z.string().min(1).max(2500),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
-  issues: z.array(z.string().min(1).max(500)).max(30).default([]),
+  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
 });
 
 export const intakeVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
   recommendation: z.enum(['approve', 'reject', 'manual_review']),
-  summary: z.string().min(1).max(1500),
-  issues: z.array(z.string().min(1).max(500)).max(30).default([]),
+  summary: z.string().min(1).max(2500),
+  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
 });

@@ -12,6 +12,8 @@ import { ApplicationReviewSkeleton } from '@/components/skeletons';
 import { applicationsApi, downloadApplicationDocument } from '@/api/applications.api';
 import { userApi } from '@/api/user.api';
 import { useAuthStore } from '@/store/auth.store';
+import { useSocketEvent } from '@/contexts/SocketContext';
+import { WS_EVENTS } from '@/lib/socket';
 
 export function ApplicationDetailPage() {
   const { id } = useParams();
@@ -25,6 +27,7 @@ export function ApplicationDetailPage() {
   const [assigning, setAssigning] = useState(false);
   const [slaActionLoading, setSlaActionLoading] = useState(false);
   const [reviewingDocumentId, setReviewingDocumentId] = useState(null);
+  const [reverifyLoading, setReverifyLoading] = useState(false);
 
   const assigneeOptions = useMemo(() => {
     const options = [];
@@ -45,23 +48,37 @@ export function ApplicationDetailPage() {
     return options;
   }, [currentUser, staff]);
 
-  const loadApplication = useCallback(async () => {
-    setLoading(true);
+  const loadApplication = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await applicationsApi.get(id);
       setApplication(data.data.application);
       setSelectedStaffId(data.data.application.assignedTo?.id ?? '');
     } catch (err) {
-      toast.error(err.message || 'Failed to load request');
-      navigate('/admin/applications');
+      if (!silent) {
+        toast.error(err.message || 'Failed to load request');
+        navigate('/admin/applications');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id, navigate]);
 
   useEffect(() => {
     loadApplication();
   }, [loadApplication]);
+
+  useSocketEvent(WS_EVENTS.APPLICATION_UPDATED, () => {
+    loadApplication({ silent: true });
+  }, [loadApplication]);
+
+  useEffect(() => {
+    if (!application?.aiVerificationPending) return undefined;
+    const timer = setInterval(() => {
+      loadApplication({ silent: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [application?.aiVerificationPending, loadApplication]);
 
   useEffect(() => {
     userApi
@@ -132,6 +149,19 @@ export function ApplicationDetailPage() {
     }
   };
 
+  const handleReverifyAi = async () => {
+    setReverifyLoading(true);
+    try {
+      const { data } = await applicationsApi.reverifyAi(id);
+      setApplication(data.data.application);
+      toast.success('AI is re-verifying all uploaded documents');
+    } catch (err) {
+      toast.error(err.message || 'Could not start AI re-verification');
+    } finally {
+      setReverifyLoading(false);
+    }
+  };
+
   const handleDocumentReview = async (document, payload) => {
     if (payload.status === 'needs_correction' && !payload.note?.trim()) {
       toast.error('Add a note explaining what the student should fix');
@@ -178,6 +208,8 @@ export function ApplicationDetailPage() {
             slaActionLoading={slaActionLoading}
             onDocumentReview={handleDocumentReview}
             reviewingDocumentId={reviewingDocumentId}
+            onReverifyAi={handleReverifyAi}
+            reverifyLoading={reverifyLoading}
             requestActions={
               application.status !== 'draft' ? (
                 <ApplicationLifecycleActions

@@ -30,6 +30,7 @@ adminRouter.patch('/:id/workflow-action', applicationController.workflowAction);
 adminRouter.patch('/:id/status', applicationController.updateStatus);
 adminRouter.patch('/:id/assign', applicationController.assign);
 adminRouter.patch('/:id/sla-action', applicationController.slaAction);
+adminRouter.patch('/:id/ai-reverify', applicationController.reverifyAi);
 adminRouter.patch('/:id/documents/:documentId/review', applicationController.reviewDocument);
 adminRouter.get('/:id/documents/:documentId/file', applicationController.streamDocument);
 

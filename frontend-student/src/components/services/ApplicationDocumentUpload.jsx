@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, Download, Eye, FileUp, Trash2, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FileUp, Loader2, Trash2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { DocumentPreviewModal } from '@/components/services/DocumentPreviewModal';
 import {
@@ -23,6 +23,8 @@ function DocumentUploadRow({
   onPreview,
   onDownload,
   eligibilityNotes = [],
+  aiFinding = null,
+  aiPending = false,
 }) {
   const inputRef = useRef(null);
   const [selectedName, setSelectedName] = useState('');
@@ -132,6 +134,41 @@ function DocumentUploadRow({
         </div>
       </div>
 
+      {aiPending || aiFinding ? (
+        <div className="mt-3 rounded-lg border border-[#D4E5D0] bg-[#F6FAF5] px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
+            AI verification
+          </p>
+          {aiPending ? (
+            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Verifying this document...
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-xs font-semibold text-[#052E1C]">
+                {aiFinding.verdict === 'pass'
+                  ? 'Passed'
+                  : aiFinding.verdict === 'fail'
+                    ? 'Failed'
+                    : aiFinding.verdict === 'uncertain'
+                      ? 'Needs a closer look'
+                      : 'Checked'}
+              </p>
+              {aiFinding.observedContent ? (
+                <p className="mt-1 text-xs text-[#334155]">
+                  <span className="font-semibold">What was uploaded: </span>
+                  {aiFinding.observedContent}
+                </p>
+              ) : null}
+              {aiFinding.issue ? (
+                <p className="mt-1 text-xs leading-relaxed text-[#4B6358]">{aiFinding.issue}</p>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
+
       {eligibilityNotes.length > 0 ? (
         <div className="mt-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
@@ -188,6 +225,27 @@ export function ApplicationDocumentUpload({
     application?.status === 'draft' || application?.status === 'needs_correction';
   const missingRequired = getMissingRequiredDocuments(offering, application);
   const progressLabel = getDocumentProgressLabel(offering, application);
+  const aiPending = Boolean(application?.aiVerificationPending);
+  const latestDocDecision = (application?.aiDecisions ?? []).find(
+    (decision) => decision.handler === 'document_verification',
+  );
+  const latestEligibilityDecision = (application?.aiDecisions ?? []).find(
+    (decision) => decision.handler === 'eligibility_screening',
+  );
+
+  const findAiFinding = (requirementName) => {
+    if (!latestDocDecision) return null;
+    const matchName = String(requirementName ?? '').trim().toLowerCase();
+    const finding = (latestDocDecision.perDocument ?? []).find(
+      (item) => String(item.requirementName ?? '').trim().toLowerCase() === matchName,
+    );
+    if (!finding) return null;
+    return {
+      verdict: finding.verdict,
+      issue: finding.issue,
+      observedContent: finding.observedContent,
+    };
+  };
 
   if (!requirements.length) {
     return (
@@ -270,6 +328,8 @@ export function ApplicationDocumentUpload({
               onPreview={setPreviewDocument}
               onDownload={handleDownload}
               eligibilityNotes={eligibilityNotesByDocument.get(documentEligibilityKey(requirement)) ?? []}
+              aiFinding={uploadedMap.get(requirement.id) ? findAiFinding(requirement.name) : null}
+              aiPending={aiPending && Boolean(uploadedMap.get(requirement.id))}
             />
           ))}
         </div>
@@ -278,6 +338,45 @@ export function ApplicationDocumentUpload({
           <p className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-xs text-[#92400E]">
             Still needed: {missingRequired.map((item) => item.name).join(', ')}
           </p>
+        ) : null}
+
+        {!aiPending && latestEligibilityDecision ? (
+          <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
+              AI eligibility review
+            </p>
+            {latestEligibilityDecision.summary ? (
+              <p className="mt-2 text-xs leading-relaxed text-[#334155]">
+                {latestEligibilityDecision.summary}
+              </p>
+            ) : null}
+            {(latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
+              <ul className="mt-2 space-y-1.5">
+                {latestEligibilityDecision.eligibilityResult.results.map((result, index) => (
+                  <li
+                    key={`${result.field}-${index}`}
+                    className={
+                      result.status === 'failed'
+                        ? 'text-xs leading-relaxed text-[#991B1B]'
+                        : result.status === 'passed'
+                          ? 'text-xs leading-relaxed text-[#065F46]'
+                          : 'text-xs leading-relaxed text-[#92400E]'
+                    }
+                  >
+                    {result.message}
+                  </li>
+                ))}
+              </ul>
+            ) : (latestEligibilityDecision.issues ?? []).length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                {latestEligibilityDecision.issues.map((issue, index) => (
+                  <li key={index} className="text-xs leading-relaxed text-[#92400E]">
+                    {issue}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

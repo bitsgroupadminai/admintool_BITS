@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
@@ -26,6 +26,25 @@ function isDocumentAiStep(step) {
   if (step.handledBy?.type !== 'ai') return false;
   const assignee = step.handledBy?.assignee ?? '';
   return assignee === 'document_verification' || /document/i.test(step.name ?? '');
+}
+
+function isNegativeAiDecision(decision) {
+  if (!decision) return false;
+  if (['fail', 'uncertain'].includes(decision.verdict)) return true;
+  if (['failed', 'returned_for_correction', 'escalated'].includes(decision.action)) return true;
+  return (decision.perDocument ?? []).some(
+    (item) => item.verdict === 'fail' || item.verdict === 'uncertain',
+  );
+}
+
+function hasNegativeAiReview(decisions) {
+  const latestByHandler = new Map();
+  for (const decision of decisions ?? []) {
+    if (!latestByHandler.has(decision.handler)) {
+      latestByHandler.set(decision.handler, decision);
+    }
+  }
+  return [...latestByHandler.values()].some(isNegativeAiDecision);
 }
 
 function findAiFinding(decisions, requirementName) {
@@ -85,7 +104,7 @@ function DocumentVerificationPanel({
       {usesAiVerification ? (
         <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">AI verification</p>
-          {pendingAi && !aiMatch ? (
+          {pendingAi ? (
             <p className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-[#1D4ED8]">
               <Loader2 className="h-4 w-4 animate-spin" />
               Verifying this document...
@@ -95,13 +114,24 @@ function DocumentVerificationPanel({
               <p className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${aiVerdict?.className ?? AI_VERDICT.uncertain.className}`}>
                 {aiVerdict?.label ?? 'Checked'}
               </p>
-              {aiMatch.finding?.issue || aiMatch.decision?.summary ? (
+              {aiMatch.finding?.observedContent ? (
                 <p className="mt-2 text-sm text-[#334155]">
+                  <span className="font-semibold text-[#052E1C]">What was uploaded: </span>
+                  {aiMatch.finding.observedContent}
+                </p>
+              ) : null}
+              {aiMatch.finding?.issue || aiMatch.decision?.summary ? (
+                <p className="mt-2 text-sm leading-relaxed text-[#334155]">
                   {aiMatch.finding?.issue || aiMatch.decision.summary}
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-[#4B6358]">No issues flagged for this document.</p>
               )}
+              {aiMatch.finding?.documentExcerpt ? (
+                <p className="mt-2 text-xs italic text-[#4B6358]">
+                  Evidence: “{aiMatch.finding.documentExcerpt}”
+                </p>
+              ) : null}
               {aiMatch.decision?.confidence != null ? (
                 <p className="mt-1 text-xs text-[#6B7280]">
                   {Math.round(aiMatch.decision.confidence * 100)}% confidence
@@ -180,6 +210,8 @@ export function ApplicationReviewContent({
   slaActionLoading = false,
   onDocumentReview = null,
   reviewingDocumentId = null,
+  onReverifyAi = null,
+  reverifyLoading = false,
 }) {
   const [note, setNote] = useState('');
   const [selectedCorrectionDocs, setSelectedCorrectionDocs] = useState([]);
@@ -191,8 +223,11 @@ export function ApplicationReviewContent({
   const legacyActions = workflowActions.length ? [] : getApplicationStatusActions(application?.status);
   const steps = workflow?.steps ?? [];
   const usesAiVerification = steps.some(isDocumentAiStep);
-  const pendingAi =
-    application?.status === 'pending_ai_review' && workflow?.currentStep?.handledBy?.type === 'ai';
+  const pendingAi = Boolean(application?.aiVerificationPending);
+  const canReverifyAi =
+    Boolean(onReverifyAi) &&
+    usesAiVerification &&
+    (hasNegativeAiReview(application?.aiDecisions) || application?.status === 'pending_ai_review');
   const showManualReview =
     Boolean(onDocumentReview) &&
     (!usesAiVerification || pendingAi || workflowActions.length > 0);
@@ -380,10 +415,29 @@ export function ApplicationReviewContent({
               Each upload is shown here with its verification status.
             </p>
           </div>
-          <span className="rounded-full bg-[#F0FAF5] px-3 py-1 text-xs font-semibold text-[#0A6640]">
-            {application.uploadedRequiredCount ?? 0} / {application.requiredDocumentCount ?? 0} required
-            uploaded
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {canReverifyAi ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={reverifyLoading || application.aiVerificationPending}
+                onClick={onReverifyAi}
+              >
+                {reverifyLoading || application.aiVerificationPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {reverifyLoading || application.aiVerificationPending
+                  ? 'Re-verifying with AI...'
+                  : 'Re-verify with AI'}
+              </Button>
+            ) : null}
+            <span className="rounded-full bg-[#F0FAF5] px-3 py-1 text-xs font-semibold text-[#0A6640]">
+              {application.uploadedRequiredCount ?? 0} / {application.requiredDocumentCount ?? 0} required
+              uploaded
+            </span>
+          </div>
         </div>
 
         {(application.missingRequiredDocuments ?? []).length > 0 ? (

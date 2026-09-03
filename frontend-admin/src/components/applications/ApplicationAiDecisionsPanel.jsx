@@ -111,10 +111,45 @@ export function ApplicationAiDecisionsPanel({ decisions = [] }) {
                           <span className="font-medium text-[#052E1C]">
                             {doc.requirementName ?? `Document ${index + 1}`}
                           </span>
-                          <span className="flex items-center gap-2">
+                          <span className="flex max-w-[70%] flex-col items-end gap-1 text-right">
+                            {doc.observedContent ? (
+                              <span className="text-[#334155]">Shows: {doc.observedContent}</span>
+                            ) : null}
                             {doc.issue ? <span className="text-[#92400E]">{doc.issue}</span> : null}
                             <Badge variant={docVerdict.variant}>{docVerdict.label}</Badge>
                           </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              {(decision.eligibilityResult?.results ?? []).length > 0 ? (
+                <div className="mt-3">
+                  <p className="text-xs font-bold text-[#052E1C]">Eligibility criteria</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {decision.eligibilityResult.results.map((result, index) => {
+                      const resultClass =
+                        result.status === 'failed'
+                          ? 'border-[#FECACA] bg-[#FEF2F2] text-[#991B1B]'
+                          : result.status === 'passed'
+                            ? 'border-[#BBF7D0] bg-[#ECFDF5] text-[#065F46]'
+                            : 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]';
+                      return (
+                        <li
+                          key={`${result.field}-${index}`}
+                          className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${resultClass}`}
+                        >
+                          <span className="font-semibold">
+                            {result.status === 'failed'
+                              ? 'Not met'
+                              : result.status === 'passed'
+                                ? 'Met'
+                                : 'Could not confirm'}
+                            {': '}
+                          </span>
+                          {result.message}
                         </li>
                       );
                     })}
@@ -137,6 +172,9 @@ export function ApplicationAiDecisionsPanel({ decisions = [] }) {
                         <dd className="mt-0.5 font-medium text-[#052E1C]">
                           {formatValue(field.value)}
                         </dd>
+                        {field.documentExcerpt ? (
+                          <dd className="mt-1 italic text-[#4B6358]">“{field.documentExcerpt}”</dd>
+                        ) : null}
                       </div>
                     ))}
                   </dl>

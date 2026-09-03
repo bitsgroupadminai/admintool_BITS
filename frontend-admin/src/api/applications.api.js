@@ -9,6 +9,7 @@ export const applicationsApi = {
   slaAction: (id, action) => apiClient.patch(`/applications/${id}/sla-action`, { action }),
   reviewDocument: (id, documentId, data) =>
     apiClient.patch(`/applications/${id}/documents/${documentId}/review`, data),
+  reverifyAi: (id) => apiClient.patch(`/applications/${id}/ai-reverify`),
   getDocumentFilePath: (applicationId, documentId, download = false) => {
     const base = `/applications/${applicationId}/documents/${documentId}/file`;
     return download ? `${base}?download=1` : base;

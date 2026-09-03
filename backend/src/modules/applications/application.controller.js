@@ -78,6 +78,19 @@ export async function assign(req, res, next) {
   }
 }
 
+export async function reverifyAi(req, res, next) {
+  try {
+    const application = await applicationService.reverifyApplicationWithAi(
+      req.user.instituteId,
+      req.params.id,
+      req.user,
+    );
+    sendSuccess(res, 200, 'AI re-verification started', { application });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function slaAction(req, res, next) {
   try {
     const payload = slaActionSchema.parse(req.body);

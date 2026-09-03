@@ -489,6 +489,9 @@ export async function verifyServicePayment(
     user,
     instituteId,
   );
+  if (enqueueAiVerification) {
+    application.aiVerificationPending = true;
+  }
   await application.save();
 
   if (enqueueAiVerification) {

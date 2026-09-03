@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isPreviewableMimeType } from '@/api/applications.api';
 
 export function InlineDocumentPreview({ document, fetchBlob }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const fetchBlobRef = useRef(fetchBlob);
+  const documentRef = useRef(document);
+  const previewUrlRef = useRef(null);
+  const documentId = document?.id;
+
+  fetchBlobRef.current = fetchBlob;
+  documentRef.current = document;
 
   useEffect(() => {
-    if (!document || !fetchBlob) {
+    if (!documentId || !fetchBlobRef.current) {
       setLoading(false);
       return undefined;
     }
@@ -15,13 +22,18 @@ export function InlineDocumentPreview({ document, fetchBlob }) {
     let active = true;
     let objectUrl = null;
 
+    setLoading(true);
+    setError('');
+
     const loadPreview = async () => {
-      setLoading(true);
-      setError('');
       try {
-        const { data } = await fetchBlob(document);
+        const { data } = await fetchBlobRef.current(documentRef.current);
         if (!active) return;
         objectUrl = URL.createObjectURL(data);
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+        }
+        previewUrlRef.current = objectUrl;
         setPreviewUrl(objectUrl);
       } catch (err) {
         if (active) setError(err.message || 'Could not load preview');
@@ -34,16 +46,24 @@ export function InlineDocumentPreview({ document, fetchBlob }) {
 
     return () => {
       active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [document, fetchBlob]);
+  }, [documentId]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+    };
+  }, []);
 
   const previewable = isPreviewableMimeType(document?.mimeType, document?.originalName);
   const isPdf =
     String(document?.mimeType ?? '').toLowerCase() === 'application/pdf' ||
     String(document?.originalName ?? '').toLowerCase().endsWith('.pdf');
 
-  if (loading) {
+  if (loading && !previewUrl) {
     return (
       <div className="flex min-h-[280px] items-center justify-center rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] text-sm text-[#4B6358]">
         Loading preview...
@@ -51,7 +71,7 @@ export function InlineDocumentPreview({ document, fetchBlob }) {
     );
   }
 
-  if (error) {
+  if (error && !previewUrl) {
     return (
       <p className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
         {error}

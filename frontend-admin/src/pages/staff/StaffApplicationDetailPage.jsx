@@ -53,6 +53,11 @@ export function StaffApplicationDetailPage() {
     return () => clearInterval(timer);
   }, [application?.aiVerificationPending, loadApplication]);
 
+  const fetchDocumentBlob = useCallback(
+    (document) => staffApplicationsApi.fetchDocumentBlob(id, document.id),
+    [id],
+  );
+
   const handleWorkflowAction = async (payload) => {
     setUpdating(true);
     try {
@@ -132,7 +137,7 @@ export function StaffApplicationDetailPage() {
             onStatusUpdate={handleStatusUpdate}
             onWorkflowAction={handleWorkflowAction}
             onDownload={(document) => downloadStaffApplicationDocument(id, document)}
-            fetchDocumentBlob={(document) => staffApplicationsApi.fetchDocumentBlob(id, document.id)}
+            fetchDocumentBlob={fetchDocumentBlob}
             onSlaAction={handleSlaAction}
             slaActionLoading={slaActionLoading}
             onDocumentReview={handleDocumentReview}

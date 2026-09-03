@@ -149,6 +149,11 @@ export function ApplicationDetailPage() {
     }
   };
 
+  const fetchDocumentBlob = useCallback(
+    (document) => applicationsApi.fetchDocumentBlob(id, document.id),
+    [id],
+  );
+
   const handleReverifyAi = async () => {
     setReverifyLoading(true);
     try {
@@ -203,7 +208,7 @@ export function ApplicationDetailPage() {
             onStatusUpdate={handleStatusUpdate}
             onWorkflowAction={handleWorkflowAction}
             onDownload={(document) => downloadApplicationDocument(id, document)}
-            fetchDocumentBlob={(document) => applicationsApi.fetchDocumentBlob(id, document.id)}
+            fetchDocumentBlob={fetchDocumentBlob}
             onSlaAction={handleSlaAction}
             slaActionLoading={slaActionLoading}
             onDocumentReview={handleDocumentReview}

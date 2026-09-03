@@ -80,6 +80,7 @@ const MANUAL_STATUS = {
 };
 
 const ROLLBACK_STATUSES = ['in_review', 'needs_correction', 'pending_ai_review'];
+const TERMINAL_STATUSES = ['admitted', 'rejected', 'withdrawn', 'cancelled'];
 
 function DetailChip({ label, value }) {
   return (
@@ -241,12 +242,30 @@ export function ApplicationReviewContent({
     (!usesAiVerification || pendingAi || workflowActions.length > 0);
   const currentStep = workflow?.currentStep;
   const earlierSteps = steps
-    .filter((step) => currentStep && step.order < currentStep.order)
-    .sort((a, b) => a.order - b.order);
-  const canRollback =
+    .filter((step) => {
+      if (step.state === 'complete') return true;
+      const currentOrder = Number(currentStep?.order);
+      const stepOrder = Number(step.order);
+      return Number.isFinite(currentOrder) && Number.isFinite(stepOrder) && stepOrder < currentOrder;
+    })
+    .sort((a, b) => Number(a.order) - Number(b.order));
+  const showRollbackUi =
     Boolean(lifecycleRole && onLifecycleUpdated) &&
+    Boolean(application?.status) &&
+    application.status !== 'draft';
+  const canRollback =
+    showRollbackUi &&
     earlierSteps.length > 0 &&
-    ROLLBACK_STATUSES.includes(application?.status);
+    ROLLBACK_STATUSES.includes(application.status);
+  const rollbackDisabledReason = !showRollbackUi
+    ? ''
+    : TERMINAL_STATUSES.includes(application.status)
+      ? 'This request is closed, so it cannot be sent back to an earlier step.'
+      : !ROLLBACK_STATUSES.includes(application.status)
+        ? 'Send back is available while the request is in review.'
+        : earlierSteps.length === 0
+          ? 'This request is still on the first step. After a later step is current, you can send it back from here.'
+          : '';
 
   const commitRollback = async (targetStepId) => {
     const step = steps.find((item) => item.stepId === targetStepId);
@@ -312,6 +331,39 @@ export function ApplicationReviewContent({
     (decision) => decision.handler === 'document_verification',
   );
 
+  const rollbackPanel = showRollbackUi ? (
+    <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
+      <p className="text-sm font-semibold text-[#052E1C]">Send back to an earlier step</p>
+      <p className="mt-1 text-xs text-[#4B6358]">
+        {canRollback
+          ? 'Reopen a completed stage. The student will be notified and asked to complete that step again.'
+          : rollbackDisabledReason}
+      </p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <Select
+            value={rollbackStepId}
+            onChange={setRollbackStepId}
+            placeholder={canRollback ? 'Select an earlier step' : 'No earlier step yet'}
+            options={earlierSteps.map((step) => ({
+              value: step.stepId,
+              label: `Step ${step.order}: ${step.name}`,
+            }))}
+            disabled={!canRollback || rollbackLoading}
+          />
+        </div>
+        <Button
+          type="button"
+          disabled={!canRollback || !rollbackStepId || rollbackLoading}
+          onClick={() => commitRollback(rollbackStepId)}
+        >
+          <Undo2 className="mr-1.5 h-3.5 w-3.5" />
+          {rollbackLoading ? 'Sending back...' : 'Send back to step'}
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
       <section className="mt-5 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
@@ -361,38 +413,7 @@ export function ApplicationReviewContent({
           statusLabel={APPLICATION_STATUS_LABELS[application.status]}
           onRollbackToStep={canRollback ? commitRollback : undefined}
           rollbackLoading={rollbackLoading}
-        >
-          {canRollback ? (
-            <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
-              <p className="text-sm font-semibold text-[#052E1C]">Send back to an earlier step</p>
-              <p className="mt-1 text-xs text-[#4B6358]">
-                Use this to reopen a completed stage, or choose Send back here on a finished step
-                above.
-              </p>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="min-w-0 flex-1">
-                  <Select
-                    value={rollbackStepId}
-                    onChange={setRollbackStepId}
-                    placeholder="Select an earlier step"
-                    options={earlierSteps.map((step) => ({
-                      value: step.stepId,
-                      label: `Step ${step.order}: ${step.name}`,
-                    }))}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  disabled={!rollbackStepId || rollbackLoading}
-                  onClick={() => commitRollback(rollbackStepId)}
-                >
-                  <Undo2 className="mr-1.5 h-3.5 w-3.5" />
-                  {rollbackLoading ? 'Sending back...' : 'Send back to step'}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </WorkflowFunnel>
+        />
       </div>
 
       <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
@@ -481,6 +502,8 @@ export function ApplicationReviewContent({
             ))}
           </div>
         ) : null}
+
+        {rollbackPanel}
 
         {requestActions ? <div className="mt-5 border-t border-[#E2EEE8] pt-5">{requestActions}</div> : null}
       </section>

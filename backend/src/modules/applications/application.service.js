@@ -40,6 +40,7 @@ import { enqueueApplicationAiVerification } from '../../core/queues/ai-verificat
 import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
 import { OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
+import { logger } from '../../core/logger/index.js';
 
 const STATUS_TRANSITIONS = {
   [APPLICATION_STATUS.SUBMITTED]: [
@@ -63,6 +64,7 @@ function formatAssignee(user) {
     name: user.name,
     email: user.email,
     staffRole: user.staffRole ?? null,
+    role: user.role ?? null,
   };
 }
 
@@ -181,7 +183,7 @@ async function getAssignedApplication(instituteId, applicationId, staffUserId) {
   return application;
 }
 
-async function loadApplicationContext(application, instituteId) {
+export async function loadApplicationContext(application, instituteId) {
   const [service, offering, institute] = await Promise.all([
     Service.findOne({ _id: application.serviceId, instituteId }).select('name'),
     Offering.findOne({ _id: application.offeringId, instituteId }).select('name documentRequirements'),
@@ -208,13 +210,13 @@ async function loadAssigneeMap(applications) {
 
   if (!assigneeIds.length) return new Map();
 
-  const assignees = await User.find({ _id: { $in: assigneeIds } }).select('name email staffRole');
+  const assignees = await User.find({ _id: { $in: assigneeIds } }).select('name email staffRole role');
   return new Map(assignees.map((user) => [user._id.toString(), user]));
 }
 
 async function loadAssignee(application) {
   if (!application.assignedTo) return null;
-  return User.findById(application.assignedTo).select('name email staffRole');
+  return User.findById(application.assignedTo).select('name email staffRole role');
 }
 
 function buildApplicationFilter(instituteId, query, extra = {}) {
@@ -621,33 +623,43 @@ export async function assignApplication(
     throw new AppError('Only submitted requests can be assigned', 400);
   }
 
-  const staff = await User.findOne({
+  const assignee = await User.findOne({
     _id: staffUserId,
     instituteId,
-    role: ROLES.STAFF,
+    role: { $in: [ROLES.STAFF, ROLES.ADMIN] },
     isActive: true,
-  }).select('name email staffRole');
+  }).select('name email staffRole role');
 
-  if (!staff) {
-    throw new AppError('Staff member not found', 404);
+  if (!assignee) {
+    throw new AppError('Assignee not found', 404);
   }
 
-  application.assignedTo = staff._id;
+  const isReassign = Boolean(application.assignedTo);
+  application.assignedTo = assignee._id;
   application.assignedAt = new Date();
   application.assignedBy = adminUser.userId;
   await application.save();
 
   const context = await loadApplicationContext(application, instituteId);
+  const reviewLink =
+    assignee.role === ROLES.ADMIN
+      ? `/admin/applications/${application._id.toString()}`
+      : `/staff/applications/${application._id.toString()}`;
 
-  notifyApplicationAssigned(application, context, staff).catch(() => {});
+  notifyApplicationAssigned(application, context, assignee).catch((err) => {
+    logger.error(
+      { err, applicationId: application._id, assigneeId: staffUserId },
+      'Failed to queue assignment email',
+    );
+  });
 
   await createNotification({
     instituteId,
     userId: staffUserId,
     type: 'assignment',
-    title: 'New request assigned',
-    body: `${application.applicantName} — ${context.offering?.name ?? 'Service request'}`,
-    link: `/staff/applications/${application._id.toString()}`,
+    title: isReassign ? 'Request reassigned to you' : 'New request assigned',
+    body: `${application.applicantName} — ${context.offeringName ?? 'Service request'}`,
+    link: reviewLink,
     metadata: { applicationId: application._id.toString() },
   });
 
@@ -672,7 +684,7 @@ export async function assignApplication(
   });
 
   await flushInstituteReadCache(instituteId);
-  return formatApplicationDetail(application, context.service, context.offering, staff, adminUser);
+  return formatApplicationDetail(application, context.service, context.offering, assignee, adminUser);
 }
 
 async function finalizeSlaAction(application, instituteId, { staff, actionLabel }, user) {

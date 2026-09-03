@@ -118,9 +118,15 @@ export function ApplicationReviewContent({
           </p>
           {application.assignedTo ? (
             <p className="mt-3 text-xs text-[#4B6358]">
-              Assigned to <span className="font-semibold text-[#052E1C]">{application.assignedTo.name}</span>
+              Assigned to{' '}
+              <span className="font-semibold text-[#052E1C]">
+                {application.assignedTo.name}
+                {application.assignedTo.role === 'admin' ? ' (Admin)' : ''}
+              </span>
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-3 text-xs text-[#9CA3AF]">Not assigned yet</p>
+          )}
           {application.currentStepDueAt ? (
             <p className={`mt-3 text-xs ${application.slaBreached || application.slaOverdue ? 'font-semibold text-[#B91C1C]' : 'text-[#4B6358]'}`}>
               SLA due {new Date(application.currentStepDueAt).toLocaleString()}

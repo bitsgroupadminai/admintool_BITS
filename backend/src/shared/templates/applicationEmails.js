@@ -2,6 +2,7 @@ import { queueEmailNotification } from '../../core/services/email.service.js';
 import { buildHtmlEmail } from './emailLayout.js';
 import { getAdminPortalUrl, getStudentPortalUrl } from '../helpers/portalUrls.helper.js';
 import { logger } from '../../core/logger/index.js';
+import { ROLES } from '../constants/roles.js';
 
 const STATUS_MESSAGES = {
   submitted: {
@@ -124,7 +125,7 @@ export function buildStatusUpdateEmail(params) {
 }
 
 /**
- * @param {{ staffName: string, applicantName: string, serviceName: string, offeringName: string, instituteName: string, adminPortalUrl: string, applicationId: string }} params
+ * @param {{ staffName: string, applicantName: string, serviceName: string, offeringName: string, instituteName: string, reviewUrl: string }} params
  */
 export function buildAssignmentEmail(params) {
   const {
@@ -133,10 +134,8 @@ export function buildAssignmentEmail(params) {
     serviceName,
     offeringName,
     instituteName,
-    adminPortalUrl,
-    applicationId,
+    reviewUrl,
   } = params;
-  const reviewUrl = `${adminPortalUrl}/staff/applications/${applicationId}`;
   const subject = `${instituteName}: New request assigned to you`;
   const text = [
     `Hello ${staffName},`,
@@ -146,7 +145,9 @@ export function buildAssignmentEmail(params) {
     `Service: ${serviceName}`,
     `Option: ${offeringName}`,
     '',
-    `Review it here: ${reviewUrl}`,
+    'Please review this request and handle every workflow step that requires staff action.',
+    '',
+    `Open the request: ${reviewUrl}`,
     '',
     `— ${instituteName}`,
   ].join('\n');
@@ -157,7 +158,7 @@ export function buildAssignmentEmail(params) {
     html: buildHtmlEmail({
       headline: 'A request was assigned to you',
       intro: `Hello ${staffName},`,
-      body: `Please review the request from <strong>${applicantName}</strong> for <strong>${offeringName}</strong> under <strong>${serviceName}</strong>.`,
+      body: `Please review the request from <strong>${applicantName}</strong> for <strong>${offeringName}</strong> under <strong>${serviceName}</strong>. Handle every workflow step that requires staff action on this request.`,
       ctaLabel: 'Open assigned request',
       ctaUrl: reviewUrl,
       instituteName,
@@ -213,22 +214,35 @@ export async function notifyApplicationStatusChange(application, context, status
   }
 }
 
-export async function notifyApplicationAssigned(application, context, staff) {
+export async function notifyApplicationAssigned(application, context, assignee) {
+  const reviewPath =
+    assignee.role === ROLES.ADMIN
+      ? `/admin/applications/${application._id.toString()}`
+      : `/staff/applications/${application._id.toString()}`;
+  const reviewUrl = `${getAdminPortalUrl()}${reviewPath}`;
+
   const email = buildAssignmentEmail({
-    staffName: staff.name,
+    staffName: assignee.name,
     applicantName: application.applicantName,
     serviceName: context.serviceName,
     offeringName: context.offeringName,
     instituteName: context.instituteName,
-    adminPortalUrl: getAdminPortalUrl(),
-    applicationId: application._id.toString(),
+    reviewUrl,
   });
 
-  return queueEmailNotification({
-    to: staff.email,
-    type: 'application-assigned',
-    ...email,
-  });
+  try {
+    return await queueEmailNotification({
+      to: assignee.email,
+      type: 'application-assigned',
+      ...email,
+    });
+  } catch (err) {
+    logger.error(
+      { err, to: assignee.email, applicationId: application._id },
+      'Failed to queue assignment email',
+    );
+    return null;
+  }
 }
 
 /**

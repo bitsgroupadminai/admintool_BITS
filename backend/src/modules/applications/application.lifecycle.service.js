@@ -9,8 +9,10 @@ import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.
 import {
   notifyApplicationStatusChange,
   notifyApplicationRollback,
+  notifyApplicationAssigned,
 } from '../../shared/templates/applicationEmails.js';
 import { getWorkflowSteps, getCurrentWorkflowStep } from '../../shared/helpers/workflowExecution.helper.js';
+import { loadApplicationContext } from './application.service.js';
 const TERMINAL_STATUSES = new Set([
   APPLICATION_STATUS.ADMITTED,
   APPLICATION_STATUS.REJECTED,
@@ -204,22 +206,30 @@ export async function transferApplication(instituteId, applicationId, staffUserI
     throw new AppError('Cannot transfer a closed request', 400);
   }
 
-  const staff = await User.findOne({
+  const assignee = await User.findOne({
     _id: staffUserId,
     instituteId,
-    role: ROLES.STAFF,
+    role: { $in: [ROLES.STAFF, ROLES.ADMIN] },
     isActive: true,
   });
 
-  if (!staff) {
-    throw new AppError('Staff member not found', 404);
+  if (!assignee) {
+    throw new AppError('Assignee not found', 404);
   }
 
-  application.assignedTo = staff._id;
+  application.assignedTo = assignee._id;
   application.assignedAt = new Date();
   application.assignedBy = actor.userId;
-  appendLifecycleHistory(application, actor, 'transferred', note || `Transferred to ${staff.name}`);
+  appendLifecycleHistory(application, actor, 'transferred', note || `Transferred to ${assignee.name}`);
   await application.save();
+
+  const context = await loadApplicationContext(application, instituteId);
+  const reviewLink =
+    assignee.role === ROLES.ADMIN
+      ? `/admin/applications/${application._id.toString()}`
+      : `/staff/applications/${application._id.toString()}`;
+
+  notifyApplicationAssigned(application, context, assignee).catch(() => {});
 
   await createNotification({
     instituteId,
@@ -227,7 +237,7 @@ export async function transferApplication(instituteId, applicationId, staffUserI
     type: 'assignment',
     title: 'Request transferred to you',
     body: `${application.applicantName} — transferred by ${actor.name}`,
-    link: `/staff/applications/${application._id.toString()}`,
+    link: reviewLink,
     metadata: { applicationId: application._id.toString() },
   });
 

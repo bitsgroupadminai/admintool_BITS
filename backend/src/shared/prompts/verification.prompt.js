@@ -1,3 +1,5 @@
+import { ageFromIsoDate, isDateOfBirthField } from '../helpers/applicantFields.helper.js';
+
 /**
  * Prompts for AI-driven verification of student application uploads and eligibility.
  *
@@ -8,13 +10,22 @@
  */
 
 const SHARED_VERIFICATION_RULES = `GENERAL RULES:
-- Judge ONLY from the provided documents, applicant details, and institute policy excerpts.
+- Judge ONLY from the provided documents, the APPLICANT RECORD, and institute policy excerpts.
 - Never fabricate values, names, marks, or statements not present in the material.
 - If a document is missing, illegible, ambiguous, or you are not confident, use verdict "uncertain" and explain why.
 - "confidence" (0-1) must reflect how certain you are: use >=0.85 only when the evidence is clear and unambiguous.
 - Quote short verbatim evidence in documentExcerpt (<=300 chars) whenever you make a claim about a document.
 - Write reviewer-facing text in plain language. Name the requirement, say what was uploaded, and say why it does or does not meet the requirement.
 - Respond with a single JSON object only. No markdown, no commentary outside the JSON.`;
+
+const IDENTITY_MATCHING_RULES = `IDENTITY MATCHING (required on every government ID, certificate, marksheet, or named document):
+- The APPLICANT RECORD is the student you are verifying. Use their full name, age, date of birth, email, mobile, and every other listed field.
+- Read the name (and date of birth / age / ID number when visible) on the uploaded file and compare it to the APPLICANT RECORD.
+- Minor differences are OK if it is clearly the same person: missing middle name, initials, spelling variants, titles (Mr/Ms/Dr), or different name order.
+- If the document clearly belongs to a different person — a different full name, a different date of birth, or no matching name when a name is clearly printed — set belongsToApplicant = false and verdict = "fail".
+- In that case issue MUST say: "This document appears to belong to [name printed on the document], not [applicant full name]. Upload a document that shows the applicant's own identity."
+- If a name or date of birth is printed and does not match the APPLICANT RECORD, do not pass the document.
+- If no name is visible at all, set belongsToApplicant based on whatever identity clues exist; if you cannot tell, use verdict "uncertain" and say that the name could not be read.`;
 
 export const DOCUMENT_VERIFICATION_SYSTEM_PROMPT = `You are an admissions document verification assistant for a university.
 Your job is to check whether the documents a student uploaded satisfy the programme's required document list.
@@ -46,7 +57,7 @@ Also decide:
 - present: is a file uploaded for this requirement?
 - matchesRequirement: does the content match what the requirement asks for?
 - legible: is it readable / not blank / not corrupted?
-- belongsToApplicant: does the name on the document match the applicant (when a name is visible)?
+- belongsToApplicant: does the identity on the document match the APPLICANT RECORD (name, and DOB/age when visible)?
 - verdict: pass / fail / uncertain for that single document.
 
 Overall verdict:
@@ -54,7 +65,9 @@ Overall verdict:
 - "fail": at least one required document is clearly missing, the wrong type of file, illegible, or belongs to someone else.
 - "uncertain": you cannot confidently determine the above.
 
-summary must be a complete reviewer-facing paragraph: list each problem by document name, say what the file actually is, and say what the student should upload instead. On a pass, briefly confirm each required document was the correct type.
+summary must be a complete reviewer-facing paragraph: list each problem by document name, say what the file actually is, and say what the student should upload instead. On a pass, briefly confirm each required document was the correct type and belongs to the applicant.
+
+${IDENTITY_MATCHING_RULES}
 
 ${SHARED_VERIFICATION_RULES}
 
@@ -80,7 +93,8 @@ Reply with JSON:
 }`;
 
 export const ELIGIBILITY_VERIFICATION_SYSTEM_PROMPT = `You are an admissions eligibility assistant for a university.
-Your ONLY job is to EXTRACT the factual values needed to check eligibility from the student's documents (e.g. marksheets, certificates) and applicant details.
+Your ONLY job is to EXTRACT the factual values needed to check eligibility from the student's documents (e.g. marksheets, certificates) and the APPLICANT RECORD.
+If a supporting document is clearly for a different person than the APPLICANT RECORD, say so in issues and do not treat its marks or fields as the applicant's.
 Do NOT decide final eligibility yourself with respect to thresholds — the system compares your extracted values against the rules deterministically.
 
 For each eligibility field the programme cares about, extract the applicant's actual value:
@@ -96,6 +110,8 @@ Set the overall verdict to reflect extraction quality (not the pass/fail decisio
 summary must name each extracted field and the value you found, plus the document you found it on.
 If a value could not be read, say which field is missing and why (wrong document type, unreadable scan, subject not listed).
 
+${IDENTITY_MATCHING_RULES}
+
 ${SHARED_VERIFICATION_RULES}
 
 Reply with JSON:
@@ -110,12 +126,15 @@ Reply with JSON:
 }`;
 
 export const INTAKE_VERIFICATION_SYSTEM_PROMPT = `You are an admissions intake screening assistant for a university.
-Before a student is authorized to enroll, review the intake document and applicant details against the programme's intake requirements.
+Before a student is authorized to enroll, review the intake document against the APPLICANT RECORD and the programme's intake requirements.
+If the intake document belongs to a different person than the APPLICANT RECORD, recommend "reject" and name both identities.
 
 Decide a recommendation:
 - "approve": the intake document and details clearly satisfy the intake requirement.
 - "reject": the intake document is clearly missing, wrong, or the applicant clearly does not qualify.
 - "manual_review": anything ambiguous or unreadable.
+
+${IDENTITY_MATCHING_RULES}
 
 ${SHARED_VERIFICATION_RULES}
 
@@ -131,7 +150,10 @@ Reply with JSON:
 /**
  * @param {{
  *   applicantName?: string,
+ *   applicantEmail?: string,
+ *   applicantMobile?: string,
  *   applicantDetails?: Array<{ label?: string, fieldKey?: string, value?: unknown }>,
+ *   applicantFields?: Array<{ fieldKey?: string, label?: string, fieldType?: string }>,
  *   requiredDocuments?: Array<{ name: string, required?: boolean, allowedTypes?: string[] }>,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
@@ -139,8 +161,7 @@ Reply with JSON:
  */
 export function buildDocumentVerificationUserPrompt(ctx) {
   return [
-    `APPLICANT: ${ctx.applicantName ?? 'Unknown'}`,
-    formatApplicantDetails(ctx.applicantDetails),
+    formatApplicantRecord(ctx),
     '',
     'REQUIRED DOCUMENTS:',
     (ctx.requiredDocuments ?? [])
@@ -164,7 +185,10 @@ export function buildDocumentVerificationUserPrompt(ctx) {
 /**
  * @param {{
  *   applicantName?: string,
+ *   applicantEmail?: string,
+ *   applicantMobile?: string,
  *   applicantDetails?: Array<{ label?: string, fieldKey?: string, value?: unknown }>,
+ *   applicantFields?: Array<{ fieldKey?: string, label?: string, fieldType?: string }>,
  *   eligibilityRules?: Array<{ field: string, fieldType: string, operator: string, value: unknown }>,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
@@ -172,8 +196,7 @@ export function buildDocumentVerificationUserPrompt(ctx) {
  */
 export function buildEligibilityVerificationUserPrompt(ctx) {
   return [
-    `APPLICANT: ${ctx.applicantName ?? 'Unknown'}`,
-    formatApplicantDetails(ctx.applicantDetails),
+    formatApplicantRecord(ctx),
     '',
     'ELIGIBILITY FIELDS TO EXTRACT (extract the applicant\'s actual value for each field name):',
     (ctx.eligibilityRules ?? [])
@@ -192,7 +215,10 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
 /**
  * @param {{
  *   applicantName?: string,
+ *   applicantEmail?: string,
+ *   applicantMobile?: string,
  *   applicantDetails?: Array<{ label?: string, fieldKey?: string, value?: unknown }>,
+ *   applicantFields?: Array<{ fieldKey?: string, label?: string, fieldType?: string }>,
  *   offeringName?: string,
  *   intakeRequirement?: { label?: string, helpText?: string } | null,
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
@@ -202,8 +228,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
 export function buildIntakeVerificationUserPrompt(ctx) {
   return [
     `PROGRAMME: ${ctx.offeringName ?? 'Unknown'}`,
-    `APPLICANT: ${ctx.applicantName ?? 'Unknown'}`,
-    formatApplicantDetails(ctx.applicantDetails),
+    formatApplicantRecord(ctx),
     '',
     'INTAKE DOCUMENT REQUIREMENT:',
     ctx.intakeRequirement?.label
@@ -219,12 +244,62 @@ export function buildIntakeVerificationUserPrompt(ctx) {
     .join('\n');
 }
 
-function formatApplicantDetails(details) {
-  if (!details?.length) return 'APPLICANT DETAILS: (none provided)';
-  const lines = details
-    .map((item) => `- ${item.label ?? item.fieldKey}: ${formatValue(item.value)}`)
-    .join('\n');
-  return `APPLICANT DETAILS:\n${lines}`;
+function looksLikeDateOfBirth(item, fieldDef) {
+  if (fieldDef && isDateOfBirthField(fieldDef)) return true;
+  const haystack = `${item.fieldKey ?? ''} ${item.label ?? ''}`.toLowerCase();
+  return (
+    haystack.includes('date of birth') ||
+    haystack.includes('date_of_birth') ||
+    haystack.includes('birth date') ||
+    haystack.includes('birthdate') ||
+    haystack.includes('birth_date') ||
+    /\bdob\b/.test(haystack)
+  );
+}
+
+function looksLikeAgeField(item) {
+  const haystack = `${item.fieldKey ?? ''} ${item.label ?? ''}`.toLowerCase();
+  return /(^|[^a-z])age([^a-z]|$)/.test(haystack);
+}
+
+/**
+ * Full identity block sent to every verification prompt.
+ */
+export function formatApplicantRecord(ctx = {}) {
+  const lines = [
+    `- Full name: ${ctx.applicantName?.trim() || '(not provided)'}`,
+    `- Email: ${ctx.applicantEmail?.trim() || '(not provided)'}`,
+    `- Mobile: ${ctx.applicantMobile?.trim() || '(not provided)'}`,
+  ];
+
+  const fieldByKey = new Map(
+    (ctx.applicantFields ?? []).map((field) => [field.fieldKey, field]),
+  );
+  let derivedAge = null;
+  let listedAge = false;
+
+  for (const item of ctx.applicantDetails ?? []) {
+    const label = item.label ?? item.fieldKey;
+    lines.push(`- ${label}: ${formatValue(item.value)}`);
+
+    if (looksLikeAgeField(item) && item.value != null && item.value !== '') {
+      listedAge = true;
+      const numericAge = Number(item.value);
+      if (!Number.isNaN(numericAge)) derivedAge = numericAge;
+    }
+
+    const fieldDef = fieldByKey.get(item.fieldKey);
+    if (looksLikeDateOfBirth(item, fieldDef)) {
+      const age = ageFromIsoDate(String(item.value ?? ''));
+      if (age != null) derivedAge = age;
+    }
+  }
+
+  if (derivedAge != null && !listedAge) {
+    lines.push(`- Age (from date of birth): ${derivedAge}`);
+  }
+
+  return `APPLICANT RECORD (compare every document against this identity):\n${lines.join('\n')}`;
 }
 
 function formatUploadedDocuments(documents) {

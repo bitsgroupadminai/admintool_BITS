@@ -158,7 +158,10 @@ async function evaluateDocumentStep({ application, offering, step, policyExcerpt
 
   const user = buildDocumentVerificationUserPrompt({
     applicantName: application.applicantName,
+    applicantEmail: application.applicantEmail,
+    applicantMobile: application.applicantMobile,
     applicantDetails: application.applicantDetails,
+    applicantFields: offering.applicantFields,
     requiredDocuments,
     documents: docs,
     policyExcerpts,
@@ -229,7 +232,10 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
 
   const user = buildEligibilityVerificationUserPrompt({
     applicantName: application.applicantName,
+    applicantEmail: application.applicantEmail,
+    applicantMobile: application.applicantMobile,
     applicantDetails: application.applicantDetails,
+    applicantFields: offering.applicantFields,
     eligibilityRules,
     documents: docs,
     policyExcerpts,
@@ -383,7 +389,10 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
 
     const user = buildIntakeVerificationUserPrompt({
       applicantName: application.applicantName,
+      applicantEmail: application.applicantEmail,
+      applicantMobile: application.applicantMobile,
       applicantDetails: application.applicantDetails,
+      applicantFields: offering.applicantFields,
       offeringName: offering.name,
       intakeRequirement: intakeRequirement
         ? { label: intakeRequirement.name, helpText: offering.intakeDocument?.helpText }

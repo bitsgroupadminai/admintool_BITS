@@ -11,6 +11,10 @@ import {
   documentVerificationResponseSchema,
   eligibilityVerificationResponseSchema,
 } from '../src/shared/schemas/verification.schemas.js';
+import {
+  buildDocumentVerificationUserPrompt,
+  formatApplicantRecord,
+} from '../src/shared/prompts/verification.prompt.js';
 import { canUserActOnWorkflowStep } from '../src/shared/helpers/workflowExecution.helper.js';
 import { HANDLER_TYPE } from '../src/shared/enums/workflow.enums.js';
 import { ROLES } from '../src/shared/constants/roles.js';
@@ -188,6 +192,39 @@ test('documentVerificationResponseSchema: out-of-range confidence fails', () => 
     summary: 'bad',
   });
   assert.equal(result.success, false);
+});
+
+test('formatApplicantRecord includes name, email, mobile, details, and age from DOB', () => {
+  const record = formatApplicantRecord({
+    applicantName: 'Priya Sharma',
+    applicantEmail: 'priya@example.com',
+    applicantMobile: '+919876543210',
+    applicantDetails: [
+      { fieldKey: 'date_of_birth', label: 'Date of birth', value: '2004-06-15' },
+      { fieldKey: 'city', label: 'City', value: 'Jaipur' },
+    ],
+  });
+  assert.match(record, /Full name: Priya Sharma/);
+  assert.match(record, /Email: priya@example.com/);
+  assert.match(record, /Mobile: \+919876543210/);
+  assert.match(record, /Date of birth: 2004-06-15/);
+  assert.match(record, /City: Jaipur/);
+  assert.match(record, /Age \(from date of birth\): \d+/);
+});
+
+test('document verification prompt includes the full applicant record', () => {
+  const prompt = buildDocumentVerificationUserPrompt({
+    applicantName: 'Aarav Mehta',
+    applicantEmail: 'aarav@example.com',
+    applicantMobile: '+911234567890',
+    applicantDetails: [{ fieldKey: 'age', label: 'Age', value: 19 }],
+    requiredDocuments: [{ name: 'Government ID', required: true }],
+    documents: [],
+  });
+  assert.match(prompt, /APPLICANT RECORD/);
+  assert.match(prompt, /Aarav Mehta/);
+  assert.match(prompt, /aarav@example.com/);
+  assert.match(prompt, /Age: 19/);
 });
 
 test('eligibilityVerificationResponseSchema: extracted fields parse', () => {

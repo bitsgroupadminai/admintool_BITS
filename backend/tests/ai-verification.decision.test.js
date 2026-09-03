@@ -9,6 +9,7 @@ import {
   mergeExtractedFields,
   evaluateEligibilityByDocument,
   mergeEligibilityProfile,
+  hydrateEligibilityDecision,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
 import { evaluateEligibilityRules } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
@@ -394,6 +395,80 @@ test('evaluateEligibilityByDocument: Class 10 skips 10+2 qualification; photos a
   );
   assert.equal(docs[1].eligibilityResult.eligible, true);
   assert.equal(docs[1].verdict, 'passed');
+});
+
+test('PCM is a subset match and Class 12 counts as 10+2', () => {
+  const evaluation = evaluateEligibilityRules(bitsRules, {
+    qualification: 'Class XII (10+2)',
+    customFields: {
+      subjects:
+        'English Language & Literature; Hindi Course-B; Mathematics Standard; Science; Social Science; Information Technology; English Core; Physics; Chemistry; Mathematics; Computer Science; Physical Education',
+    },
+  });
+  assert.equal(evaluation.results.find((result) => result.field === 'Qualification').status, 'passed');
+  assert.equal(evaluation.results.find((result) => result.field === 'Subjects').status, 'passed');
+});
+
+test('hydrateEligibilityDecision rebuilds Class 10, Class 12, and BITSAT cards', () => {
+  const hydrated = hydrateEligibilityDecision(
+    {
+      handler: 'eligibility_screening',
+      verdict: 'fail',
+      extractedFields: [
+        {
+          field: 'Qualification',
+          value: null,
+          documentExcerpt:
+            'Secondary School Examination (Class X) Sample Marksheet; Senior Secondary Examination (Class XII) Sample Marksheet',
+        },
+        {
+          field: 'Subjects',
+          value:
+            'English Language & Literature; Hindi Course-B; Mathematics Standard; Science; Social Science; Information Technology / English Core; Physics; Chemistry; Mathematics; Computer Science; Physical Education',
+        },
+      ],
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [
+        { requirementName: 'Class 10 marksheet' },
+        { requirementName: 'Class 12 marksheet' },
+        { requirementName: 'BITSAT scorecard' },
+        { requirementName: 'Passport-size photograph' },
+      ],
+    },
+  );
+
+  const names = hydrated.perDocument.map((doc) => doc.requirementName);
+  assert.deepEqual(names.sort(), ['BITSAT scorecard', 'Class 10 marksheet', 'Class 12 marksheet'].sort());
+
+  const class12 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  assert.equal(class12.qualification, 'Class XII (10+2)');
+  assert.equal(
+    class12.eligibilityResult.results.find((result) => result.field === 'Qualification').status,
+    'passed',
+  );
+  assert.equal(
+    class12.eligibilityResult.results.find((result) => result.field === 'Subjects').status,
+    'passed',
+  );
+  assert.ok(class12.subjects.some((subject) => /physics/i.test(subject.name)));
+
+  const class10 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 10 marksheet');
+  assert.equal(
+    class10.eligibilityResult.results.find((result) => result.field === 'Qualification').status,
+    'not_applicable',
+  );
+  assert.ok(class10.subjects.some((subject) => /science/i.test(subject.name)));
+
+  assert.equal(
+    hydrated.eligibilityResult.results.find((result) => result.field === 'Qualification').status,
+    'passed',
+  );
+  assert.equal(
+    hydrated.eligibilityResult.results.find((result) => result.field === 'Subjects').status,
+    'passed',
+  );
 });
 
 test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {

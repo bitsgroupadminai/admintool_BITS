@@ -43,9 +43,9 @@ import {
   INTERNAL_ACTION,
   decideDocumentAction,
   decideEligibilityAction,
-  evaluateEligibilityByDocument,
   mergeExtractedFields,
   mergeEligibilityProfile,
+  hydrateEligibilityDecision,
 } from './ai-verification.decision.js';
 
 export { isAiVerificationEnabled } from './ai-verification.config.js';
@@ -301,23 +301,34 @@ async function evaluateEligibilityStep({
     schema: eligibilityVerificationResponseSchema,
   });
 
-  const perDocument = evaluateEligibilityByDocument(raw.perDocument ?? [], eligibilityRules);
   const extractedFields = mergeExtractedFields(raw.perDocument ?? [], raw.extractedFields ?? []);
-  const profile = mergeEligibilityProfile(raw.perDocument ?? [], raw.extractedFields ?? []);
+  const hydrated = hydrateEligibilityDecision(
+    {
+      handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
+      verdict: raw.verdict,
+      perDocument: raw.perDocument ?? [],
+      extractedFields,
+      raw,
+    },
+    {
+      eligibilityRules,
+      documents: application.documents ?? [],
+    },
+  );
 
   // Deterministic comparison against the actual rules using AI-extracted values.
   const { action, evaluation } = decideEligibilityAction({
-    verdict: raw.verdict,
+    verdict: hydrated.verdict,
     confidence: raw.confidence,
     extractedFields,
     eligibilityRules,
     thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
-    profile,
+    profile: mergeEligibilityProfile(hydrated.perDocument, extractedFields),
   });
 
   const comparisonIssues = formatEligibilityComparisonIssues(evaluation, extractedFields);
-  const issues = comparisonIssues.length ? comparisonIssues : raw.issues ?? [];
-  const summary = buildEligibilitySummary(evaluation, raw.summary, issues);
+  const issues = comparisonIssues.length ? comparisonIssues : hydrated.issues ?? [];
+  const summary = buildEligibilitySummary(evaluation, hydrated.summary);
 
   return {
     action,
@@ -326,15 +337,11 @@ async function evaluateEligibilityStep({
     decision: {
       handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
       action: mapAction(action),
-      verdict: !evaluation.eligible
-        ? 'fail'
-        : (evaluation.results ?? []).some((result) => result.status === 'unchecked')
-          ? 'uncertain'
-          : raw.verdict,
+      verdict: hydrated.verdict,
       confidence: raw.confidence,
       summary,
       issues,
-      perDocument,
+      perDocument: hydrated.perDocument,
       extractedFields,
       eligibilityResult: evaluation,
       raw,

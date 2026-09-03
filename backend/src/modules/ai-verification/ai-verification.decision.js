@@ -1,6 +1,14 @@
 import {
   evaluateEligibilityRules,
   isAcademicEligibilityDocument,
+  parseSubjectEntries,
+  inferQualificationLabel,
+  isClass12DocumentName,
+  isClass10DocumentName,
+  isBitsatDocumentName,
+  subjectsForDocument,
+  parseNumericValue,
+  normalizeFieldKey,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
 
 /**
@@ -96,10 +104,23 @@ export function buildProfileFromDocument(doc = {}) {
   }
 
   const profile = buildProfileFromExtractedFields(extractedFields);
-  profile.qualification = doc.qualification || profile.customFields.qualification || null;
-  profile.aggregate = doc.aggregate ?? profile.customFields.aggregate ?? null;
+  profile.evidenceText = [
+    doc.requirementName,
+    doc.qualification,
+    profile.evidenceText,
+  ]
+    .filter(Boolean)
+    .join(' ; ');
+  profile.qualification =
+    doc.qualification ||
+    profile.customFields.qualification ||
+    inferQualificationLabel(profile.evidenceText) ||
+    (isClass12DocumentName(doc.requirementName) ? 'Class XII (10+2)' : null);
+  profile.aggregate = doc.aggregate ?? profile.customFields.aggregate ?? profile.customFields['aggregate requirement'] ?? null;
   profile.examScore = doc.examScore ?? profile.customFields.bitsat ?? null;
-  profile.subjects = doc.subjects ?? [];
+  profile.subjects = (doc.subjects ?? []).length
+    ? doc.subjects
+    : parseSubjectEntries(profile.customFields.subjects);
   return profile;
 }
 
@@ -155,11 +176,176 @@ export function buildProfileFromExtractedFields(fields = []) {
       customFields[key] = field.value;
     }
   }
+  const evidenceText = fields
+    .flatMap((field) => [field.field, field.value, field.documentExcerpt])
+    .filter((item) => item != null && item !== '')
+    .join(' ; ');
   return {
     programmeName: null,
     enrollmentStatus: null,
-    qualification: null,
+    qualification: inferQualificationLabel(evidenceText) || customFields.qualification || null,
     customFields,
+    evidenceText,
+  };
+}
+
+function collectDecisionFields(decision = {}) {
+  return [
+    ...(decision.extractedFields ?? []),
+    ...((decision.perDocument ?? []).flatMap((doc) => doc.extractedFields ?? [])),
+    ...((decision.raw?.extractedFields ?? [])),
+    ...((decision.raw?.perDocument ?? []).flatMap((doc) => doc.extractedFields ?? [])),
+  ];
+}
+
+function documentBucket(requirementName) {
+  if (isBitsatDocumentName(requirementName)) return 'bitsat';
+  if (isClass12DocumentName(requirementName)) return 'class12';
+  if (isClass10DocumentName(requirementName)) return 'class10';
+  return String(requirementName ?? '')
+    .trim()
+    .toLowerCase();
+}
+
+function parseNumericFromFields(fields, matcher) {
+  for (const field of fields) {
+    const blob = `${field.field ?? ''} ${field.value ?? ''} ${field.documentExcerpt ?? ''}`;
+    if (!matcher.test(blob)) continue;
+    const fromValue = parseNumericValue(field.value);
+    if (fromValue != null) return fromValue;
+    const fromExcerpt = parseNumericValue(field.documentExcerpt);
+    if (fromExcerpt != null) return fromExcerpt;
+  }
+  return null;
+}
+
+function allSubjectEntries(decision, fields) {
+  const fromDocs = [
+    ...(decision.perDocument ?? []),
+    ...(decision.raw?.perDocument ?? []),
+  ].flatMap((doc) => doc.subjects ?? []);
+  if (fromDocs.length) return parseSubjectEntries(fromDocs);
+  const subjectValues = fields
+    .filter((field) => {
+      const key = normalizeFieldKey(field.field);
+      return /subject/.test(key) && !/threshold|mark|score/.test(key);
+    })
+    .map((field) => field.value)
+    .filter((value) => value != null && value !== '');
+  return parseSubjectEntries(subjectValues.join('; '));
+}
+
+function seedAcademicDocuments(decision = {}, uploadedDocuments = [], fields = []) {
+  const seeded = new Map();
+
+  const remember = (requirementName, extra = {}) => {
+    const name = String(requirementName ?? '').trim();
+    if (!name || !isAcademicEligibilityDocument(name, extra)) return;
+    const bucket = documentBucket(name);
+    const current = seeded.get(bucket);
+    if (!current) {
+      seeded.set(bucket, { requirementName: name, ...extra });
+      return;
+    }
+    seeded.set(bucket, {
+      ...current,
+      ...extra,
+      requirementName: current.requirementName || name,
+      extractedFields: [...(current.extractedFields ?? []), ...(extra.extractedFields ?? [])],
+      subjects: (current.subjects?.length ? current.subjects : extra.subjects) ?? [],
+    });
+  };
+
+  for (const doc of [...(decision.perDocument ?? []), ...(decision.raw?.perDocument ?? [])]) {
+    remember(doc.requirementName, doc);
+  }
+  for (const uploaded of uploadedDocuments) {
+    remember(uploaded.requirementName || uploaded.name);
+  }
+  for (const field of fields) {
+    for (const piece of String(field.documentExcerpt ?? '').split(/[;]/)) {
+      const label = piece.trim();
+      if (label) remember(label);
+    }
+  }
+
+  return [...seeded.values()];
+}
+
+function fillDocumentExtraction(doc, decision, fields) {
+  const localEvidence = [
+    doc.requirementName,
+    doc.qualification,
+    ...(doc.extractedFields ?? []).flatMap((field) => [field.value, field.documentExcerpt]),
+  ]
+    .filter((item) => item != null && item !== '')
+    .join(' ; ');
+
+  const qualification =
+    doc.qualification ||
+    inferQualificationLabel(localEvidence) ||
+    inferQualificationLabel(doc.requirementName) ||
+    (isClass12DocumentName(doc.requirementName) ? 'Class XII (10+2)' : '') ||
+    (isClass10DocumentName(doc.requirementName) ? 'Class X' : '');
+
+  const ownSubjects = doc.subjects?.length ? parseSubjectEntries(doc.subjects) : [];
+  const subjects = ownSubjects.length
+    ? ownSubjects
+    : isBitsatDocumentName(doc.requirementName)
+      ? []
+      : subjectsForDocument(allSubjectEntries(decision, fields), doc.requirementName);
+
+  const aggregate =
+    doc.aggregate ??
+    parseNumericFromFields(doc.extractedFields ?? [], /aggregate|percentage|overall|total/i);
+  const examScore =
+    doc.examScore ??
+    (isBitsatDocumentName(doc.requirementName)
+      ? parseNumericFromFields([...(doc.extractedFields ?? []), ...fields], /bitsat|entrance|exam score/i)
+      : null);
+
+  return {
+    ...doc,
+    relevantToEligibility: true,
+    qualification,
+    aggregate,
+    examScore,
+    subjects,
+  };
+}
+
+export function hydrateEligibilityDecision(decision = {}, { eligibilityRules = [], documents = [] } = {}) {
+  if (decision.handler && decision.handler !== 'eligibility_screening') {
+    return decision;
+  }
+
+  const fields = collectDecisionFields(decision);
+  const seeded = seedAcademicDocuments(decision, documents, fields).map((doc) =>
+    fillDocumentExtraction(doc, decision, fields),
+  );
+  const perDocument = evaluateEligibilityByDocument(seeded, eligibilityRules);
+  const profile = mergeEligibilityProfile(seeded, fields);
+  const evaluation = evaluateEligibilityRules(eligibilityRules, profile);
+  const hasUnchecked = (evaluation.results ?? []).some((result) => result.status === 'unchecked');
+
+  let summary;
+  if (!evaluation.eligible) {
+    summary = 'The extracted values do not meet one or more eligibility criteria.';
+  } else if (hasUnchecked) {
+    summary = 'Some eligibility values could not be confirmed from the uploaded documents.';
+  } else {
+    summary = 'The extracted values meet the configured eligibility criteria.';
+  }
+
+  return {
+    ...decision,
+    summary,
+    issues: (evaluation.results ?? [])
+      .filter((result) => result.status === 'failed' || result.status === 'unchecked')
+      .map((result) => result.message),
+    perDocument,
+    eligibilityResult: evaluation,
+    verdict: !evaluation.eligible ? 'fail' : hasUnchecked ? 'uncertain' : decision.verdict || 'pass',
   };
 }
 
@@ -177,8 +363,7 @@ export function buildProfileFromExtractedFields(fields = []) {
  * @returns {{ action: string, evaluation: object }}
  */
 function isClass10Name(requirementName) {
-  const name = String(requirementName ?? '').toLowerCase();
-  return /class\s*10|\bx\b|secondary/.test(name) && !/12|xii|senior|\+2/.test(name);
+  return isClass10DocumentName(requirementName);
 }
 
 export function mergeEligibilityProfile(perDocument = [], fallbackFields = []) {

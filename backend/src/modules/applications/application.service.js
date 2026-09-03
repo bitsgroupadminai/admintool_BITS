@@ -38,7 +38,7 @@ import {
 import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
 import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
 import { isAiVerificationEnabled } from '../ai-verification/ai-verification.config.js';
-import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
+import { hydrateEligibilityDecision } from '../ai-verification/ai-verification.decision.js';
 import { HANDLER_TYPE, AI_HANDLER, OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
 import { logger } from '../../core/logger/index.js';
@@ -156,30 +156,76 @@ async function getInstituteApplication(instituteId, applicationId) {
  * newest first, for staff/admin review context.
  */
 export async function loadApplicationAiDecisions(instituteId, applicationId) {
-  const decisions = await AiDecision.find({
-    instituteId,
-    applicationId,
-    handler: { $ne: AI_DECISION_HANDLER.INTAKE_AUTHORIZATION },
-  })
-    .sort({ createdAt: -1 })
-    .limit(20)
-    .lean();
+  const [decisions, application] = await Promise.all([
+    AiDecision.find({
+      instituteId,
+      applicationId,
+      handler: { $ne: AI_DECISION_HANDLER.INTAKE_AUTHORIZATION },
+    })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    Application.findOne({ _id: applicationId, instituteId }).select('documents offeringId'),
+  ]);
 
-  return decisions.map((decision) => ({
-    id: decision._id.toString(),
-    stepId: decision.stepId ?? null,
-    stepName: decision.stepName ?? '',
-    handler: decision.handler,
-    action: decision.action,
-    verdict: decision.verdict ?? null,
-    confidence: decision.confidence ?? null,
-    summary: decision.summary ?? '',
-    issues: decision.issues ?? [],
-    perDocument: decision.perDocument ?? [],
-    extractedFields: decision.extractedFields ?? [],
-    eligibilityResult: decision.eligibilityResult ?? null,
-    createdAt: decision.createdAt,
+  const offering = application
+    ? await Offering.findOne({ _id: application.offeringId, instituteId }).select(
+        'eligibilityRules documentRequirements',
+      )
+    : null;
+  const eligibilityRules = (offering?.eligibilityRules ?? []).map((rule) => ({
+    field: rule.field,
+    fieldType: rule.fieldType,
+    operator: rule.operator,
+    value: rule.value,
   }));
+  const documents = [
+    ...(application?.documents ?? []),
+    ...(offering?.documentRequirements ?? []).map((requirement) => ({
+      requirementName: requirement.name,
+    })),
+  ];
+
+  return decisions.map((decision) => {
+    const formatted = {
+      id: decision._id.toString(),
+      stepId: decision.stepId ?? null,
+      stepName: decision.stepName ?? '',
+      handler: decision.handler,
+      action: decision.action,
+      verdict: decision.verdict ?? null,
+      confidence: decision.confidence ?? null,
+      summary: decision.summary ?? '',
+      issues: decision.issues ?? [],
+      perDocument: decision.perDocument ?? [],
+      extractedFields: decision.extractedFields ?? [],
+      eligibilityResult: decision.eligibilityResult ?? null,
+      createdAt: decision.createdAt,
+      raw: decision.raw ?? null,
+    };
+
+    if (decision.handler !== AI_DECISION_HANDLER.ELIGIBILITY_SCREENING) {
+      const { raw, ...rest } = formatted;
+      return rest;
+    }
+
+    const hydrated = hydrateEligibilityDecision(formatted, { eligibilityRules, documents });
+    return {
+      id: hydrated.id,
+      stepId: hydrated.stepId,
+      stepName: hydrated.stepName,
+      handler: hydrated.handler,
+      action: hydrated.action,
+      verdict: hydrated.verdict,
+      confidence: hydrated.confidence,
+      summary: hydrated.summary,
+      issues: hydrated.issues,
+      perDocument: hydrated.perDocument,
+      extractedFields: hydrated.extractedFields,
+      eligibilityResult: hydrated.eligibilityResult,
+      createdAt: hydrated.createdAt,
+    };
+  });
 }
 
 async function getAssignedApplication(instituteId, applicationId, staffUserId) {
@@ -372,7 +418,7 @@ export async function getStaffAssignmentSummary(instituteId, staffUserId) {
 export async function getApplicationDetail(instituteId, applicationId, user = null) {
   return cachedRead(
     cacheNs.APPLICATION_DETAIL,
-    [instituteId, applicationId, user?.userId, user?.role],
+    [instituteId, applicationId, user?.userId, user?.role, 'elig-v3'],
     async () => {
       const application = await getInstituteApplication(instituteId, applicationId);
       const [context, assignee, aiDecisions] = await Promise.all([
@@ -409,7 +455,7 @@ export async function getAssignedApplicationDetail(
 ) {
   return cachedRead(
     cacheNs.APPLICATION_ASSIGNED_DETAIL,
-    [instituteId, applicationId, staffUserId, user?.userId],
+    [instituteId, applicationId, staffUserId, user?.userId, 'elig-v3'],
     async () => {
       const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
       const [context, assignee, aiDecisions] = await Promise.all([

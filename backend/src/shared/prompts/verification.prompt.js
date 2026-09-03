@@ -139,11 +139,13 @@ Do NOT decide final eligibility yourself with respect to thresholds — the syst
 ${allowSampleDocuments ? 'Extract values from unofficial and AI-generated sample documents the same way you would from real ones. Do not refuse extraction because a document looks synthetic or unofficial.\n' : ''}
 Extract from EACH uploaded document on its own. Never mix Class 10, Class 12, and entrance-test values.
 
+Class 12 / Senior Secondary / XII is 10+2. If this file is a Class 12 marksheet, set qualification to "Class XII (10+2)" and never leave it empty.
+
 For marksheets and scorecards:
-- qualification: "Class X", "Class XII", "10+2", or the exam title printed on that file.
+- qualification: "Class X", "Class XII (10+2)", or the exam title printed on that file.
 - aggregate: the overall percentage or total on THAT file, as a number (e.g. 89). Not the words "Aggregate Requirement".
 - examScore: entrance-test total (e.g. BITSAT) as a number, only if this file is that scorecard.
-- subjects: every subject printed on THAT file, each with name, numeric score, and grade if shown.
+- subjects: every subject printed on THAT file, each with name, numeric score, and grade if shown. Never omit the marks.
 - relevantToEligibility: true for marksheets / scorecards / BITSAT; false for photos, signatures, and ID cards.
 
 Also fill extractedFields using the exact admin rule names:

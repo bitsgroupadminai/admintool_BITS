@@ -7,6 +7,112 @@ export function normalizeFieldKey(field) {
     .replace(/[^a-z0-9]+/g, ' ');
 }
 
+export function parseSubjectEntries(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (item && typeof item === 'object' && item.name) {
+        return [
+          {
+            name: String(item.name).trim(),
+            score: parseNumericValue(item.score),
+            maxScore: parseNumericValue(item.maxScore),
+            grade: item.grade ? String(item.grade) : '',
+          },
+        ];
+      }
+      return parseSubjectEntries(item);
+    });
+  }
+
+  const text = String(value ?? '').trim();
+  if (!text) return [];
+
+  return text
+    .split(/[,;|]+/)
+    .flatMap((part) => part.split(/\s+\/\s+/))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const scored = part.match(
+        /^(.+?)\s*[:=\-]\s*(\d{1,3}(?:\.\d+)?)(?:\s*\/\s*(\d{2,3}))?(?:\s*[\(\[]?([A-D][1-3])[\)\]]?)?$/i,
+      );
+      if (scored) {
+        return {
+          name: scored[1].trim(),
+          score: Number(scored[2]),
+          maxScore: scored[3] ? Number(scored[3]) : null,
+          grade: scored[4] ?? '',
+        };
+      }
+      const trailing = part.match(/^(.+?)\s+(\d{1,3}(?:\.\d+)?)(?:\s*\/\s*(\d{2,3}))?(?:\s+([A-D][1-3]))?$/i);
+      if (trailing && /[a-z]/i.test(trailing[1])) {
+        return {
+          name: trailing[1].trim(),
+          score: Number(trailing[2]),
+          maxScore: trailing[3] ? Number(trailing[3]) : null,
+          grade: trailing[4] ?? '',
+        };
+      }
+      const graded = part.match(/^(.+?)\s+([A-D][1-3])$/i);
+      if (graded) {
+        return { name: graded[1].trim(), score: null, maxScore: null, grade: graded[2] };
+      }
+      return { name: part, score: null, maxScore: null, grade: '' };
+    });
+}
+
+export function inferQualificationLabel(text) {
+  const tags = qualificationTags(text);
+  if (tags.has('plus2')) return 'Class XII (10+2)';
+  if (tags.has('class10')) return 'Class X';
+  if (tags.has('bitsat')) return 'BITSAT';
+  return '';
+}
+
+export function isClass12DocumentName(requirementName) {
+  const name = String(requirementName ?? '').toLowerCase();
+  return /class\s*12|12th|\bxii\b|10\s*\+\s*2|senior secondary|higher secondary/.test(name);
+}
+
+export function isClass10DocumentName(requirementName) {
+  const name = String(requirementName ?? '').toLowerCase();
+  return /class\s*10|10th|\bx\b|matric|secondary school/.test(name) && !isClass12DocumentName(name);
+}
+
+export function isBitsatDocumentName(requirementName) {
+  return /bitsat|entrance/.test(String(requirementName ?? '').toLowerCase());
+}
+
+export function subjectsForDocument(subjects = [], requirementName) {
+  if (!subjects.length) return [];
+  if (isBitsatDocumentName(requirementName)) {
+    return subjects.filter((subject) =>
+      /physics|chemistry|math|english|logical|biology/.test(String(subject.name ?? '').toLowerCase()),
+    );
+  }
+  const class10 = subjects.filter((subject) => isLikelyClass10Subject(subject.name));
+  const class12 = subjects.filter((subject) => isLikelyClass12Subject(subject.name));
+  if (isClass10DocumentName(requirementName)) {
+    return class10.length ? class10 : subjects.filter((subject) => !isLikelyClass12Subject(subject.name));
+  }
+  if (isClass12DocumentName(requirementName)) {
+    return class12.length ? class12 : subjects.filter((subject) => !isLikelyClass10Subject(subject.name));
+  }
+  return subjects;
+}
+
+function isLikelyClass10Subject(name) {
+  const text = String(name ?? '').toLowerCase();
+  return /language|literature|hindi course|mathematics standard|math standard|social science|^science$|information technology/.test(
+    text,
+  );
+}
+
+function isLikelyClass12Subject(name) {
+  const text = String(name ?? '').toLowerCase();
+  return /physics|chemistry|english core|physical education|computer science|^mathematics$|^maths$/.test(text);
+}
+
 function looksLikeQualificationField(key) {
   return /qualification|degree|education|10\s*\+\s*2/.test(key);
 }
@@ -70,10 +176,10 @@ function hasRequiredSubjects(actual, expected) {
 function qualificationTags(value) {
   const text = String(value ?? '').toLowerCase();
   const tags = new Set();
-  if (/10\s*\+\s*2|\+2|class\s*12|xii|senior secondary|higher secondary/.test(text)) {
+  if (/10\s*\+\s*2|\+2|class\s*12|12th|\bxii\b|senior secondary|higher secondary/.test(text)) {
     tags.add('plus2');
   }
-  if (/class\s*10|\bx\b/.test(text) && !/12|xii|senior/.test(text)) {
+  if ((/class\s*10|10th|\bx\b|matric/.test(text) || /secondary school/.test(text)) && !/12|xii|senior|higher/.test(text)) {
     tags.add('class10');
   }
   if (/bitsat/.test(text)) tags.add('bitsat');
@@ -110,9 +216,10 @@ function resolveStudentValue(field, profile) {
 
   if (looksLikeQualificationField(key)) {
     return (
-      profile.qualification ??
-      profile.customFields?.[key] ??
-      profile.customFields?.qualification ??
+      profile.qualification ||
+      profile.customFields?.[key] ||
+      profile.customFields?.qualification ||
+      inferQualificationLabel(profile.evidenceText) ||
       null
     );
   }
@@ -170,7 +277,9 @@ export function isAcademicEligibilityDocument(requirementName, doc = {}) {
   if (/photo|photograph|signature|aadhaar|aadhar|id proof|passport-size|identity/.test(name)) {
     return false;
   }
-  return /marksheet|marks|scorecard|bitsat|class\s*10|class\s*12|10\s*\+\s*2|certificate/.test(name);
+  return /marksheet|marks sheet|scorecard|bitsat|class\s*10|class\s*12|10th|12th|10\s*\+\s*2|certificate|senior secondary|secondary school/.test(
+    name,
+  );
 }
 
 export function ruleAppliesToDocument(rule, requirementName) {
@@ -187,7 +296,7 @@ export function ruleAppliesToDocument(rule, requirementName) {
   }
 
   if (looksLikeQualificationField(field) && qualificationTags(expected).has('plus2')) {
-    return /12|xii|\+2|senior/.test(name);
+    return isClass12DocumentName(name) || /12|xii|\+2|senior/.test(name);
   }
 
   if (looksLikeQualificationField(field) && qualificationTags(expected).has('class10')) {
@@ -199,7 +308,7 @@ export function ruleAppliesToDocument(rule, requirementName) {
   }
 
   if (looksLikeSubjectsField(field) && !looksLikeThresholdField(field)) {
-    return /12|xii|\+2|senior|bitsat|graduation|degree/.test(name);
+    return /12|xii|\+2|senior|graduation|degree/.test(name);
   }
 
   return isAcademicEligibilityDocument(name);

@@ -244,7 +244,9 @@ function EligibilityScreeningView({ decision }) {
       <div className={`rounded-xl border px-4 py-3 ${overall.className}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide">Overall eligibility</p>
         <p className="mt-1 text-sm font-semibold">{overall.label}</p>
-        {decision.summary ? <p className="mt-1 text-xs leading-relaxed">{decision.summary}</p> : null}
+        {decision.summary && decision.summary.length < 240 ? (
+          <p className="mt-1 text-xs leading-relaxed">{decision.summary}</p>
+        ) : null}
       </div>
 
       {documents.length > 0 ? (

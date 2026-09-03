@@ -8,7 +8,9 @@ import {
   buildProfileFromExtractedFields,
   mergeExtractedFields,
   evaluateEligibilityByDocument,
+  mergeEligibilityProfile,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
+import { evaluateEligibilityRules } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
   documentVerificationResponseSchema,
   eligibilityVerificationResponseSchema,
@@ -311,10 +313,111 @@ test('eligibilityVerificationResponseSchema: per-document extractions parse', ()
     perDocument: [
       {
         requirementName: 'Class 12 marksheet',
+        qualification: 'Class XII',
+        aggregate: '82%',
+        subjects: [{ name: 'Physics', score: '85', grade: 'A2' }],
         extractedFields: [{ field: 'Aggregate Requirement', value: 82, documentExcerpt: '82%' }],
       },
     ],
   });
   assert.equal(parsed.perDocument[0].requirementName, 'Class 12 marksheet');
   assert.equal(parsed.perDocument[0].extractedFields[0].value, 82);
+  assert.equal(parsed.perDocument[0].aggregate, 82);
+  assert.equal(parsed.perDocument[0].subjects[0].score, 85);
+});
+
+const bitsRules = [
+  { field: 'Qualification', fieldType: 'text', operator: 'eq', value: '10+2 or equivalent' },
+  { field: 'Subjects', fieldType: 'text', operator: 'eq', value: 'Physics, Chemistry, Mathematics' },
+  { field: 'Aggregate Requirement', fieldType: 'numeric', operator: 'gte', value: 75 },
+  { field: 'Subject Threshold', fieldType: 'numeric', operator: 'gte', value: 60 },
+];
+
+test('evaluateEligibilityRules: qualification and PCM match from structured fields', () => {
+  const evaluation = evaluateEligibilityRules(bitsRules, {
+    qualification: 'Class XII / Senior Secondary',
+    aggregate: 81,
+    subjects: [
+      { name: 'Physics', score: 78, grade: 'A2' },
+      { name: 'Chemistry', score: 72, grade: 'B1' },
+      { name: 'Mathematics', score: 88, grade: 'A1' },
+      { name: 'English', score: 70, grade: 'B1' },
+    ],
+  });
+  assert.equal(evaluation.eligible, true);
+  assert.equal(evaluation.results.find((result) => result.field === 'Subjects').status, 'passed');
+  assert.equal(evaluation.results.find((result) => result.field === 'Subject Threshold').status, 'passed');
+  assert.equal(
+    evaluation.results.find((result) => result.field === 'Subject Threshold').scoreChecks.length,
+    3,
+  );
+});
+
+test('evaluateEligibilityByDocument: Class 10 skips 10+2 qualification; photos are ignored', () => {
+  const docs = evaluateEligibilityByDocument(
+    [
+      {
+        requirementName: 'Passport-size photograph',
+        extractedFields: [{ field: 'Qualification', value: 'photo' }],
+      },
+      {
+        requirementName: 'Class 10 marksheet',
+        qualification: 'Class X',
+        aggregate: 89,
+        subjects: [
+          { name: 'Science', score: 90, grade: 'A1' },
+          { name: 'Mathematics', score: 92, grade: 'A1' },
+        ],
+      },
+      {
+        requirementName: 'Class 12 marksheet',
+        qualification: 'Class XII',
+        aggregate: 76,
+        subjects: [
+          { name: 'Physics', score: 70, grade: 'B1' },
+          { name: 'Chemistry', score: 68, grade: 'B1' },
+          { name: 'Mathematics', score: 80, grade: 'A2' },
+        ],
+      },
+    ],
+    bitsRules,
+  );
+  assert.equal(docs.length, 2);
+  assert.equal(docs[0].requirementName, 'Class 10 marksheet');
+  assert.equal(
+    docs[0].eligibilityResult.results.find((result) => result.field === 'Qualification').status,
+    'not_applicable',
+  );
+  assert.equal(
+    docs[0].eligibilityResult.results.find((result) => result.field === 'Subjects').status,
+    'not_applicable',
+  );
+  assert.equal(docs[1].eligibilityResult.eligible, true);
+  assert.equal(docs[1].verdict, 'passed');
+});
+
+test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {
+  const profile = mergeEligibilityProfile([
+    {
+      requirementName: 'Class 10 marksheet',
+      qualification: 'Class X',
+      aggregate: 91,
+      subjects: [{ name: 'Science', score: 90 }],
+    },
+    {
+      requirementName: 'Class 12 marksheet',
+      qualification: 'Class XII',
+      aggregate: 76,
+      subjects: [{ name: 'Physics', score: 70 }, { name: 'Chemistry', score: 68 }, { name: 'Mathematics', score: 80 }],
+    },
+    {
+      requirementName: 'BITSAT scorecard',
+      examScore: 312,
+    },
+  ]);
+  assert.equal(profile.qualification, 'Class XII');
+  assert.equal(profile.aggregate, 76);
+  assert.equal(profile.examScore, 312);
+  assert.equal(profile.subjects.length, 3);
+  assert.equal(profile.subjects[0].name, 'Physics');
 });

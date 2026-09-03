@@ -137,21 +137,27 @@ Your ONLY job is to EXTRACT the factual values needed to check eligibility from 
 If a supporting document is clearly for a different person than the APPLICANT RECORD, say so in issues and do not treat its marks or fields as the applicant's.
 Do NOT decide final eligibility yourself with respect to thresholds — the system compares your extracted values against the rules deterministically.
 ${allowSampleDocuments ? 'Extract values from unofficial and AI-generated sample documents the same way you would from real ones. Do not refuse extraction because a document looks synthetic or unofficial.\n' : ''}
-Extract values SEPARATELY for each uploaded document. Never copy a value from one file onto another.
-For each document, only include fields that are actually visible on that file. If a field is not on that document, omit it or use null.
+Extract from EACH uploaded document on its own. Never mix Class 10, Class 12, and entrance-test values.
 
-- Use the exact field name given in the rules list.
-- Use the exact requirementName from the uploaded documents list.
-- value: the extracted number/text/boolean, or null if it is not present on that document.
-- documentExcerpt: verbatim proof from THAT document, including the subject/mark line when marks are involved.
+For marksheets and scorecards:
+- qualification: "Class X", "Class XII", "10+2", or the exam title printed on that file.
+- aggregate: the overall percentage or total on THAT file, as a number (e.g. 89). Not the words "Aggregate Requirement".
+- examScore: entrance-test total (e.g. BITSAT) as a number, only if this file is that scorecard.
+- subjects: every subject printed on THAT file, each with name, numeric score, and grade if shown.
+- relevantToEligibility: true for marksheets / scorecards / BITSAT; false for photos, signatures, and ID cards.
+
+Also fill extractedFields using the exact admin rule names:
+- "Qualification" → the qualification string from this file.
+- "Subjects" → the subject names from this file only, comma-separated.
+- "Aggregate Requirement" → the numeric aggregate/percentage from this file.
+- "Subject Threshold" → null. Put per-subject scores in subjects[] instead.
 
 Set the overall verdict to reflect extraction quality (not the pass/fail decision):
-- "pass": you confidently extracted the values that those documents can provide.
-- "uncertain": some values are missing or ambiguous / documents unreadable.
-- "fail": documents clearly contradict a stated requirement (e.g. wrong stream) — rare; prefer "uncertain" when unsure.
+- "pass": you confidently extracted the academic values those documents can provide.
+- "uncertain": some academic values are missing or unreadable.
+- "fail": rare; prefer "uncertain" when unsure.
 
-summary must name each document, the fields found on it, and the values.
-If a value could not be read, say which document and field are missing and why.
+summary must be one short sentence naming which academic documents were read.
 
 ${identityRules(allowSampleDocuments)}
 
@@ -161,19 +167,24 @@ Reply with JSON:
 {
   "verdict": "pass" | "fail" | "uncertain",
   "confidence": 0.0-1.0,
-  "summary": "detailed reviewer-facing explanation of what was extracted from each document",
+  "summary": "short sentence of what was extracted",
   "perDocument": [
     {
       "requirementName": "exact requirement name",
+      "relevantToEligibility": true,
+      "qualification": "Class XII",
+      "aggregate": 89,
+      "examScore": null,
+      "subjects": [
+        { "name": "Physics", "score": 85, "maxScore": 100, "grade": "A2" }
+      ],
       "extractedFields": [
         { "field": "exact field name", "value": <number|string|boolean|null>, "documentExcerpt": "verbatim proof or empty" }
       ]
     }
   ],
-  "extractedFields": [
-    { "field": "exact field name", "value": <number|string|boolean|null>, "documentExcerpt": "verbatim proof or empty" }
-  ],
-  "issues": ["specific extraction problems, if any"]
+  "extractedFields": [],
+  "issues": []
 }`;
 }
 
@@ -258,7 +269,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
   return [
     formatApplicantRecord(ctx),
     '',
-    'ELIGIBILITY RULES (extract the applicant\'s actual value for each field from EACH document separately):',
+    'ELIGIBILITY RULES (do not mix files; extract each file\'s own qualification, subjects, marks, grades, and totals):',
     (ctx.eligibilityRules ?? [])
       .map((rule) => {
         const need =
@@ -277,7 +288,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
       })
       .join('\n') || '- (none configured)',
     '',
-    'UPLOADED DOCUMENTS (extract from each file on its own; do not mix values across files):',
+    'UPLOADED DOCUMENTS (for marksheets and BITSAT, list every subject with numeric score and grade; photos/ID are not eligibility evidence):',
     formatUploadedDocuments(ctx.documents),
     '',
     formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),

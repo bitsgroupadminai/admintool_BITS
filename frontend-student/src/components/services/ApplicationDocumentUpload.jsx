@@ -14,6 +14,28 @@ import { downloadStudentDocument, isPreviewableMimeType } from '@/utils/document
 import { groupEligibilityNotesByDocument, documentEligibilityKey } from '@/utils/eligibility';
 import { getDocumentAiErrors, getDocumentAiStatus } from '@/utils/aiDocumentFinding';
 
+function academicEligibilityDocuments(documents = []) {
+  return documents.filter((doc) => {
+    const name = String(doc.requirementName ?? '').toLowerCase();
+    if (/photo|photograph|signature|aadhaar|aadhar|id proof|passport-size/.test(name)) {
+      return false;
+    }
+    return (
+      (doc.eligibilityResult?.results ?? []).some((result) => result.status !== 'not_applicable') ||
+      (doc.subjects ?? []).length > 0
+    );
+  });
+}
+
+function eligibilityOutcomeLabel(decision) {
+  if (decision?.eligibilityResult?.eligible === false) return 'Not eligible';
+  if ((decision?.eligibilityResult?.results ?? []).some((result) => result.status === 'unchecked')) {
+    return 'Needs review';
+  }
+  if (decision?.eligibilityResult?.eligible) return 'Eligible';
+  return decision?.summary || 'Review complete';
+}
+
 function DocumentUploadRow({
   requirement,
   uploadedDocument,
@@ -257,6 +279,7 @@ export function ApplicationDocumentUpload({
   const latestEligibilityDecision = (application?.aiDecisions ?? []).find(
     (decision) => decision.handler === 'eligibility_screening',
   );
+  const eligibilityDocuments = academicEligibilityDocuments(latestEligibilityDecision?.perDocument);
 
   const findAiFinding = (requirementName) => {
     if (!latestDocDecision) return null;
@@ -373,47 +396,22 @@ export function ApplicationDocumentUpload({
             <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
               AI eligibility review
             </p>
-            {latestEligibilityDecision.summary ? (
-              <p className="mt-2 text-xs leading-relaxed text-[#334155]">
-                {latestEligibilityDecision.summary}
-              </p>
-            ) : null}
-            {(latestEligibilityDecision.perDocument ?? []).some(
-              (doc) => doc.eligibilityResult || (doc.extractedFields ?? []).length,
-            ) ? (
-              <div className="mt-2 space-y-2">
-                {latestEligibilityDecision.perDocument.map((doc, index) => (
-                  <div key={`${doc.requirementName}-${index}`}>
-                    <p className="text-xs font-semibold text-[#052E1C]">
-                      {doc.requirementName || `Document ${index + 1}`}
-                    </p>
-                    <ul className="mt-1 space-y-1">
-                      {(doc.eligibilityResult?.results ?? []).map((result, resultIndex) => (
-                        <li
-                          key={`${result.field}-${resultIndex}`}
-                          className={
-                            result.status === 'failed'
-                              ? 'text-xs leading-relaxed text-[#991B1B]'
-                              : result.status === 'passed'
-                                ? 'text-xs leading-relaxed text-[#065F46]'
-                                : 'text-xs leading-relaxed text-[#92400E]'
-                          }
-                        >
-                          {result.field}: extracted {result.actual ?? '—'}; needs{' '}
-                          {result.requirement ?? result.expected ?? '—'};{' '}
-                          {result.status === 'failed'
-                            ? 'not met'
-                            : result.status === 'passed'
-                              ? 'met'
-                              : 'could not confirm'}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ) : (latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
-              <ul className="mt-2 space-y-1.5">
+            <p
+              className={
+                latestEligibilityDecision.eligibilityResult?.eligible === false
+                  ? 'mt-2 text-xs font-semibold text-[#991B1B]'
+                  : (latestEligibilityDecision.eligibilityResult?.results ?? []).some(
+                        (result) => result.status === 'unchecked',
+                      )
+                    ? 'mt-2 text-xs font-semibold text-[#92400E]'
+                    : 'mt-2 text-xs font-semibold text-[#065F46]'
+              }
+            >
+              {eligibilityOutcomeLabel(latestEligibilityDecision)}
+            </p>
+            {eligibilityDocuments.length === 0 &&
+            (latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
+              <ul className="mt-2 space-y-1">
                 {latestEligibilityDecision.eligibilityResult.results.map((result, index) => (
                   <li
                     key={`${result.field}-${index}`}
@@ -425,19 +423,54 @@ export function ApplicationDocumentUpload({
                           : 'text-xs leading-relaxed text-[#92400E]'
                     }
                   >
-                    {result.message}
-                  </li>
-                ))}
-              </ul>
-            ) : (latestEligibilityDecision.issues ?? []).length > 0 ? (
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {latestEligibilityDecision.issues.map((issue, index) => (
-                  <li key={index} className="text-xs leading-relaxed text-[#92400E]">
-                    {issue}
+                    {result.field}: {result.actual ?? '—'} (needs {result.requirement ?? result.expected ?? '—'})
                   </li>
                 ))}
               </ul>
             ) : null}
+            {eligibilityDocuments.map((doc, index) => (
+              <div key={`${doc.requirementName}-${index}`} className="mt-3">
+                <p className="text-xs font-semibold text-[#052E1C]">
+                  {doc.requirementName || `Document ${index + 1}`}
+                  {doc.verdict === 'failed'
+                    ? ' · Not eligible'
+                    : doc.verdict === 'passed'
+                      ? ' · Eligible'
+                      : doc.verdict === 'unchecked'
+                        ? ' · Incomplete'
+                        : ''}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {(doc.eligibilityResult?.results ?? [])
+                    .filter((result) => result.status !== 'not_applicable')
+                    .map((result, resultIndex) => (
+                      <li
+                        key={`${result.field}-${resultIndex}`}
+                        className={
+                          result.status === 'failed'
+                            ? 'text-xs leading-relaxed text-[#991B1B]'
+                            : result.status === 'passed'
+                              ? 'text-xs leading-relaxed text-[#065F46]'
+                              : 'text-xs leading-relaxed text-[#92400E]'
+                        }
+                      >
+                        {result.field}: {result.actual ?? '—'} (needs {result.requirement ?? result.expected ?? '—'})
+                        {result.status === 'failed'
+                          ? ' · not met'
+                          : result.status === 'passed'
+                            ? ' · met'
+                            : ' · could not confirm'}
+                      </li>
+                    ))}
+                  {(doc.subjects ?? []).map((subject, subjectIndex) => (
+                    <li key={`${subject.name}-${subjectIndex}`} className="text-xs text-[#334155]">
+                      {subject.name}: {subject.score ?? '—'}
+                      {subject.grade ? ` (${subject.grade})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

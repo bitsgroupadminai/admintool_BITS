@@ -1,4 +1,7 @@
-import { evaluateEligibilityRules } from '../../shared/helpers/eligibilityEvaluation.helper.js';
+import {
+  evaluateEligibilityRules,
+  isAcademicEligibilityDocument,
+} from '../../shared/helpers/eligibilityEvaluation.helper.js';
 
 /**
  * Pure decision logic for AI verification. Kept free of DB / OpenAI / queue imports
@@ -72,18 +75,67 @@ export function mergeExtractedFields(perDocument = [], fallback = []) {
   return merged.length ? merged : fallback;
 }
 
+export function buildProfileFromDocument(doc = {}) {
+  const extractedFields = [...(doc.extractedFields ?? [])];
+  if (doc.qualification) {
+    extractedFields.push({ field: 'Qualification', value: doc.qualification });
+  }
+  if (doc.aggregate != null && doc.aggregate !== '') {
+    extractedFields.push({ field: 'Aggregate Requirement', value: doc.aggregate });
+    extractedFields.push({ field: 'aggregate', value: doc.aggregate });
+  }
+  if (doc.examScore != null && doc.examScore !== '') {
+    extractedFields.push({ field: 'BITSAT', value: doc.examScore });
+    extractedFields.push({ field: 'exam score', value: doc.examScore });
+  }
+  if (doc.subjects?.length) {
+    extractedFields.push({
+      field: 'Subjects',
+      value: doc.subjects.map((subject) => subject.name).join(', '),
+    });
+  }
+
+  const profile = buildProfileFromExtractedFields(extractedFields);
+  profile.qualification = doc.qualification || profile.customFields.qualification || null;
+  profile.aggregate = doc.aggregate ?? profile.customFields.aggregate ?? null;
+  profile.examScore = doc.examScore ?? profile.customFields.bitsat ?? null;
+  profile.subjects = doc.subjects ?? [];
+  return profile;
+}
+
+export function summarizeDocumentEvaluation(evaluation = {}) {
+  const applicable = (evaluation.results ?? []).filter((result) => result.status !== 'not_applicable');
+  if (applicable.some((result) => result.status === 'failed')) return 'failed';
+  if (applicable.some((result) => result.status === 'unchecked')) return 'unchecked';
+  if (applicable.some((result) => result.status === 'passed')) return 'passed';
+  return 'not_applicable';
+}
+
 export function evaluateEligibilityByDocument(perDocument = [], eligibilityRules = []) {
-  return (perDocument ?? []).map((doc) => {
-    const extractedFields = doc.extractedFields ?? [];
-    return {
-      requirementName: doc.requirementName || 'Document',
-      extractedFields,
-      eligibilityResult: evaluateEligibilityRules(
+  return (perDocument ?? [])
+    .filter(
+      (doc) =>
+        doc.relevantToEligibility !== false &&
+        isAcademicEligibilityDocument(doc.requirementName, doc),
+    )
+    .map((doc) => {
+      const extractedFields = doc.extractedFields ?? [];
+      const eligibilityResult = evaluateEligibilityRules(
         eligibilityRules,
-        buildProfileFromExtractedFields(extractedFields),
-      ),
-    };
-  });
+        buildProfileFromDocument(doc),
+        { requirementName: doc.requirementName },
+      );
+      return {
+        requirementName: doc.requirementName || 'Document',
+        qualification: doc.qualification ?? '',
+        aggregate: doc.aggregate ?? null,
+        examScore: doc.examScore ?? null,
+        subjects: doc.subjects ?? [],
+        extractedFields,
+        eligibilityResult,
+        verdict: summarizeDocumentEvaluation(eligibilityResult),
+      };
+    });
 }
 
 /**
@@ -124,15 +176,52 @@ export function buildProfileFromExtractedFields(fields = []) {
  * }} params
  * @returns {{ action: string, evaluation: object }}
  */
+function isClass10Name(requirementName) {
+  const name = String(requirementName ?? '').toLowerCase();
+  return /class\s*10|\bx\b|secondary/.test(name) && !/12|xii|senior|\+2/.test(name);
+}
+
+export function mergeEligibilityProfile(perDocument = [], fallbackFields = []) {
+  const academic = (perDocument ?? []).filter(
+    (doc) =>
+      doc.relevantToEligibility !== false &&
+      isAcademicEligibilityDocument(doc.requirementName, doc),
+  );
+  const ranked = [...academic].sort(
+    (left, right) =>
+      documentMergePriority(left.requirementName) - documentMergePriority(right.requirementName),
+  );
+  const merged = {
+    extractedFields: mergeExtractedFields(academic, fallbackFields),
+    qualification: '',
+    aggregate: null,
+    examScore: null,
+    subjects: [],
+  };
+  for (const doc of ranked) {
+    if (doc.qualification) merged.qualification = doc.qualification;
+    if (doc.aggregate != null) merged.aggregate = doc.aggregate;
+    if (doc.examScore != null) merged.examScore = doc.examScore;
+  }
+  const subjectSource =
+    [...ranked].reverse().find((doc) => doc.subjects?.length && !isClass10Name(doc.requirementName)) ??
+    [...ranked].reverse().find((doc) => doc.subjects?.length);
+  if (subjectSource) merged.subjects = subjectSource.subjects;
+  return buildProfileFromDocument(merged);
+}
+
 export function decideEligibilityAction({
   verdict,
   confidence,
   extractedFields,
   eligibilityRules,
   thresholds,
+  profile,
 }) {
-  const profile = buildProfileFromExtractedFields(extractedFields);
-  const evaluation = evaluateEligibilityRules(eligibilityRules, profile);
+  const evaluation = evaluateEligibilityRules(
+    eligibilityRules,
+    profile ?? buildProfileFromExtractedFields(extractedFields),
+  );
   const hasUnchecked = evaluation.results.some((result) => result.status === 'unchecked');
 
   let action;

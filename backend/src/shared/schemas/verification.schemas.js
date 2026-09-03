@@ -40,8 +40,27 @@ const extractedFieldSchema = z.object({
   documentExcerpt: z.string().max(500).optional().default(''),
 });
 
+const looseNumber = z.preprocess((value) => {
+  if (value == null || value === '') return null;
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value;
+  const parsed = Number(String(value).replace(/[^\d.-]/g, ''));
+  return Number.isNaN(parsed) ? null : parsed;
+}, z.number().nullable().optional());
+
+const subjectScoreSchema = z.object({
+  name: z.string().min(1).max(120),
+  score: looseNumber,
+  maxScore: looseNumber,
+  grade: z.string().max(20).optional().default(''),
+});
+
 const eligibilityDocumentExtractionSchema = z.object({
   requirementName: z.string().min(1).max(200),
+  relevantToEligibility: z.boolean().optional().default(true),
+  qualification: z.string().max(200).optional().default(''),
+  aggregate: looseNumber,
+  examScore: looseNumber,
+  subjects: z.array(subjectScoreSchema).max(30).default([]),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
 });
 

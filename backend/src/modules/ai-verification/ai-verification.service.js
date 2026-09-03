@@ -45,6 +45,7 @@ import {
   decideEligibilityAction,
   evaluateEligibilityByDocument,
   mergeExtractedFields,
+  mergeEligibilityProfile,
 } from './ai-verification.decision.js';
 
 export { isAiVerificationEnabled } from './ai-verification.config.js';
@@ -301,7 +302,8 @@ async function evaluateEligibilityStep({
   });
 
   const perDocument = evaluateEligibilityByDocument(raw.perDocument ?? [], eligibilityRules);
-  const extractedFields = mergeExtractedFields(perDocument, raw.extractedFields ?? []);
+  const extractedFields = mergeExtractedFields(raw.perDocument ?? [], raw.extractedFields ?? []);
+  const profile = mergeEligibilityProfile(raw.perDocument ?? [], raw.extractedFields ?? []);
 
   // Deterministic comparison against the actual rules using AI-extracted values.
   const { action, evaluation } = decideEligibilityAction({
@@ -310,6 +312,7 @@ async function evaluateEligibilityStep({
     extractedFields,
     eligibilityRules,
     thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
+    profile,
   });
 
   const comparisonIssues = formatEligibilityComparisonIssues(evaluation, extractedFields);
@@ -536,17 +539,14 @@ function formatEligibilityComparisonIssues(evaluation, extractedFields = []) {
     });
 }
 
-function buildEligibilitySummary(evaluation, extractionSummary, issues) {
-  if (!evaluation.eligible && issues.length) {
-    return issues.join(' ');
+function buildEligibilitySummary(evaluation, extractionSummary) {
+  if (!evaluation.eligible) {
+    return 'The extracted values do not meet one or more eligibility criteria.';
   }
-  if (evaluation.eligible && (evaluation.results ?? []).length) {
-    const passed = evaluation.results
-      .filter((result) => result.status === 'passed')
-      .map((result) => result.message);
-    return passed.length ? passed.join(' ') : extractionSummary;
+  if ((evaluation.results ?? []).some((result) => result.status === 'unchecked')) {
+    return 'Some eligibility values could not be confirmed from the uploaded documents.';
   }
-  return extractionSummary || issues.join(' ');
+  return extractionSummary || 'The extracted values meet the configured eligibility criteria.';
 }
 
 async function emitAiVerificationUpdate(instituteId, application) {

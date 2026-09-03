@@ -54,10 +54,12 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
-  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_MODEL: z.string().default('gpt-5.4-mini'),
   OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
   /** Vision-capable model used to read image / scanned document uploads. */
   OPENAI_VISION_MODEL: z.string().default('gpt-4o'),
+  /** Model used to verify student document uploads and eligibility. Supports image input. */
+  OPENAI_VERIFICATION_MODEL: z.string().default('gpt-5.4-mini'),
   /** Default chat JSON timeout (ms). Large knowledge docs need more than 12s. */
   OPENAI_TIMEOUT_MS: z.coerce.number().default(60_000),
   /** Service insights / catalogue extraction timeout (ms). */

@@ -36,7 +36,7 @@ import {
   intakeVerificationResponseSchema,
 } from '../../shared/schemas/verification.schemas.js';
 import { AiDecision, AI_DECISION_HANDLER, AI_DECISION_ACTION } from './aiDecision.model.js';
-import { AI_VERIFY_THRESHOLDS, isAiVerificationEnabled } from './ai-verification.config.js';
+import { AI_VERIFICATION_MODEL, AI_VERIFY_THRESHOLDS, isAiVerificationEnabled } from './ai-verification.config.js';
 import {
   INTERNAL_ACTION,
   decideDocumentAction,
@@ -196,6 +196,7 @@ async function evaluateDocumentStep({ application, offering, step, policyExcerpt
       issues: raw.issues ?? [],
       perDocument: raw.perDocument ?? [],
       raw,
+      modelUsed: AI_VERIFICATION_MODEL,
     },
   };
 }
@@ -272,6 +273,7 @@ async function evaluateEligibilityStep({ application, offering, step, policyExce
       extractedFields: raw.extractedFields ?? [],
       eligibilityResult: evaluation,
       raw,
+      modelUsed: AI_VERIFICATION_MODEL,
     },
   };
 }
@@ -410,6 +412,7 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
         summary: raw.summary,
         issues: raw.issues ?? [],
         raw,
+        modelUsed: AI_VERIFICATION_MODEL,
       },
     });
 
@@ -502,9 +505,9 @@ async function emitAiVerificationUpdate(instituteId, application) {
 
 async function callModel({ system, user, images, schema }) {
   if (images?.length) {
-    return chatVisionJson({ system, user, images, schema });
+    return chatVisionJson({ system, user, images, schema, model: AI_VERIFICATION_MODEL });
   }
-  return chatJson({ system, user, schema, timeoutMs: undefined });
+  return chatJson({ system, user, schema, timeoutMs: undefined, model: AI_VERIFICATION_MODEL });
 }
 
 async function gatherApplicationDocuments(application) {

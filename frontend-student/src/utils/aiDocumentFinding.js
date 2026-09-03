@@ -102,3 +102,12 @@ export function getDocumentAiStatus(finding) {
   }
   return { label: 'Checked', tone: 'uncertain' };
 }
+
+export function hasDocumentAiFailures(application) {
+  const decision = (application?.aiDecisions ?? []).find(
+    (item) => item.handler === 'document_verification',
+  );
+  return (decision?.perDocument ?? []).some(
+    (finding) => finding.verdict === 'fail' || finding.verdict === 'uncertain',
+  );
+}

@@ -110,21 +110,13 @@ export function ServiceRequestPanel({
             You will see the updated verification results here when the review finishes.
           </p>
         </div>
-      ) : application?.aiDecisions?.length &&
-        !(application.status === 'needs_correction' && application.correctionNote) ? (
+      ) : application?.aiDecisions?.length && application.status !== 'needs_correction' ? (
         <div className="mt-5">
           <CorrectionFeedback
             title="Latest AI review"
             application={application}
             tone="muted"
           />
-        </div>
-      ) : null}
-
-      {application?.status === 'needs_correction' &&
-      (application?.correctionNote || application?.aiDecisions?.length) ? (
-        <div className="mt-5">
-          <CorrectionFeedback application={application} />
         </div>
       ) : null}
 

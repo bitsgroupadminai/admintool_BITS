@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApplicationDocumentUpload } from '@/components/services/ApplicationDocumentUpload';
 import { DocumentList } from '@/components/enrollment/DocumentList';
 import { getDocumentProgressStats } from '@/utils/applicationDocuments';
+import { hasDocumentAiFailures } from '@/utils/aiDocumentFinding';
 
 /**
  * Compact document prerequisite for step 1. Collapsed = progress only.
@@ -20,7 +21,14 @@ export function StepDocumentsAccordion({
   const stats = getDocumentProgressStats(offering, application);
   const canEdit =
     application?.status === 'draft' || application?.status === 'needs_correction';
-  const [open, setOpen] = useState((!application || canEdit) && !stats.complete);
+  const hasFailures = hasDocumentAiFailures(application);
+  const shouldOpenByDefault =
+    hasFailures || ((!application || canEdit) && !stats.complete);
+  const [open, setOpen] = useState(shouldOpenByDefault);
+
+  useEffect(() => {
+    if (hasFailures) setOpen(true);
+  }, [hasFailures]);
   const percent =
     stats.requiredCount === 0 ? 100 : Math.round((stats.uploadedCount / stats.requiredCount) * 100);
   const summaryNames =

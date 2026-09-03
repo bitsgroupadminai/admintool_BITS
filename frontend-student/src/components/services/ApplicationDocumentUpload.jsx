@@ -87,25 +87,24 @@ function DocumentUploadRow({
 
   return (
     <div className="rounded-xl border border-[#E2EEE8] bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <StatusIcon className={`mt-0.5 h-4 w-4 shrink-0 ${statusIconClass}`} />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#052E1C]">{requirement.name}</p>
-            {requirement.required !== false ? (
-              <span className="mt-1 inline-flex rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#92400E]">
-                Required
-              </span>
-            ) : (
-              <span className="mt-1 inline-flex rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
-                Optional
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="flex items-center gap-2">
+        <StatusIcon className={`h-4 w-4 shrink-0 ${statusIconClass}`} />
+        <p className="min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold text-[#052E1C]">
+          {requirement.name}
+        </p>
+        {requirement.required !== false ? (
+          <span className="shrink-0 rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#92400E]">
+            Required
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
+            Optional
+          </span>
+        )}
+      </div>
 
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
-          {isUploaded ? (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {isUploaded ? (
             <>
               {isPreviewableMimeType(uploadedDocument.mimeType) ? (
                 <button
@@ -159,7 +158,6 @@ function DocumentUploadRow({
               />
             </>
           ) : null}
-        </div>
       </div>
 
       {aiPending || aiFinding ? (

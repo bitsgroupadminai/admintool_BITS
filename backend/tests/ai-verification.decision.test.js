@@ -471,6 +471,26 @@ test('hydrateEligibilityDecision rebuilds Class 10, Class 12, and BITSAT cards',
   );
 });
 
+test('hydrateEligibilityDecision ignores malformed stored payloads', () => {
+  const hydrated = hydrateEligibilityDecision(
+    {
+      handler: 'eligibility_screening',
+      extractedFields: { field: 'Subjects', value: 'Physics' },
+      perDocument: { requirementName: 'Class 12 marksheet' },
+      raw: { extractedFields: { foo: 1 }, perDocument: { requirementName: 'BITSAT' } },
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [{ requirementName: 'Class 12 marksheet' }],
+    },
+  );
+  assert.equal(hydrated.perDocument[0].requirementName, 'Class 12 marksheet');
+  assert.equal(
+    hydrated.eligibilityResult.results.find((result) => result.field === 'Qualification').status,
+    'passed',
+  );
+});
+
 test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {
   const profile = mergeEligibilityProfile([
     {

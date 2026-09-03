@@ -38,6 +38,7 @@ import {
 import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
 import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
 import { isAiVerificationEnabled } from '../ai-verification/ai-verification.config.js';
+import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
 import { hydrateEligibilityDecision } from '../ai-verification/ai-verification.decision.js';
 import { HANDLER_TYPE, AI_HANDLER, OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
@@ -165,7 +166,7 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
       .sort({ createdAt: -1 })
       .limit(20)
       .lean(),
-    Application.findOne({ _id: applicationId, instituteId }).select('documents offeringId'),
+    Application.findOne({ _id: applicationId, instituteId }).select('documents offeringId').lean(),
   ]);
 
   const offering = application
@@ -180,7 +181,9 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
     value: rule.value,
   }));
   const documents = [
-    ...(application?.documents ?? []),
+    ...(application?.documents ?? []).map((document) => ({
+      requirementName: document.requirementName,
+    })),
     ...(offering?.documentRequirements ?? []).map((requirement) => ({
       requirementName: requirement.name,
     })),
@@ -196,9 +199,9 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
       verdict: decision.verdict ?? null,
       confidence: decision.confidence ?? null,
       summary: decision.summary ?? '',
-      issues: decision.issues ?? [],
-      perDocument: decision.perDocument ?? [],
-      extractedFields: decision.extractedFields ?? [],
+      issues: Array.isArray(decision.issues) ? decision.issues : [],
+      perDocument: Array.isArray(decision.perDocument) ? decision.perDocument : [],
+      extractedFields: Array.isArray(decision.extractedFields) ? decision.extractedFields : [],
       eligibilityResult: decision.eligibilityResult ?? null,
       createdAt: decision.createdAt,
       raw: decision.raw ?? null,
@@ -209,22 +212,28 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
       return rest;
     }
 
-    const hydrated = hydrateEligibilityDecision(formatted, { eligibilityRules, documents });
-    return {
-      id: hydrated.id,
-      stepId: hydrated.stepId,
-      stepName: hydrated.stepName,
-      handler: hydrated.handler,
-      action: hydrated.action,
-      verdict: hydrated.verdict,
-      confidence: hydrated.confidence,
-      summary: hydrated.summary,
-      issues: hydrated.issues,
-      perDocument: hydrated.perDocument,
-      extractedFields: hydrated.extractedFields,
-      eligibilityResult: hydrated.eligibilityResult,
-      createdAt: hydrated.createdAt,
-    };
+    try {
+      const hydrated = hydrateEligibilityDecision(formatted, { eligibilityRules, documents });
+      return {
+        id: hydrated.id,
+        stepId: hydrated.stepId,
+        stepName: hydrated.stepName,
+        handler: hydrated.handler,
+        action: hydrated.action,
+        verdict: hydrated.verdict,
+        confidence: hydrated.confidence,
+        summary: hydrated.summary,
+        issues: hydrated.issues,
+        perDocument: hydrated.perDocument,
+        extractedFields: hydrated.extractedFields,
+        eligibilityResult: hydrated.eligibilityResult,
+        createdAt: hydrated.createdAt,
+      };
+    } catch (err) {
+      logger.error({ err, applicationId, decisionId: formatted.id }, 'Eligibility hydration failed');
+      const { raw, ...rest } = formatted;
+      return rest;
+    }
   });
 }
 

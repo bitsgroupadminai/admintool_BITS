@@ -51,6 +51,10 @@ function documentMergePriority(requirementName) {
   return 2;
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function fieldHasValue(field) {
   return field?.field && field.value != null && field.value !== '';
 }
@@ -67,7 +71,7 @@ export function mergeExtractedFields(perDocument = [], fallback = []) {
   );
   const byField = new Map();
   for (const doc of ranked) {
-    for (const field of doc.extractedFields ?? []) {
+    for (const field of asArray(doc.extractedFields)) {
       if (fieldHasValue(field)) {
         byField.set(
           String(field.field)
@@ -84,7 +88,7 @@ export function mergeExtractedFields(perDocument = [], fallback = []) {
 }
 
 export function buildProfileFromDocument(doc = {}) {
-  const extractedFields = [...(doc.extractedFields ?? [])];
+  const extractedFields = [...asArray(doc.extractedFields)];
   if (doc.qualification) {
     extractedFields.push({ field: 'Qualification', value: doc.qualification });
   }
@@ -191,10 +195,10 @@ export function buildProfileFromExtractedFields(fields = []) {
 
 function collectDecisionFields(decision = {}) {
   return [
-    ...(decision.extractedFields ?? []),
-    ...((decision.perDocument ?? []).flatMap((doc) => doc.extractedFields ?? [])),
-    ...((decision.raw?.extractedFields ?? [])),
-    ...((decision.raw?.perDocument ?? []).flatMap((doc) => doc.extractedFields ?? [])),
+    ...asArray(decision.extractedFields),
+    ...asArray(decision.perDocument).flatMap((doc) => asArray(doc.extractedFields)),
+    ...asArray(decision.raw?.extractedFields),
+    ...asArray(decision.raw?.perDocument).flatMap((doc) => asArray(doc.extractedFields)),
   ];
 }
 
@@ -221,9 +225,9 @@ function parseNumericFromFields(fields, matcher) {
 
 function allSubjectEntries(decision, fields) {
   const fromDocs = [
-    ...(decision.perDocument ?? []),
-    ...(decision.raw?.perDocument ?? []),
-  ].flatMap((doc) => doc.subjects ?? []);
+    ...asArray(decision.perDocument),
+    ...asArray(decision.raw?.perDocument),
+  ].flatMap((doc) => asArray(doc.subjects));
   if (fromDocs.length) return parseSubjectEntries(fromDocs);
   const subjectValues = fields
     .filter((field) => {
@@ -251,12 +255,12 @@ function seedAcademicDocuments(decision = {}, uploadedDocuments = [], fields = [
       ...current,
       ...extra,
       requirementName: current.requirementName || name,
-      extractedFields: [...(current.extractedFields ?? []), ...(extra.extractedFields ?? [])],
+      extractedFields: [...asArray(current.extractedFields), ...asArray(extra.extractedFields)],
       subjects: (current.subjects?.length ? current.subjects : extra.subjects) ?? [],
     });
   };
 
-  for (const doc of [...(decision.perDocument ?? []), ...(decision.raw?.perDocument ?? [])]) {
+  for (const doc of [...asArray(decision.perDocument), ...asArray(decision.raw?.perDocument)]) {
     remember(doc.requirementName, doc);
   }
   for (const uploaded of uploadedDocuments) {
@@ -276,7 +280,7 @@ function fillDocumentExtraction(doc, decision, fields) {
   const localEvidence = [
     doc.requirementName,
     doc.qualification,
-    ...(doc.extractedFields ?? []).flatMap((field) => [field.value, field.documentExcerpt]),
+    ...(asArray(doc.extractedFields)).flatMap((field) => [field.value, field.documentExcerpt]),
   ]
     .filter((item) => item != null && item !== '')
     .join(' ; ');
@@ -297,11 +301,11 @@ function fillDocumentExtraction(doc, decision, fields) {
 
   const aggregate =
     doc.aggregate ??
-    parseNumericFromFields(doc.extractedFields ?? [], /aggregate|percentage|overall|total/i);
+    parseNumericFromFields(asArray(doc.extractedFields), /aggregate|percentage|overall|total/i);
   const examScore =
     doc.examScore ??
     (isBitsatDocumentName(doc.requirementName)
-      ? parseNumericFromFields([...(doc.extractedFields ?? []), ...fields], /bitsat|entrance|exam score/i)
+      ? parseNumericFromFields([...asArray(doc.extractedFields), ...fields], /bitsat|entrance|exam score/i)
       : null);
 
   return {

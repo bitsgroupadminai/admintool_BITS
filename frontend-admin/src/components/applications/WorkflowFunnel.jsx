@@ -1,4 +1,4 @@
-import { Check, Clock3, Sparkles } from 'lucide-react';
+import { Check, Clock3, Sparkles, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +9,14 @@ function formatHandlerLabel(handledBy) {
   return `Staff · ${(handledBy.assignee ?? 'general').replace(/_/g, ' ')}`;
 }
 
-export function WorkflowFunnel({ steps = [], currentStepName, statusLabel }) {
+export function WorkflowFunnel({
+  steps = [],
+  currentStepName,
+  statusLabel,
+  onRollbackToStep,
+  rollbackLoading = false,
+  children,
+}) {
   if (!steps.length) return null;
 
   return (
@@ -37,6 +44,7 @@ export function WorkflowFunnel({ steps = [], currentStepName, statusLabel }) {
         {steps.map((step, index) => {
           const isCurrent = step.state === 'current';
           const isComplete = step.state === 'complete';
+          const canSendBack = Boolean(onRollbackToStep) && isComplete;
           return (
             <li
               key={step.stepId}
@@ -76,10 +84,22 @@ export function WorkflowFunnel({ steps = [], currentStepName, statusLabel }) {
               <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[#4B6358]">
                 {isComplete ? 'Done' : isCurrent ? 'Current' : 'Upcoming'}
               </p>
+              {canSendBack ? (
+                <button
+                  type="button"
+                  disabled={rollbackLoading}
+                  onClick={() => onRollbackToStep(step.stepId)}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#0A6640] hover:underline disabled:opacity-60"
+                >
+                  <Undo2 className="h-3 w-3" />
+                  Send back here
+                </button>
+              ) : null}
             </li>
           );
         })}
       </ol>
+      {children}
     </section>
   );
 }

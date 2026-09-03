@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Download, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Loader2, RefreshCw, Undo2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
 import { ApplicationAiDecisionsPanel } from '@/components/applications/ApplicationAiDecisionsPanel';
 import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
 import { WorkflowFunnel } from '@/components/applications/WorkflowFunnel';
 import { InlineDocumentPreview } from '@/components/applications/InlineDocumentPreview';
+import { applicationLifecycleApi } from '@/api/applications.lifecycle.api';
 import {
   APPLICATION_STATUS_BADGE_VARIANT,
   APPLICATION_STATUS_LABELS,
@@ -74,6 +78,8 @@ const MANUAL_STATUS = {
   needs_correction: { label: 'Needs correction', className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]' },
   pending: { label: 'Not reviewed', className: 'border-[#E2EEE8] bg-[#F9FCFB] text-[#4B6358]' },
 };
+
+const ROLLBACK_STATUSES = ['in_review', 'needs_correction', 'pending_ai_review'];
 
 function DetailChip({ label, value }) {
   return (
@@ -209,9 +215,14 @@ export function ApplicationReviewContent({
   reviewingDocumentId = null,
   onReverifyAi = null,
   reverifyLoading = false,
+  lifecycleRole = null,
+  onLifecycleUpdated = null,
 }) {
+  const confirm = useConfirm();
   const [note, setNote] = useState('');
   const [selectedCorrectionDocs, setSelectedCorrectionDocs] = useState([]);
+  const [rollbackStepId, setRollbackStepId] = useState('');
+  const [rollbackLoading, setRollbackLoading] = useState(false);
   const uploadedMap = new Map(
     (application?.documents ?? []).map((document) => [document.requirementId, document]),
   );
@@ -228,6 +239,42 @@ export function ApplicationReviewContent({
   const showManualReview =
     Boolean(onDocumentReview) &&
     (!usesAiVerification || pendingAi || workflowActions.length > 0);
+  const currentStep = workflow?.currentStep;
+  const earlierSteps = steps
+    .filter((step) => currentStep && step.order < currentStep.order)
+    .sort((a, b) => a.order - b.order);
+  const canRollback =
+    Boolean(lifecycleRole && onLifecycleUpdated) &&
+    earlierSteps.length > 0 &&
+    ROLLBACK_STATUSES.includes(application?.status);
+
+  const commitRollback = async (targetStepId) => {
+    const step = steps.find((item) => item.stepId === targetStepId);
+    if (!step) return;
+    const ok = await confirm({
+      title: `Send back to “${step.name}”?`,
+      description:
+        'The student will be notified and asked to complete this step again. This is recorded in the activity log.',
+      confirmLabel: 'Send back',
+    });
+    if (!ok) return;
+
+    setRollbackLoading(true);
+    try {
+      await applicationLifecycleApi.rollback(
+        application.id,
+        { targetStepId },
+        lifecycleRole,
+      );
+      toast.success(`Request sent back to ${step.name}`);
+      setRollbackStepId('');
+      onLifecycleUpdated?.();
+    } catch (err) {
+      toast.error(err.message || 'Could not send this request back');
+    } finally {
+      setRollbackLoading(false);
+    }
+  };
 
   const handleWorkflowClick = (outcome) => {
     if (outcome === 'needs_correction' && !note.trim()) {
@@ -312,7 +359,40 @@ export function ApplicationReviewContent({
           steps={steps}
           currentStepName={workflow?.currentStep?.name}
           statusLabel={APPLICATION_STATUS_LABELS[application.status]}
-        />
+          onRollbackToStep={canRollback ? commitRollback : undefined}
+          rollbackLoading={rollbackLoading}
+        >
+          {canRollback ? (
+            <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
+              <p className="text-sm font-semibold text-[#052E1C]">Send back to an earlier step</p>
+              <p className="mt-1 text-xs text-[#4B6358]">
+                Use this to reopen a completed stage, or choose Send back here on a finished step
+                above.
+              </p>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <Select
+                    value={rollbackStepId}
+                    onChange={setRollbackStepId}
+                    placeholder="Select an earlier step"
+                    options={earlierSteps.map((step) => ({
+                      value: step.stepId,
+                      label: `Step ${step.order}: ${step.name}`,
+                    }))}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  disabled={!rollbackStepId || rollbackLoading}
+                  onClick={() => commitRollback(rollbackStepId)}
+                >
+                  <Undo2 className="mr-1.5 h-3.5 w-3.5" />
+                  {rollbackLoading ? 'Sending back...' : 'Send back to step'}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </WorkflowFunnel>
       </div>
 
       <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">

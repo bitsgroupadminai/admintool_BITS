@@ -142,14 +142,14 @@ export function StaffApplicationDetailPage() {
             slaActionLoading={slaActionLoading}
             onDocumentReview={handleDocumentReview}
             reviewingDocumentId={reviewingDocumentId}
+            lifecycleRole="staff"
+            onLifecycleUpdated={loadApplication}
             requestActions={
               application ? (
                 <ApplicationLifecycleActions
                   applicationId={id}
                   status={application.status}
                   role="staff"
-                  workflowSteps={application.workflow?.steps}
-                  currentStep={application.workflow?.currentStep}
                   onUpdated={loadApplication}
                   embedded
                 />

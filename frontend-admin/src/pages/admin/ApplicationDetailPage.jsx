@@ -215,14 +215,14 @@ export function ApplicationDetailPage() {
             reviewingDocumentId={reviewingDocumentId}
             onReverifyAi={handleReverifyAi}
             reverifyLoading={reverifyLoading}
+            lifecycleRole="admin"
+            onLifecycleUpdated={loadApplication}
             requestActions={
               application.status !== 'draft' ? (
                 <ApplicationLifecycleActions
                   applicationId={id}
                   status={application.status}
                   role="admin"
-                  workflowSteps={application.workflow?.steps}
-                  currentStep={application.workflow?.currentStep}
                   onUpdated={loadApplication}
                   embedded
                 />

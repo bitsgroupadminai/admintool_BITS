@@ -4,7 +4,7 @@ import { Offering } from '../offerings/offering.model.js';
 import { Institute } from '../institutes/institute.model.js';
 import { User } from '../users/user.model.js';
 import { AppError } from '../../core/utils/AppError.js';
-import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
+import { APPLICATION_STATUS, DOCUMENT_REVIEW_STATUS } from '../../shared/enums/application.enums.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { notifyApplicationAssigned, notifyApplicationStatusChange } from '../../shared/templates/applicationEmails.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
@@ -89,6 +89,22 @@ function formatApplicationSummary(application, service, offering, assignee) {
   };
 }
 
+function formatApplicationDocument(document) {
+  return {
+    id: document._id.toString(),
+    requirementId: document.requirementId.toString(),
+    requirementName: document.requirementName,
+    originalName: document.originalName,
+    mimeType: document.mimeType,
+    sizeBytes: document.sizeBytes,
+    uploadedAt: document.uploadedAt,
+    reviewStatus: document.reviewStatus ?? DOCUMENT_REVIEW_STATUS.PENDING,
+    reviewNote: document.reviewNote ?? '',
+    reviewedByName: document.reviewedByName ?? '',
+    reviewedAt: document.reviewedAt ?? null,
+  };
+}
+
 function formatApplicationDetail(application, service, offering, assignee, user = null) {
   const progress = offering ? getDocumentUploadProgress(offering, application) : null;
   const workflowSteps = getWorkflowSteps(application);
@@ -102,6 +118,7 @@ function formatApplicationDetail(application, service, offering, assignee, user 
     status: application.status,
     applicantName: application.applicantName,
     applicantEmail: application.applicantEmail,
+    applicantMobile: application.applicantMobile ?? '',
     applicantDetails: application.applicantDetails ?? [],
     serviceId: application.serviceId.toString(),
     serviceName: service?.name ?? 'Unknown service',
@@ -113,15 +130,7 @@ function formatApplicationDetail(application, service, offering, assignee, user 
     createdAt: application.createdAt,
     updatedAt: application.updatedAt,
     documentRequirements: offering ? formatDocumentRequirements(offering.documentRequirements) : [],
-    documents: (application.documents ?? []).map((document) => ({
-      id: document._id.toString(),
-      requirementId: document.requirementId.toString(),
-      requirementName: document.requirementName,
-      originalName: document.originalName,
-      mimeType: document.mimeType,
-      sizeBytes: document.sizeBytes,
-      uploadedAt: document.uploadedAt,
-    })),
+    documents: (application.documents ?? []).map(formatApplicationDocument),
     requiredDocumentCount: progress?.requiredDocumentCount ?? 0,
     uploadedRequiredCount: progress?.uploadedRequiredCount ?? 0,
     missingRequiredDocuments: progress?.missingRequiredDocuments ?? [],
@@ -778,6 +787,96 @@ export async function respondToAssignedSlaBreach(
 ) {
   const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
   return respondToSlaBreach(instituteId, applicationId, payload, user);
+}
+
+function applyDocumentReview(application, document, user, status, note = '') {
+  document.reviewStatus = status;
+  document.reviewNote = note?.trim() ?? '';
+  document.reviewedBy = user.userId;
+  document.reviewedByName = user.name ?? '';
+  document.reviewedAt = new Date();
+
+  application.workflowHistory = application.workflowHistory ?? [];
+  application.workflowHistory.push({
+    stepId: application.currentStepId ?? 'document_review',
+    stepName: document.requirementName || 'Document review',
+    outcome:
+      status === DOCUMENT_REVIEW_STATUS.APPROVED
+        ? 'document_approved'
+        : status === DOCUMENT_REVIEW_STATUS.REJECTED
+          ? 'document_rejected'
+          : 'document_needs_correction',
+    actedBy: user.userId,
+    actedByName: user.name ?? '',
+    actedByRole: user.role ?? '',
+    note: document.reviewNote,
+    createdAt: new Date(),
+  });
+}
+
+/**
+ * Staff/admin review of a single uploaded document.
+ */
+export async function reviewApplicationDocument(
+  instituteId,
+  applicationId,
+  documentId,
+  user,
+  payload,
+  staffUserId = null,
+) {
+  const application = staffUserId
+    ? await getAssignedApplication(instituteId, applicationId, staffUserId)
+    : await getInstituteApplication(instituteId, applicationId);
+
+  const document = findApplicationDocument(application, documentId);
+  if (!document) {
+    throw new AppError('Document not found', 404);
+  }
+
+  const note = payload.note?.trim() ?? '';
+  if (payload.status === DOCUMENT_REVIEW_STATUS.NEEDS_CORRECTION && !note) {
+    throw new AppError('Add a note explaining what the student should fix', 400);
+  }
+
+  applyDocumentReview(application, document, user, payload.status, note);
+
+  if (payload.status === DOCUMENT_REVIEW_STATUS.NEEDS_CORRECTION) {
+    const step = getCurrentWorkflowStep(application);
+    const outcome = step ? findStepOutcome(step, OUTCOME_TYPE.NEEDS_CORRECTION) : null;
+    const canAct =
+      WORKFLOW_ACTION_STATUSES.has(application.status) &&
+      outcome &&
+      canUserActOnWorkflowStep(user, step, {
+        allowAiStep: application.status === APPLICATION_STATUS.PENDING_AI_REVIEW,
+      });
+
+    if (canAct) {
+      return executeWorkflowAction(application, instituteId, user, {
+        outcome: OUTCOME_TYPE.NEEDS_CORRECTION,
+        note,
+        correctionRequiredDocuments: [document.requirementName],
+      });
+    }
+
+    application.status = APPLICATION_STATUS.NEEDS_CORRECTION;
+    application.correctionNote = note;
+    application.correctionRequiredDocuments = [document.requirementName];
+  }
+
+  await application.save();
+  await flushInstituteReadCache(instituteId);
+
+  const context = await loadApplicationContext(application, instituteId);
+  const assignee = await loadAssignee(application);
+
+  if (payload.status === DOCUMENT_REVIEW_STATUS.NEEDS_CORRECTION) {
+    notifyApplicationStatusChange(application, context, APPLICATION_STATUS.NEEDS_CORRECTION).catch(
+      () => {},
+    );
+  }
+
+  return formatApplicationDetail(application, context.service, context.offering, assignee, user);
 }
 
 /**

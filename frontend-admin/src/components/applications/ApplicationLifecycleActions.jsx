@@ -22,7 +22,15 @@ const primaryBtn =
  * @param {Object} [props.currentStep] — current workflow step
  * @param {() => void} props.onUpdated
  */
-export function ApplicationLifecycleActions({ applicationId, status, role, workflowSteps, currentStep, onUpdated }) {
+export function ApplicationLifecycleActions({
+  applicationId,
+  status,
+  role,
+  workflowSteps,
+  currentStep,
+  onUpdated,
+  embedded = false,
+}) {
   const [note, setNote] = useState('');
   const [staffList, setStaffList] = useState([]);
   const [transferStaffId, setTransferStaffId] = useState('');
@@ -77,13 +85,15 @@ export function ApplicationLifecycleActions({ applicationId, status, role, workf
   const canReopen = ['rejected', 'cancelled', 'withdrawn'].includes(status);
 
   return (
-    <div className="mt-8 space-y-4 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+    <div className={embedded ? 'space-y-4' : 'mt-8 space-y-4 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm'}>
+      {embedded ? null : (
       <div>
         <h2 className="text-sm font-bold text-[#052E1C]">Request actions</h2>
         <p className="mt-1 text-sm text-[#4B6358]">
           Cancel, reopen, escalate, or transfer this request. Notes are saved to the audit log.
         </p>
       </div>
+      )}
 
       <input
         value={note}

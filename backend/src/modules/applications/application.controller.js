@@ -2,6 +2,7 @@ import * as applicationService from './application.service.js';
 import { sendSuccess } from '../../core/utils/apiResponse.js';
 import {
   assignApplicationSchema,
+  documentReviewSchema,
   listApplicationsQuerySchema,
   slaActionSchema,
   updateApplicationStatusSchema,
@@ -87,6 +88,39 @@ export async function slaAction(req, res, next) {
       req.user,
     );
     sendSuccess(res, 200, 'SLA action applied', { application });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function reviewDocument(req, res, next) {
+  try {
+    const payload = documentReviewSchema.parse(req.body);
+    const application = await applicationService.reviewApplicationDocument(
+      req.user.instituteId,
+      req.params.id,
+      req.params.documentId,
+      req.user,
+      payload,
+    );
+    sendSuccess(res, 200, 'Document review saved', { application });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function reviewAssignedDocument(req, res, next) {
+  try {
+    const payload = documentReviewSchema.parse(req.body);
+    const application = await applicationService.reviewApplicationDocument(
+      req.user.instituteId,
+      req.params.id,
+      req.params.documentId,
+      req.user,
+      payload,
+      req.user.userId,
+    );
+    sendSuccess(res, 200, 'Document review saved', { application });
   } catch (err) {
     next(err);
   }

@@ -4,10 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { ApplicationReviewContent } from '@/components/applications/ApplicationReviewContent';
-import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
 import { ApplicationLifecycleActions } from '@/components/applications/ApplicationLifecycleActions';
 import { ApplicationPaymentsPanel } from '@/components/payments/ApplicationPaymentsPanel';
-import { DocumentPreviewModal } from '@/components/applications/DocumentPreviewModal';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { ApplicationReviewSkeleton } from '@/components/skeletons';
@@ -26,7 +24,7 @@ export function ApplicationDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [slaActionLoading, setSlaActionLoading] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState(null);
+  const [reviewingDocumentId, setReviewingDocumentId] = useState(null);
 
   const assigneeOptions = useMemo(() => {
     const options = [];
@@ -134,6 +132,27 @@ export function ApplicationDetailPage() {
     }
   };
 
+  const handleDocumentReview = async (document, payload) => {
+    if (payload.status === 'needs_correction' && !payload.note?.trim()) {
+      toast.error('Add a note explaining what the student should fix');
+      return;
+    }
+    setReviewingDocumentId(document.id);
+    try {
+      const { data } = await applicationsApi.reviewDocument(id, document.id, payload);
+      setApplication(data.data.application);
+      toast.success(
+        payload.status === 'needs_correction'
+          ? 'Correction requested — student will be notified'
+          : `Document ${payload.status === 'approved' ? 'approved' : 'rejected'}`,
+      );
+    } catch (err) {
+      toast.error(err.message || 'Could not save document review');
+    } finally {
+      setReviewingDocumentId(null);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
@@ -153,23 +172,29 @@ export function ApplicationDetailPage() {
             updating={updating}
             onStatusUpdate={handleStatusUpdate}
             onWorkflowAction={handleWorkflowAction}
-            onPreview={setPreviewDocument}
             onDownload={(document) => downloadApplicationDocument(id, document)}
+            fetchDocumentBlob={(document) => applicationsApi.fetchDocumentBlob(id, document.id)}
             onSlaAction={handleSlaAction}
             slaActionLoading={slaActionLoading}
-            assignSection={
+            onDocumentReview={handleDocumentReview}
+            reviewingDocumentId={reviewingDocumentId}
+            requestActions={
               application.status !== 'draft' ? (
-                <>
-                  <ApplicationLifecycleActions
-                    applicationId={id}
-                    status={application.status}
-                    role="admin"
-                    workflowSteps={application.workflow?.steps}
-                    currentStep={application.workflow?.currentStep}
-                    onUpdated={loadApplication}
-                  />
-                  <div className="mt-8 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-                  <h2 className="text-sm font-bold text-[#052E1C]">Assignment</h2>
+                <ApplicationLifecycleActions
+                  applicationId={id}
+                  status={application.status}
+                  role="admin"
+                  workflowSteps={application.workflow?.steps}
+                  currentStep={application.workflow?.currentStep}
+                  onUpdated={loadApplication}
+                  embedded
+                />
+              ) : null
+            }
+            assignmentSection={
+              application.status !== 'draft' ? (
+                  <div className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+                  <h2 className="text-sm font-bold text-[#052E1C]">Assign to staff</h2>
                   <p className="mt-1 text-sm text-[#4B6358]">
                     Assign this request to a staff member or to yourself. The assignee handles
                     every workflow step that requires staff action and receives an email notification.
@@ -214,34 +239,16 @@ export function ApplicationDetailPage() {
                     </Button>
                   </div>
                   </div>
-                  <div className="mt-8 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-                    <h2 className="text-sm font-bold text-[#052E1C]">Audit log</h2>
-                    <p className="mt-1 text-sm text-[#4B6358]">
-                      Who did what and when on this request.
-                    </p>
-                    <div className="mt-4">
-                      <ApplicationAuditLog applicationId={id} />
-                    </div>
-                  </div>
-                </>
               ) : null
+            }
+            afterDocuments={
+              <div className="mt-6">
+                <ApplicationPaymentsPanel applicationId={id} />
+              </div>
             }
           />
         )}
-        {!loading && application ? (
-          <div className="mt-8">
-            <ApplicationPaymentsPanel applicationId={id} />
-          </div>
-        ) : null}
       </div>
-
-      <DocumentPreviewModal
-        open={Boolean(previewDocument)}
-        onClose={() => setPreviewDocument(null)}
-        applicationId={id}
-        document={previewDocument}
-        mode="admin"
-      />
     </AdminLayout>
   );
 }

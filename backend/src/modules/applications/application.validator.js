@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
+import { APPLICATION_STATUS, DOCUMENT_REVIEW_STATUS } from '../../shared/enums/application.enums.js';
 import { OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 
 export const listApplicationsQuerySchema = z.object({
@@ -35,6 +35,15 @@ export const workflowActionSchema = z.object({
 
 export const assignApplicationSchema = z.object({
   staffUserId: z.string().min(1),
+});
+
+export const documentReviewSchema = z.object({
+  status: z.enum([
+    DOCUMENT_REVIEW_STATUS.APPROVED,
+    DOCUMENT_REVIEW_STATUS.REJECTED,
+    DOCUMENT_REVIEW_STATUS.NEEDS_CORRECTION,
+  ]),
+  note: z.string().trim().max(2000).optional(),
 });
 
 export const slaActionSchema = z.object({

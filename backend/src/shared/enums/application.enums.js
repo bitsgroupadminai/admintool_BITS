@@ -10,3 +10,10 @@ export const APPLICATION_STATUS = {
   WITHDRAWN: 'withdrawn',
   CANCELLED: 'cancelled',
 };
+
+export const DOCUMENT_REVIEW_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  NEEDS_CORRECTION: 'needs_correction',
+};

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
+import { APPLICATION_STATUS, DOCUMENT_REVIEW_STATUS } from '../../shared/enums/application.enums.js';
 
 const workflowOutcomeSchema = new mongoose.Schema(
   {
@@ -80,6 +80,28 @@ const applicationDocumentSchema = new mongoose.Schema(
     uploadedAt: {
       type: Date,
       default: Date.now,
+    },
+    reviewStatus: {
+      type: String,
+      enum: Object.values(DOCUMENT_REVIEW_STATUS),
+      default: DOCUMENT_REVIEW_STATUS.PENDING,
+    },
+    reviewNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    reviewedByName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    reviewedAt: {
+      type: Date,
     },
   },
   { _id: true },

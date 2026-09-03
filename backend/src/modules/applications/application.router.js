@@ -30,6 +30,7 @@ adminRouter.patch('/:id/workflow-action', applicationController.workflowAction);
 adminRouter.patch('/:id/status', applicationController.updateStatus);
 adminRouter.patch('/:id/assign', applicationController.assign);
 adminRouter.patch('/:id/sla-action', applicationController.slaAction);
+adminRouter.patch('/:id/documents/:documentId/review', applicationController.reviewDocument);
 adminRouter.get('/:id/documents/:documentId/file', applicationController.streamDocument);
 
 staffRouter.use(
@@ -50,6 +51,7 @@ staffRouter.get('/:id', applicationController.getAssignedById);
 staffRouter.patch('/:id/workflow-action', applicationController.assignedWorkflowAction);
 staffRouter.patch('/:id/status', applicationController.updateAssignedStatus);
 staffRouter.patch('/:id/sla-action', applicationController.assignedSlaAction);
+staffRouter.patch('/:id/documents/:documentId/review', applicationController.reviewAssignedDocument);
 staffRouter.get('/:id/documents/:documentId/file', applicationController.streamAssignedDocument);
 
 export { adminRouter as default, staffRouter };

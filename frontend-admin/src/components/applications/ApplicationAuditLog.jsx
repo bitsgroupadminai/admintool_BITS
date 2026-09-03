@@ -4,25 +4,35 @@ import { applicationLifecycleApi } from '@/api/applications.lifecycle.api';
 
 /**
  * @param {Object} props
- * @param {string} props.applicationId
+ * @param {string} [props.applicationId]
  * @param {'admin' | 'staff'} [props.role]
+ * @param {Array} [props.entries]
+ * @param {number | null} [props.configurationVersion]
  */
-export function ApplicationAuditLog({ applicationId, role = 'admin' }) {
-  const [entries, setEntries] = useState([]);
-  const [configVersion, setConfigVersion] = useState(null);
-  const [loading, setLoading] = useState(true);
+export function ApplicationAuditLog({
+  applicationId,
+  role = 'admin',
+  entries: entriesProp,
+  configurationVersion: versionProp,
+}) {
+  const [fetchedEntries, setFetchedEntries] = useState([]);
+  const [fetchedVersion, setFetchedVersion] = useState(null);
+  const [loading, setLoading] = useState(!entriesProp);
 
   useEffect(() => {
-    if (!applicationId) return;
+    if (entriesProp || !applicationId) return;
     applicationLifecycleApi
       .getAuditLog(applicationId, role)
       .then(({ data }) => {
-        setEntries(data.data.entries ?? []);
-        setConfigVersion(data.data.configurationVersion);
+        setFetchedEntries(data.data.entries ?? []);
+        setFetchedVersion(data.data.configurationVersion);
       })
-      .catch(() => setEntries([]))
+      .catch(() => setFetchedEntries([]))
       .finally(() => setLoading(false));
-  }, [applicationId, role]);
+  }, [applicationId, role, entriesProp]);
+
+  const entries = entriesProp ?? fetchedEntries;
+  const configVersion = versionProp ?? fetchedVersion;
 
   if (loading) {
     return <p className="text-sm text-[#4B6358]">Loading audit log...</p>;

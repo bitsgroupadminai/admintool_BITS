@@ -4,9 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { ApplicationReviewContent } from '@/components/applications/ApplicationReviewContent';
-import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
 import { ApplicationLifecycleActions } from '@/components/applications/ApplicationLifecycleActions';
-import { DocumentPreviewModal } from '@/components/applications/DocumentPreviewModal';
 import {
   downloadStaffApplicationDocument,
   staffApplicationsApi,
@@ -20,7 +18,7 @@ export function StaffApplicationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [slaActionLoading, setSlaActionLoading] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState(null);
+  const [reviewingDocumentId, setReviewingDocumentId] = useState(null);
 
   const loadApplication = useCallback(async () => {
     setLoading(true);
@@ -78,6 +76,27 @@ export function StaffApplicationDetailPage() {
     }
   };
 
+  const handleDocumentReview = async (document, payload) => {
+    if (payload.status === 'needs_correction' && !payload.note?.trim()) {
+      toast.error('Add a note explaining what the student should fix');
+      return;
+    }
+    setReviewingDocumentId(document.id);
+    try {
+      const { data } = await staffApplicationsApi.reviewDocument(id, document.id, payload);
+      setApplication(data.data.application);
+      toast.success(
+        payload.status === 'needs_correction'
+          ? 'Correction requested — student will be notified'
+          : `Document ${payload.status === 'approved' ? 'approved' : 'rejected'}`,
+      );
+    } catch (err) {
+      toast.error(err.message || 'Could not save document review');
+    } finally {
+      setReviewingDocumentId(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <Link
@@ -96,40 +115,27 @@ export function StaffApplicationDetailPage() {
             updating={updating}
             onStatusUpdate={handleStatusUpdate}
             onWorkflowAction={handleWorkflowAction}
-            onPreview={setPreviewDocument}
             onDownload={(document) => downloadStaffApplicationDocument(id, document)}
+            fetchDocumentBlob={(document) => staffApplicationsApi.fetchDocumentBlob(id, document.id)}
             onSlaAction={handleSlaAction}
             slaActionLoading={slaActionLoading}
-            assignSection={
+            onDocumentReview={handleDocumentReview}
+            reviewingDocumentId={reviewingDocumentId}
+            requestActions={
               application ? (
-                <>
-                  <ApplicationLifecycleActions
-                    applicationId={id}
-                    status={application.status}
-                    role="staff"
-                    workflowSteps={application.workflow?.steps}
-                    currentStep={application.workflow?.currentStep}
-                    onUpdated={loadApplication}
-                  />
-                  <div className="mt-8 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-                    <h2 className="text-sm font-bold text-[#052E1C]">Audit log</h2>
-                    <div className="mt-4">
-                      <ApplicationAuditLog applicationId={id} role="staff" />
-                    </div>
-                  </div>
-                </>
+                <ApplicationLifecycleActions
+                  applicationId={id}
+                  status={application.status}
+                  role="staff"
+                  workflowSteps={application.workflow?.steps}
+                  currentStep={application.workflow?.currentStep}
+                  onUpdated={loadApplication}
+                  embedded
+                />
               ) : null
             }
           />
         )}
-
-      <DocumentPreviewModal
-        open={Boolean(previewDocument)}
-        onClose={() => setPreviewDocument(null)}
-        applicationId={id}
-        document={previewDocument}
-        mode="staff"
-      />
     </DashboardLayout>
   );
 }

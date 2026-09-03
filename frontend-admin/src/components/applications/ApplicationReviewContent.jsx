@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Download, Eye } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
 import { ApplicationAiDecisionsPanel } from '@/components/applications/ApplicationAiDecisionsPanel';
+import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
+import { WorkflowFunnel } from '@/components/applications/WorkflowFunnel';
+import { InlineDocumentPreview } from '@/components/applications/InlineDocumentPreview';
 import {
   APPLICATION_STATUS_BADGE_VARIANT,
   APPLICATION_STATUS_LABELS,
@@ -18,11 +21,149 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatHandlerLabel(handledBy) {
-  if (!handledBy) return 'Staff';
-  if (handledBy.type === 'ai') return `AI · ${handledBy.assignee?.replace(/_/g, ' ') ?? 'automation'}`;
-  if (handledBy.type === 'student') return 'Student';
-  return `Staff · ${handledBy.assignee?.replace(/_/g, ' ') ?? 'general'}`;
+function isDocumentAiStep(step) {
+  if (!step) return false;
+  if (step.handledBy?.type !== 'ai') return false;
+  const assignee = step.handledBy?.assignee ?? '';
+  return assignee === 'document_verification' || /document/i.test(step.name ?? '');
+}
+
+function findAiFinding(decisions, requirementName) {
+  const matchName = String(requirementName ?? '').trim().toLowerCase();
+  for (const decision of decisions ?? []) {
+    if (decision.handler !== 'document_verification') continue;
+    const finding = (decision.perDocument ?? []).find(
+      (item) => String(item.requirementName ?? '').trim().toLowerCase() === matchName,
+    );
+    if (finding) return { finding, decision };
+    if (!(decision.perDocument ?? []).length) {
+      return { finding: null, decision };
+    }
+  }
+  return null;
+}
+
+const AI_VERDICT = {
+  pass: { label: 'Passed', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
+  fail: { label: 'Failed', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
+  uncertain: { label: 'Uncertain', className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]' },
+};
+
+const MANUAL_STATUS = {
+  approved: { label: 'Approved', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
+  rejected: { label: 'Rejected', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
+  needs_correction: { label: 'Needs correction', className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]' },
+  pending: { label: 'Not reviewed', className: 'border-[#E2EEE8] bg-[#F9FCFB] text-[#4B6358]' },
+};
+
+function DetailChip({ label, value }) {
+  return (
+    <div className="min-w-[140px] flex-1 rounded-xl border border-[#E2EEE8] bg-white px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#6B7280]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-[#052E1C]">{value || '—'}</p>
+    </div>
+  );
+}
+
+function DocumentVerificationPanel({
+  requirement,
+  uploaded,
+  application,
+  usesAiVerification,
+  pendingAi,
+  showManualReview,
+  reviewing,
+  onReview,
+}) {
+  const [note, setNote] = useState(uploaded?.reviewNote ?? '');
+  const aiMatch = findAiFinding(application.aiDecisions, requirement.name);
+  const aiVerdict = AI_VERDICT[aiMatch?.finding?.verdict] ?? AI_VERDICT[aiMatch?.decision?.verdict];
+  const manual = MANUAL_STATUS[uploaded?.reviewStatus] ?? MANUAL_STATUS.pending;
+
+  return (
+    <div className="space-y-3">
+      {usesAiVerification ? (
+        <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">AI verification</p>
+          {pendingAi && !aiMatch ? (
+            <p className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-[#1D4ED8]">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Verifying this document...
+            </p>
+          ) : aiMatch ? (
+            <>
+              <p className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${aiVerdict?.className ?? AI_VERDICT.uncertain.className}`}>
+                {aiVerdict?.label ?? 'Checked'}
+              </p>
+              {aiMatch.finding?.issue || aiMatch.decision?.summary ? (
+                <p className="mt-2 text-sm text-[#334155]">
+                  {aiMatch.finding?.issue || aiMatch.decision.summary}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-[#4B6358]">No issues flagged for this document.</p>
+              )}
+              {aiMatch.decision?.confidence != null ? (
+                <p className="mt-1 text-xs text-[#6B7280]">
+                  {Math.round(aiMatch.decision.confidence * 100)}% confidence
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-[#4B6358]">No AI result for this document yet.</p>
+          )}
+        </div>
+      ) : null}
+
+      {showManualReview && uploaded ? (
+        <div className="rounded-xl border border-[#E2EEE8] bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#052E1C]">Staff review</p>
+            <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${manual.className}`}>
+              {manual.label}
+            </span>
+          </div>
+          {uploaded.reviewedByName ? (
+            <p className="mt-1 text-xs text-[#6B7280]">
+              Last reviewed by {uploaded.reviewedByName}
+              {uploaded.reviewedAt ? ` · ${new Date(uploaded.reviewedAt).toLocaleString()}` : ''}
+            </p>
+          ) : null}
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            placeholder="Notes for the student (required when requesting a correction)"
+            className="mt-3 w-full rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:bg-white focus:ring-2 focus:ring-[#6EE7B7]/20"
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={reviewing}
+              onClick={() => onReview({ status: 'approved', note })}
+            >
+              Approve
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={reviewing}
+              onClick={() => onReview({ status: 'rejected', note })}
+            >
+              Reject
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={reviewing}
+              onClick={() => onReview({ status: 'needs_correction', note })}
+            >
+              Needs correction
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function ApplicationReviewContent({
@@ -30,11 +171,15 @@ export function ApplicationReviewContent({
   updating,
   onStatusUpdate,
   onWorkflowAction,
-  onPreview,
   onDownload,
-  assignSection = null,
+  fetchDocumentBlob,
+  requestActions = null,
+  assignmentSection = null,
+  afterDocuments = null,
   onSlaAction = null,
   slaActionLoading = false,
+  onDocumentReview = null,
+  reviewingDocumentId = null,
 }) {
   const [note, setNote] = useState('');
   const [selectedCorrectionDocs, setSelectedCorrectionDocs] = useState([]);
@@ -44,6 +189,13 @@ export function ApplicationReviewContent({
   const workflow = application?.workflow;
   const workflowActions = workflow?.availableActions ?? [];
   const legacyActions = workflowActions.length ? [] : getApplicationStatusActions(application?.status);
+  const steps = workflow?.steps ?? [];
+  const usesAiVerification = steps.some(isDocumentAiStep);
+  const pendingAi =
+    application?.status === 'pending_ai_review' && workflow?.currentStep?.handledBy?.type === 'ai';
+  const showManualReview =
+    Boolean(onDocumentReview) &&
+    (!usesAiVerification || pendingAi || workflowActions.length > 0);
 
   const handleWorkflowClick = (outcome) => {
     if (outcome === 'needs_correction' && !note.trim()) {
@@ -64,301 +216,254 @@ export function ApplicationReviewContent({
     );
   };
 
+  const activityEntries = (workflow?.history ?? []).map((entry, index) => ({
+    id: `${entry.stepId}-${entry.createdAt}-${index}`,
+    stepName: entry.stepName,
+    outcome: entry.outcome,
+    actedByName: entry.actedByName,
+    actedByRole: entry.actedByRole,
+    note: entry.note,
+    createdAt: entry.createdAt,
+  }));
+
+  const otherAiDecisions = (application.aiDecisions ?? []).filter(
+    (decision) => decision.handler !== 'document_verification',
+  );
+
   return (
     <>
-      <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#10B981]">
-            Request review
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#052E1C]">
-            {application.applicantName}
-          </h1>
-          <p className="mt-2 text-sm text-[#4B6358]">{application.applicantEmail}</p>
-          {application.applicantDetails?.length > 0 ? (
-            <dl className="mt-4 grid gap-2 sm:grid-cols-2">
-              {application.applicantDetails.map((item) => (
-                <div
-                  key={item.fieldKey}
-                  className="rounded-xl border border-[#E2EEE8] bg-white px-3 py-2 text-sm"
-                >
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-                    {item.label}
-                  </dt>
-                  <dd className="mt-1 font-medium text-[#052E1C]">{String(item.value ?? '—')}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#4B6358]">
-            <span className="rounded-xl border border-[#E2EEE8] bg-white px-3 py-2">
-              <span className="font-semibold text-[#052E1C]">Service:</span> {application.serviceName}
-            </span>
-            <span className="rounded-xl border border-[#E2EEE8] bg-white px-3 py-2">
-              <span className="font-semibold text-[#052E1C]">Option:</span> {application.offeringName}
-            </span>
+      <section className="mt-5 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#10B981]">
+              Request review
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#052E1C]">
+              {application.applicantName}
+            </h1>
           </div>
+          <Badge variant={APPLICATION_STATUS_BADGE_VARIANT[application.status] ?? 'default'}>
+            {APPLICATION_STATUS_LABELS[application.status] ?? application.status}
+          </Badge>
         </div>
 
-        <div className="rounded-2xl border border-[#C4E8D4] bg-white/85 p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#10B981]">Status</p>
-          <div className="mt-3">
-            <Badge variant={APPLICATION_STATUS_BADGE_VARIANT[application.status] ?? 'default'}>
-              {APPLICATION_STATUS_LABELS[application.status] ?? application.status}
-            </Badge>
-          </div>
-          {workflow?.currentStep ? (
-            <p className="mt-3 text-xs text-[#4B6358]">
-              Current step:{' '}
-              <span className="font-semibold text-[#052E1C]">{workflow.currentStep.name}</span>
-            </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <DetailChip label="Email" value={application.applicantEmail} />
+          {application.applicantMobile ? (
+            <DetailChip label="Mobile" value={application.applicantMobile} />
           ) : null}
-          <p className="mt-3 text-xs text-[#4B6358]">
-            Updated {new Date(application.updatedAt).toLocaleString()}
-          </p>
-          {application.assignedTo ? (
-            <p className="mt-3 text-xs text-[#4B6358]">
-              Assigned to{' '}
-              <span className="font-semibold text-[#052E1C]">
-                {application.assignedTo.name}
-                {application.assignedTo.role === 'admin' ? ' (Admin)' : ''}
-              </span>
-            </p>
-          ) : (
-            <p className="mt-3 text-xs text-[#9CA3AF]">Not assigned yet</p>
-          )}
-          {application.currentStepDueAt ? (
-            <p className={`mt-3 text-xs ${application.slaBreached || application.slaOverdue ? 'font-semibold text-[#B91C1C]' : 'text-[#4B6358]'}`}>
-              SLA due {new Date(application.currentStepDueAt).toLocaleString()}
-              {application.slaBreached || application.slaOverdue ? ' · overdue' : ''}
-            </p>
-          ) : null}
-
-          {onSlaAction ? (
-            <SlaBreachActions
-              application={application}
-              loading={slaActionLoading}
-              onExtend={() => onSlaAction('extend')}
-              onEscalate={() => onSlaAction('escalate')}
+          {(application.applicantDetails ?? []).map((item) => (
+            <DetailChip
+              key={item.fieldKey}
+              label={item.label}
+              value={String(item.value ?? '—')}
             />
-          ) : null}
+          ))}
+          <DetailChip label="Service" value={application.serviceName} />
+          <DetailChip label="Option" value={application.offeringName} />
+          {application.assignedTo ? (
+            <DetailChip
+              label="Assigned to"
+              value={`${application.assignedTo.name}${application.assignedTo.role === 'admin' ? ' (Admin)' : ''}`}
+            />
+          ) : (
+            <DetailChip label="Assigned to" value="Unassigned" />
+          )}
+        </div>
+      </section>
 
-          {workflowActions.length > 0 ? (
-            <div className="mt-4 space-y-3">
-              {workflowActions.some((action) => action.outcome === 'needs_correction') ? (
-                <>
-                  <textarea
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    rows={3}
-                    placeholder="Explain what the student should fix (required for correction requests)"
-                    className="w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
-                  />
-                  {(application.documentRequirements ?? []).length > 0 ? (
-                    <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-3">
-                      <p className="text-xs font-bold text-[#052E1C]">
-                        Which documents need fixing?
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {(application.documentRequirements ?? []).map((requirement) => (
-                          <label
-                            key={requirement.id}
-                            className="flex items-center gap-2 text-xs text-[#4B6358]"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedCorrectionDocs.includes(requirement.name)}
-                              onChange={() => toggleCorrectionDoc(requirement.name)}
-                              className="rounded border-[#C4E8D4]"
-                            />
-                            {requirement.name}
-                          </label>
-                        ))}
-                      </div>
+      <div className="mt-6">
+        <WorkflowFunnel
+          steps={steps}
+          currentStepName={workflow?.currentStep?.name}
+          statusLabel={APPLICATION_STATUS_LABELS[application.status]}
+        />
+      </div>
+
+      <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-[#052E1C]">Request actions</h2>
+        <p className="mt-1 text-sm text-[#4B6358]">
+          Move this request through its current step, or use lifecycle actions. Notes are saved to
+          the activity log.
+        </p>
+        <p className="mt-3 text-xs text-[#4B6358]">
+          Updated {new Date(application.updatedAt).toLocaleString()}
+          {application.currentStepDueAt
+            ? ` · SLA due ${new Date(application.currentStepDueAt).toLocaleString()}`
+            : ''}
+          {application.slaBreached || application.slaOverdue ? ' · overdue' : ''}
+        </p>
+
+        {onSlaAction ? (
+          <SlaBreachActions
+            application={application}
+            loading={slaActionLoading}
+            onExtend={() => onSlaAction('extend')}
+            onEscalate={() => onSlaAction('escalate')}
+          />
+        ) : null}
+
+        {workflowActions.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {workflowActions.some((action) => action.outcome === 'needs_correction') ? (
+              <>
+                <textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  rows={3}
+                  placeholder="Explain what the student should fix (required for correction requests)"
+                  className="w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+                />
+                {(application.documentRequirements ?? []).length > 0 ? (
+                  <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-3">
+                    <p className="text-xs font-bold text-[#052E1C]">Which documents need fixing?</p>
+                    <div className="mt-2 space-y-2">
+                      {(application.documentRequirements ?? []).map((requirement) => (
+                        <label
+                          key={requirement.id}
+                          className="flex items-center gap-2 text-xs text-[#4B6358]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCorrectionDocs.includes(requirement.name)}
+                            onChange={() => toggleCorrectionDoc(requirement.name)}
+                            className="rounded border-[#C4E8D4]"
+                          />
+                          {requirement.name}
+                        </label>
+                      ))}
                     </div>
-                  ) : null}
-                </>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                {workflowActions.map((action) => (
-                  <Button
-                    key={action.outcome}
-                    type="button"
-                    variant={action.outcome === 'rejected' ? 'outline' : 'default'}
-                    disabled={updating}
-                    onClick={() => handleWorkflowClick(action.outcome)}
-                  >
-                    {action.label ?? WORKFLOW_OUTCOME_LABELS[action.outcome] ?? action.outcome}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : legacyActions.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {legacyActions.map((action) => (
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {workflowActions.map((action) => (
                 <Button
-                  key={action.status}
+                  key={action.outcome}
                   type="button"
-                  variant={action.status === 'rejected' ? 'outline' : 'default'}
+                  variant={action.outcome === 'rejected' ? 'outline' : 'default'}
                   disabled={updating}
-                  onClick={() => onStatusUpdate(action.status)}
+                  onClick={() => handleWorkflowClick(action.outcome)}
                 >
-                  {action.label}
+                  {action.label ?? WORKFLOW_OUTCOME_LABELS[action.outcome] ?? action.outcome}
                 </Button>
               ))}
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      {assignSection}
-
-      {workflow?.steps?.length ? (
-        <section className="mt-8 rounded-2xl border border-[#E2EEE8] bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-[#052E1C]">Workflow progress</h2>
-          <p className="mt-1 text-sm text-[#4B6358]">
-            Actions follow the configured workflow for this service option.
-          </p>
-          <ol className="mt-5 space-y-3">
-            {workflow.steps.map((step) => (
-              <li
-                key={step.stepId}
-                className={`rounded-xl border p-4 ${
-                  step.state === 'current'
-                    ? 'border-[#6EE7B7] bg-[#F0FAF5]'
-                    : step.state === 'complete'
-                      ? 'border-[#C4E8D4] bg-[#F9FCFB]'
-                      : 'border-[#E2EEE8] bg-white'
-                }`}
+          </div>
+        ) : legacyActions.length > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {legacyActions.map((action) => (
+              <Button
+                key={action.status}
+                type="button"
+                variant={action.status === 'rejected' ? 'outline' : 'default'}
+                disabled={updating}
+                onClick={() => onStatusUpdate(action.status)}
               >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+
+        {requestActions ? <div className="mt-5 border-t border-[#E2EEE8] pt-5">{requestActions}</div> : null}
+      </section>
+
+      {assignmentSection}
+
+      <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#052E1C]">Student documents</h2>
+            <p className="mt-1 text-sm text-[#4B6358]">
+              Each upload is shown here with its verification status.
+            </p>
+          </div>
+          <span className="rounded-full bg-[#F0FAF5] px-3 py-1 text-xs font-semibold text-[#0A6640]">
+            {application.uploadedRequiredCount ?? 0} / {application.requiredDocumentCount ?? 0} required
+            uploaded
+          </span>
+        </div>
+
+        {(application.missingRequiredDocuments ?? []).length > 0 ? (
+          <p className="mt-4 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
+            Missing: {application.missingRequiredDocuments.map((item) => item.name).join(', ')}
+          </p>
+        ) : null}
+
+        <div className="mt-5 space-y-6">
+          {(application.documentRequirements ?? []).map((requirement) => {
+            const uploaded = uploadedMap.get(requirement.id);
+            return (
+              <div key={requirement.id} className="rounded-2xl border border-[#E2EEE8] bg-[#F9FCFB] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#10B981]">
-                      Step {step.order}
+                    <p className="text-sm font-semibold text-[#052E1C]">{requirement.name}</p>
+                    <p className="mt-1 text-xs text-[#4B6358]">
+                      {requirement.required !== false ? 'Required' : 'Optional'}
+                      {uploaded
+                        ? ` · ${uploaded.originalName} (${formatFileSize(uploaded.sizeBytes)})`
+                        : ''}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-[#052E1C]">{step.name}</p>
-                    <p className="mt-1 text-xs text-[#4B6358]">{formatHandlerLabel(step.handledBy)}</p>
                   </div>
-                  <Badge variant={step.state === 'complete' ? 'active' : step.state === 'current' ? 'default' : 'draft'}>
-                    {step.state === 'complete' ? 'Done' : step.state === 'current' ? 'Current' : 'Upcoming'}
-                  </Badge>
+                  {uploaded ? (
+                    <button
+                      type="button"
+                      onClick={() => onDownload(uploaded)}
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#C4E8D4] bg-white px-3 text-xs font-semibold text-[#0A6640]"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </button>
+                  ) : null}
                 </div>
-              </li>
-            ))}
-          </ol>
 
-          {(workflow.history ?? []).length > 0 ? (
-            <div className="mt-6 border-t border-[#E2EEE8] pt-5">
-              <h3 className="text-sm font-bold text-[#052E1C]">Action history</h3>
-              <ul className="mt-3 space-y-2 text-sm text-[#4B6358]">
-                {workflow.history.map((entry, index) => (
-                  <li key={`${entry.stepId}-${entry.createdAt}-${index}`} className="rounded-lg bg-[#F9FCFB] px-3 py-2">
-                    <span className="font-semibold text-[#052E1C]">{entry.stepName}</span>
-                    {' · '}
-                    {entry.outcome.replace(/_/g, ' ')} by {entry.actedByName}
-                    {entry.note ? ` — ${entry.note}` : ''}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                  <div>
+                    {uploaded ? (
+                      <InlineDocumentPreview document={uploaded} fetchBlob={fetchDocumentBlob} />
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-[#FDE68A] bg-[#FFFBEB] px-4 py-10 text-center text-sm text-[#92400E]">
+                        This document has not been uploaded.
+                      </p>
+                    )}
+                  </div>
+                  <DocumentVerificationPanel
+                    requirement={requirement}
+                    uploaded={uploaded}
+                    application={application}
+                    usesAiVerification={usesAiVerification}
+                    pendingAi={pendingAi}
+                    showManualReview={showManualReview}
+                    reviewing={reviewingDocumentId === uploaded?.id}
+                    onReview={(payload) => onDocumentReview?.(uploaded, payload)}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {otherAiDecisions.length > 0 ? (
+        <ApplicationAiDecisionsPanel decisions={otherAiDecisions} />
       ) : null}
 
-      <ApplicationAiDecisionsPanel decisions={application.aiDecisions ?? []} />
+      {afterDocuments}
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <section className="rounded-2xl border border-[#E2EEE8] bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-[#052E1C]">Uploaded documents</h2>
-              <p className="mt-1 text-sm text-[#4B6358]">Review each file submitted by the student.</p>
-            </div>
-            <span className="rounded-full bg-[#F0FAF5] px-3 py-1 text-xs font-semibold text-[#0A6640]">
-              {application.uploadedRequiredCount ?? 0} / {application.requiredDocumentCount ?? 0} required
-              uploaded
-            </span>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {(application.documentRequirements ?? []).map((requirement) => {
-              const uploaded = uploadedMap.get(requirement.id);
-              return (
-                <div
-                  key={requirement.id}
-                  className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[#052E1C]">{requirement.name}</p>
-                      <p className="mt-1 text-xs text-[#4B6358]">
-                        {requirement.required !== false ? 'Required' : 'Optional'}
-                      </p>
-                      {uploaded ? (
-                        <p className="mt-2 text-xs font-medium text-[#0A6640]">
-                          {uploaded.originalName} ({formatFileSize(uploaded.sizeBytes)})
-                        </p>
-                      ) : (
-                        <p className="mt-2 text-xs text-[#92400E]">Missing upload</p>
-                      )}
-                    </div>
-
-                    {uploaded ? (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onPreview(uploaded)}
-                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#C4E8D4] bg-white px-3 text-xs font-semibold text-[#0A6640]"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Preview
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDownload(uploaded)}
-                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#C4E8D4] bg-white px-3 text-xs font-semibold text-[#0A6640]"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Download
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <aside className="space-y-4">
-          <div className="rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-[#052E1C]">Review checklist</h3>
-            <ul className="mt-3 space-y-2 text-sm text-[#4B6358]">
-              <li>Confirm every required document is uploaded.</li>
-              <li>Open previews for PDFs and images before approving.</li>
-              <li>Use workflow actions to move the request to the next step.</li>
-            </ul>
-          </div>
-
-          {(application.missingRequiredDocuments ?? []).length > 0 ? (
-            <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-5">
-              <h3 className="text-sm font-bold text-[#92400E]">Missing required documents</h3>
-              <ul className="mt-2 space-y-1 text-sm text-[#92400E]">
-                {application.missingRequiredDocuments.map((item) => (
-                  <li key={item.id}>{item.name}</li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-[#C4E8D4] bg-[#F0FAF5] p-5">
-              <h3 className="text-sm font-bold text-[#0A6640]">Documents complete</h3>
-              <p className="mt-2 text-sm text-[#4B6358]">
-                All required documents were uploaded before submission.
-              </p>
-            </div>
-          )}
-        </aside>
-      </div>
+      <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-[#052E1C]">Activity log</h2>
+        <p className="mt-1 text-sm text-[#4B6358]">
+          Workflow actions, document reviews, and lifecycle events in one place.
+        </p>
+        <div className="mt-4">
+          <ApplicationAuditLog
+            entries={activityEntries}
+            configurationVersion={workflow?.configurationVersion ?? null}
+          />
+        </div>
+      </section>
     </>
   );
 }

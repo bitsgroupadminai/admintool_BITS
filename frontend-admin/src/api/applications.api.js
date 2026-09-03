@@ -7,6 +7,8 @@ export const applicationsApi = {
   workflowAction: (id, payload) => apiClient.patch(`/applications/${id}/workflow-action`, payload),
   assignStaff: (id, staffUserId) => apiClient.patch(`/applications/${id}/assign`, { staffUserId }),
   slaAction: (id, action) => apiClient.patch(`/applications/${id}/sla-action`, { action }),
+  reviewDocument: (id, documentId, data) =>
+    apiClient.patch(`/applications/${id}/documents/${documentId}/review`, data),
   getDocumentFilePath: (applicationId, documentId, download = false) => {
     const base = `/applications/${applicationId}/documents/${documentId}/file`;
     return download ? `${base}?download=1` : base;

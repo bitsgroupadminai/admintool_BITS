@@ -97,6 +97,7 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
         actual,
         expected: rule.value,
         operator: rule.operator,
+        requirement,
         message: `${rule.field} requires ${requirement}, but this value could not be confirmed from the available information.`,
       });
       continue;
@@ -109,6 +110,7 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
         actual,
         expected: rule.value,
         operator: rule.operator,
+        requirement,
         message: `${rule.field} requires ${requirement}; the value found is ${formatDisplayValue(actual)}.`,
       });
       continue;
@@ -121,6 +123,7 @@ export function evaluateEligibilityRules(rules = [], profile = {}) {
       actual,
       expected: rule.value,
       operator: rule.operator,
+      requirement,
       message: `${rule.field} requires ${requirement}, but the value found is ${formatDisplayValue(actual)}. This does not meet the eligibility criterion.`,
     });
   }

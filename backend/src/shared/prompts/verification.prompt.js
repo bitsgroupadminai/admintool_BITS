@@ -137,18 +137,21 @@ Your ONLY job is to EXTRACT the factual values needed to check eligibility from 
 If a supporting document is clearly for a different person than the APPLICANT RECORD, say so in issues and do not treat its marks or fields as the applicant's.
 Do NOT decide final eligibility yourself with respect to thresholds — the system compares your extracted values against the rules deterministically.
 ${allowSampleDocuments ? 'Extract values from unofficial and AI-generated sample documents the same way you would from real ones. Do not refuse extraction because a document looks synthetic or unofficial.\n' : ''}
-For each eligibility field the programme cares about, extract the applicant's actual value:
+Extract values SEPARATELY for each uploaded document. Never copy a value from one file onto another.
+For each document, only include fields that are actually visible on that file. If a field is not on that document, omit it or use null.
+
 - Use the exact field name given in the rules list.
-- value: the extracted number/text/boolean, or null if it is not present in the documents.
-- documentExcerpt: verbatim proof from the document, including the subject/mark line when marks are involved.
+- Use the exact requirementName from the uploaded documents list.
+- value: the extracted number/text/boolean, or null if it is not present on that document.
+- documentExcerpt: verbatim proof from THAT document, including the subject/mark line when marks are involved.
 
 Set the overall verdict to reflect extraction quality (not the pass/fail decision):
-- "pass": you confidently extracted all required values.
+- "pass": you confidently extracted the values that those documents can provide.
 - "uncertain": some values are missing or ambiguous / documents unreadable.
 - "fail": documents clearly contradict a stated requirement (e.g. wrong stream) — rare; prefer "uncertain" when unsure.
 
-summary must name each extracted field and the value you found, plus the document you found it on.
-If a value could not be read, say which field is missing and why (wrong document type, unreadable scan, subject not listed).
+summary must name each document, the fields found on it, and the values.
+If a value could not be read, say which document and field are missing and why.
 
 ${identityRules(allowSampleDocuments)}
 
@@ -158,7 +161,15 @@ Reply with JSON:
 {
   "verdict": "pass" | "fail" | "uncertain",
   "confidence": 0.0-1.0,
-  "summary": "detailed reviewer-facing explanation of what was extracted",
+  "summary": "detailed reviewer-facing explanation of what was extracted from each document",
+  "perDocument": [
+    {
+      "requirementName": "exact requirement name",
+      "extractedFields": [
+        { "field": "exact field name", "value": <number|string|boolean|null>, "documentExcerpt": "verbatim proof or empty" }
+      ]
+    }
+  ],
   "extractedFields": [
     { "field": "exact field name", "value": <number|string|boolean|null>, "documentExcerpt": "verbatim proof or empty" }
   ],
@@ -247,12 +258,26 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
   return [
     formatApplicantRecord(ctx),
     '',
-    'ELIGIBILITY FIELDS TO EXTRACT (extract the applicant\'s actual value for each field name):',
+    'ELIGIBILITY RULES (extract the applicant\'s actual value for each field from EACH document separately):',
     (ctx.eligibilityRules ?? [])
-      .map((rule) => `- ${rule.field} (${rule.fieldType})`)
+      .map((rule) => {
+        const need =
+          rule.operator === 'gte'
+            ? `at least ${rule.value}`
+            : rule.operator === 'lte'
+              ? `at most ${rule.value}`
+              : rule.operator === 'gt'
+                ? `more than ${rule.value}`
+                : rule.operator === 'lt'
+                  ? `less than ${rule.value}`
+                  : rule.operator === 'neq'
+                    ? `other than ${rule.value}`
+                    : String(rule.value ?? '');
+        return `- ${rule.field}: ${need} (${rule.fieldType})`;
+      })
       .join('\n') || '- (none configured)',
     '',
-    'SUPPORTING DOCUMENTS (text extracted where possible; images are attached separately):',
+    'UPLOADED DOCUMENTS (extract from each file on its own; do not mix values across files):',
     formatUploadedDocuments(ctx.documents),
     '',
     formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),

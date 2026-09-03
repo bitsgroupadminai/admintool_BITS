@@ -43,6 +43,8 @@ import {
   INTERNAL_ACTION,
   decideDocumentAction,
   decideEligibilityAction,
+  evaluateEligibilityByDocument,
+  mergeExtractedFields,
 } from './ai-verification.decision.js';
 
 export { isAiVerificationEnabled } from './ai-verification.config.js';
@@ -298,16 +300,19 @@ async function evaluateEligibilityStep({
     schema: eligibilityVerificationResponseSchema,
   });
 
+  const perDocument = evaluateEligibilityByDocument(raw.perDocument ?? [], eligibilityRules);
+  const extractedFields = mergeExtractedFields(perDocument, raw.extractedFields ?? []);
+
   // Deterministic comparison against the actual rules using AI-extracted values.
   const { action, evaluation } = decideEligibilityAction({
     verdict: raw.verdict,
     confidence: raw.confidence,
-    extractedFields: raw.extractedFields ?? [],
+    extractedFields,
     eligibilityRules,
     thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
   });
 
-  const comparisonIssues = formatEligibilityComparisonIssues(evaluation, raw.extractedFields ?? []);
+  const comparisonIssues = formatEligibilityComparisonIssues(evaluation, extractedFields);
   const issues = comparisonIssues.length ? comparisonIssues : raw.issues ?? [];
   const summary = buildEligibilitySummary(evaluation, raw.summary, issues);
 
@@ -326,7 +331,8 @@ async function evaluateEligibilityStep({
       confidence: raw.confidence,
       summary,
       issues,
-      extractedFields: raw.extractedFields ?? [],
+      perDocument,
+      extractedFields,
       eligibilityResult: evaluation,
       raw,
       modelUsed: AI_VERIFICATION_MODEL,

@@ -378,7 +378,41 @@ export function ApplicationDocumentUpload({
                 {latestEligibilityDecision.summary}
               </p>
             ) : null}
-            {(latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
+            {(latestEligibilityDecision.perDocument ?? []).some(
+              (doc) => doc.eligibilityResult || (doc.extractedFields ?? []).length,
+            ) ? (
+              <div className="mt-2 space-y-2">
+                {latestEligibilityDecision.perDocument.map((doc, index) => (
+                  <div key={`${doc.requirementName}-${index}`}>
+                    <p className="text-xs font-semibold text-[#052E1C]">
+                      {doc.requirementName || `Document ${index + 1}`}
+                    </p>
+                    <ul className="mt-1 space-y-1">
+                      {(doc.eligibilityResult?.results ?? []).map((result, resultIndex) => (
+                        <li
+                          key={`${result.field}-${resultIndex}`}
+                          className={
+                            result.status === 'failed'
+                              ? 'text-xs leading-relaxed text-[#991B1B]'
+                              : result.status === 'passed'
+                                ? 'text-xs leading-relaxed text-[#065F46]'
+                                : 'text-xs leading-relaxed text-[#92400E]'
+                          }
+                        >
+                          {result.field}: extracted {result.actual ?? '—'}; needs{' '}
+                          {result.requirement ?? result.expected ?? '—'};{' '}
+                          {result.status === 'failed'
+                            ? 'not met'
+                            : result.status === 'passed'
+                              ? 'met'
+                              : 'could not confirm'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
               <ul className="mt-2 space-y-1.5">
                 {latestEligibilityDecision.eligibilityResult.results.map((result, index) => (
                   <li

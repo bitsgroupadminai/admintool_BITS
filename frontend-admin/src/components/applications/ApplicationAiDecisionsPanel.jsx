@@ -27,9 +27,122 @@ function formatConfidence(confidence) {
 }
 
 function formatValue(value) {
-  if (value == null) return '—';
+  if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
+}
+
+function formatRequirement(result) {
+  if (result?.requirement) return result.requirement;
+  const expected = formatValue(result?.expected);
+  const operator = result?.operator;
+  if (operator === 'gte') return `at least ${expected}`;
+  if (operator === 'lte') return `at most ${expected}`;
+  if (operator === 'gt') return `more than ${expected}`;
+  if (operator === 'lt') return `less than ${expected}`;
+  if (operator === 'neq') return `other than ${expected}`;
+  return expected;
+}
+
+function criterionStatusMeta(status) {
+  if (status === 'failed') {
+    return {
+      label: 'Not met',
+      className: 'border-[#FECACA] bg-[#FEF2F2] text-[#991B1B]',
+    };
+  }
+  if (status === 'passed') {
+    return {
+      label: 'Met',
+      className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#065F46]',
+    };
+  }
+  return {
+    label: 'Could not confirm',
+    className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]',
+  };
+}
+
+function isEligibilityDocumentBreakdown(perDocument = []) {
+  return perDocument.some(
+    (doc) => (doc.extractedFields ?? []).length > 0 || doc.eligibilityResult,
+  );
+}
+
+function EligibilityDocumentBreakdown({ documents = [] }) {
+  return (
+    <div className="mt-4 space-y-3">
+      {documents.map((doc, index) => {
+        const results = doc.eligibilityResult?.results ?? [];
+        const fieldsByName = new Map(
+          (doc.extractedFields ?? []).map((field) => [
+            String(field.field ?? '')
+              .trim()
+              .toLowerCase(),
+            field,
+          ]),
+        );
+        return (
+          <div
+            key={`${doc.requirementName}-${index}`}
+            className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4"
+          >
+            <p className="text-sm font-semibold text-[#052E1C]">
+              {doc.requirementName || `Document ${index + 1}`}
+            </p>
+            {results.length ? (
+              <ul className="mt-3 space-y-2">
+                {results.map((result, resultIndex) => {
+                  const status = criterionStatusMeta(result.status);
+                  const extracted =
+                    fieldsByName.get(String(result.field ?? '').trim().toLowerCase()) ??
+                    { value: result.actual, documentExcerpt: '' };
+                  return (
+                    <li
+                      key={`${result.field}-${resultIndex}`}
+                      className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${status.className}`}
+                    >
+                      <p className="font-semibold text-[11px] uppercase tracking-wide">
+                        {result.field}
+                      </p>
+                      <dl className="mt-1.5 space-y-1 text-[12px]">
+                        <div>
+                          <dt className="inline font-semibold">Extracted value: </dt>
+                          <dd className="inline">{formatValue(extracted.value ?? result.actual)}</dd>
+                        </div>
+                        <div>
+                          <dt className="inline font-semibold">Minimum criterion: </dt>
+                          <dd className="inline">{formatRequirement(result)}</dd>
+                        </div>
+                        <div>
+                          <dt className="inline font-semibold">Result: </dt>
+                          <dd className="inline">{status.label}</dd>
+                        </div>
+                      </dl>
+                      {extracted.documentExcerpt ? (
+                        <p className="mt-1.5 italic opacity-80">“{extracted.documentExcerpt}”</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (doc.extractedFields ?? []).length > 0 ? (
+              <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                {doc.extractedFields.map((field, fieldIndex) => (
+                  <div key={fieldIndex} className="rounded-lg border border-[#E2EEE8] bg-white px-3 py-2 text-xs">
+                    <dt className="font-semibold uppercase tracking-wide text-[#6B7280]">{field.field}</dt>
+                    <dd className="mt-0.5 font-medium text-[#052E1C]">{formatValue(field.value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-2 text-xs text-[#4B6358]">No values were extracted from this document.</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function ApplicationAiDecisionsPanel({ decisions = [] }) {
@@ -97,89 +210,86 @@ export function ApplicationAiDecisionsPanel({ decisions = [] }) {
                 </div>
               ) : null}
 
-              {(decision.perDocument ?? []).length > 0 ? (
-                <div className="mt-3">
-                  <p className="text-xs font-bold text-[#052E1C]">Per-document findings</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {decision.perDocument.map((doc, index) => {
-                      const docVerdict = VERDICT_META[doc.verdict] ?? VERDICT_META.uncertain;
-                      return (
-                        <li
-                          key={index}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#F9FCFB] px-3 py-2 text-xs text-[#4B6358]"
-                        >
-                          <span className="font-medium text-[#052E1C]">
-                            {doc.requirementName ?? `Document ${index + 1}`}
-                          </span>
-                          <span className="flex max-w-[70%] flex-col items-end gap-1 text-right">
-                            {doc.observedContent ? (
-                              <span className="text-[#334155]">Shows: {doc.observedContent}</span>
+              {isEligibilityDocumentBreakdown(decision.perDocument) ? (
+                <EligibilityDocumentBreakdown documents={decision.perDocument} />
+              ) : (
+                <>
+                  {(decision.perDocument ?? []).length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-xs font-bold text-[#052E1C]">Per-document findings</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {decision.perDocument.map((doc, index) => {
+                          const docVerdict = VERDICT_META[doc.verdict] ?? VERDICT_META.uncertain;
+                          return (
+                            <li
+                              key={index}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#F9FCFB] px-3 py-2 text-xs text-[#4B6358]"
+                            >
+                              <span className="font-medium text-[#052E1C]">
+                                {doc.requirementName ?? `Document ${index + 1}`}
+                              </span>
+                              <span className="flex max-w-[70%] flex-col items-end gap-1 text-right">
+                                {doc.observedContent ? (
+                                  <span className="text-[#334155]">Shows: {doc.observedContent}</span>
+                                ) : null}
+                                {doc.issue ? <span className="text-[#92400E]">{doc.issue}</span> : null}
+                                <Badge variant={docVerdict.variant}>{docVerdict.label}</Badge>
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {(decision.eligibilityResult?.results ?? []).length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-xs font-bold text-[#052E1C]">Eligibility criteria</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {decision.eligibilityResult.results.map((result, index) => {
+                          const status = criterionStatusMeta(result.status);
+                          return (
+                            <li
+                              key={`${result.field}-${index}`}
+                              className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${status.className}`}
+                            >
+                              <p className="font-semibold">{result.field}</p>
+                              <p className="mt-1">
+                                Extracted value: {formatValue(result.actual)} · Minimum criterion:{' '}
+                                {formatRequirement(result)} · {status.label}
+                              </p>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {(decision.extractedFields ?? []).length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-xs font-bold text-[#052E1C]">Extracted values</p>
+                      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {decision.extractedFields.map((field, index) => (
+                          <div
+                            key={index}
+                            className="rounded-lg border border-[#E2EEE8] bg-white px-3 py-2 text-xs"
+                          >
+                            <dt className="font-semibold uppercase tracking-wide text-[#6B7280]">
+                              {field.field}
+                            </dt>
+                            <dd className="mt-0.5 font-medium text-[#052E1C]">
+                              {formatValue(field.value)}
+                            </dd>
+                            {field.documentExcerpt ? (
+                              <dd className="mt-1 italic text-[#4B6358]">“{field.documentExcerpt}”</dd>
                             ) : null}
-                            {doc.issue ? <span className="text-[#92400E]">{doc.issue}</span> : null}
-                            <Badge variant={docVerdict.variant}>{docVerdict.label}</Badge>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : null}
-
-              {(decision.eligibilityResult?.results ?? []).length > 0 ? (
-                <div className="mt-3">
-                  <p className="text-xs font-bold text-[#052E1C]">Eligibility criteria</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {decision.eligibilityResult.results.map((result, index) => {
-                      const resultClass =
-                        result.status === 'failed'
-                          ? 'border-[#FECACA] bg-[#FEF2F2] text-[#991B1B]'
-                          : result.status === 'passed'
-                            ? 'border-[#BBF7D0] bg-[#ECFDF5] text-[#065F46]'
-                            : 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]';
-                      return (
-                        <li
-                          key={`${result.field}-${index}`}
-                          className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${resultClass}`}
-                        >
-                          <span className="font-semibold">
-                            {result.status === 'failed'
-                              ? 'Not met'
-                              : result.status === 'passed'
-                                ? 'Met'
-                                : 'Could not confirm'}
-                            {': '}
-                          </span>
-                          {result.message}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : null}
-
-              {(decision.extractedFields ?? []).length > 0 ? (
-                <div className="mt-3">
-                  <p className="text-xs font-bold text-[#052E1C]">Extracted values</p>
-                  <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {decision.extractedFields.map((field, index) => (
-                      <div
-                        key={index}
-                        className="rounded-lg border border-[#E2EEE8] bg-white px-3 py-2 text-xs"
-                      >
-                        <dt className="font-semibold uppercase tracking-wide text-[#6B7280]">
-                          {field.field}
-                        </dt>
-                        <dd className="mt-0.5 font-medium text-[#052E1C]">
-                          {formatValue(field.value)}
-                        </dd>
-                        {field.documentExcerpt ? (
-                          <dd className="mt-1 italic text-[#4B6358]">“{field.documentExcerpt}”</dd>
-                        ) : null}
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ) : null}
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           );
         })}

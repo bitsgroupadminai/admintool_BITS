@@ -32,6 +32,60 @@ export function decideDocumentAction({ verdict, confidence, thresholds, forceEsc
   return INTERNAL_ACTION.ESCALATE;
 }
 
+function documentMergePriority(requirementName) {
+  const name = String(requirementName ?? '').toLowerCase();
+  if (/class\s*12|xii|10\s*\+\s*2|senior secondary|graduation|degree|ug\b/.test(name)) return 3;
+  if (/class\s*11|\bxi\b/.test(name)) return 2;
+  if (/class\s*10|\bx\b|secondary/.test(name)) return 1;
+  return 2;
+}
+
+function fieldHasValue(field) {
+  return field?.field && field.value != null && field.value !== '';
+}
+
+/**
+ * Collapse per-document extractions into one profile. Later / higher-priority
+ * documents overwrite the same field (Class 12 beats Class 10).
+ */
+export function mergeExtractedFields(perDocument = [], fallback = []) {
+  if (!perDocument.length) return fallback;
+  const ranked = [...perDocument].sort(
+    (left, right) =>
+      documentMergePriority(left.requirementName) - documentMergePriority(right.requirementName),
+  );
+  const byField = new Map();
+  for (const doc of ranked) {
+    for (const field of doc.extractedFields ?? []) {
+      if (fieldHasValue(field)) {
+        byField.set(
+          String(field.field)
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' '),
+          field,
+        );
+      }
+    }
+  }
+  const merged = [...byField.values()];
+  return merged.length ? merged : fallback;
+}
+
+export function evaluateEligibilityByDocument(perDocument = [], eligibilityRules = []) {
+  return (perDocument ?? []).map((doc) => {
+    const extractedFields = doc.extractedFields ?? [];
+    return {
+      requirementName: doc.requirementName || 'Document',
+      extractedFields,
+      eligibilityResult: evaluateEligibilityRules(
+        eligibilityRules,
+        buildProfileFromExtractedFields(extractedFields),
+      ),
+    };
+  });
+}
+
 /**
  * Build an eligibility profile from AI-extracted fields so the deterministic rule
  * engine can compare values (AI only extracts; code decides pass/fail).

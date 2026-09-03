@@ -6,6 +6,8 @@ import {
   decideDocumentAction,
   decideEligibilityAction,
   buildProfileFromExtractedFields,
+  mergeExtractedFields,
+  evaluateEligibilityByDocument,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
 import {
   documentVerificationResponseSchema,
@@ -266,4 +268,53 @@ test('sample-document testing thresholds approve a modest pass', () => {
     thresholds: { autoApprove: 0.5, autoReject: 0.95 },
   });
   assert.equal(action, INTERNAL_ACTION.APPROVE);
+});
+
+test('mergeExtractedFields prefers Class 12 values over Class 10', () => {
+  const merged = mergeExtractedFields([
+    {
+      requirementName: 'Class 10 marksheet',
+      extractedFields: [{ field: 'Aggregate Requirement', value: 89 }],
+    },
+    {
+      requirementName: 'Class 12 marksheet',
+      extractedFields: [{ field: 'Aggregate Requirement', value: 76 }],
+    },
+  ]);
+  assert.equal(merged[0].value, 76);
+});
+
+test('evaluateEligibilityByDocument scores each file against the same rules', () => {
+  const docs = evaluateEligibilityByDocument(
+    [
+      {
+        requirementName: 'Class 10 marksheet',
+        extractedFields: [{ field: 'Aggregate Requirement', value: 89 }],
+      },
+      {
+        requirementName: 'Class 12 marksheet',
+        extractedFields: [{ field: 'Aggregate Requirement', value: 70 }],
+      },
+    ],
+    [{ field: 'Aggregate Requirement', fieldType: 'numeric', operator: 'gte', value: 75 }],
+  );
+  assert.equal(docs[0].eligibilityResult.results[0].status, 'passed');
+  assert.equal(docs[1].eligibilityResult.results[0].status, 'failed');
+  assert.equal(docs[0].eligibilityResult.results[0].requirement, 'at least 75');
+});
+
+test('eligibilityVerificationResponseSchema: per-document extractions parse', () => {
+  const parsed = eligibilityVerificationResponseSchema.parse({
+    verdict: 'pass',
+    confidence: 0.9,
+    summary: 'Extracted from each marksheet.',
+    perDocument: [
+      {
+        requirementName: 'Class 12 marksheet',
+        extractedFields: [{ field: 'Aggregate Requirement', value: 82, documentExcerpt: '82%' }],
+      },
+    ],
+  });
+  assert.equal(parsed.perDocument[0].requirementName, 'Class 12 marksheet');
+  assert.equal(parsed.perDocument[0].extractedFields[0].value, 82);
 });

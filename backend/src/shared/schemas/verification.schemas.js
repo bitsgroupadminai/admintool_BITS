@@ -40,10 +40,16 @@ const extractedFieldSchema = z.object({
   documentExcerpt: z.string().max(500).optional().default(''),
 });
 
+const eligibilityDocumentExtractionSchema = z.object({
+  requirementName: z.string().min(1).max(200),
+  extractedFields: z.array(extractedFieldSchema).max(40).default([]),
+});
+
 export const eligibilityVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
   summary: z.string().min(1).max(2500),
+  perDocument: z.array(eligibilityDocumentExtractionSchema).max(30).default([]),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
   issues: z.array(z.string().min(1).max(800)).max(30).default([]),
 });

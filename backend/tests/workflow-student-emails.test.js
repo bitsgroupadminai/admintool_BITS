@@ -94,4 +94,41 @@ describe('workflow student emails', () => {
     assert.match(mail.text, /48,000/);
     assert.equal(classifyWorkflowEmailKind('Offer Release'), 'offer_release');
   });
+
+  it('does not greet the student twice when the body already says Dear', () => {
+    const mail = buildWorkflowStepEmail({
+      application: {
+        applicantName: 'Harangad Singh Ghai',
+        applicantEmail: 'harangad@example.com',
+        serviceId: 'svc1',
+      },
+      step: {
+        stepId: 's6',
+        order: 6,
+        name: 'Admission Confirmation',
+        studentEmail: {
+          subject: 'Welcome — your admission is confirmed',
+          headline: 'Welcome to BITS P',
+          body: `Dear Harangad Singh Ghai,
+
+Welcome to BITS P — your admission for M.Sc. Economics has been confirmed.
+
+Warm regards,
+Admissions Office`,
+        },
+      },
+      context: {
+        instituteName: 'BITS P',
+        studentPortalUrl: 'https://student.example.com',
+      },
+    });
+    const helloMatches = mail.html.match(/Hello Harangad Singh Ghai/gi) ?? [];
+    const dearMatches = mail.html.match(/Dear Harangad Singh Ghai/gi) ?? [];
+    assert.equal(helloMatches.length, 1);
+    assert.equal(dearMatches.length, 0);
+    assert.doesNotMatch(mail.text, /Dear Harangad Singh Ghai/);
+    assert.match(mail.text, /Hello Harangad Singh Ghai/);
+    assert.match(mail.html, /admission for M\.Sc\. Economics has been confirmed/);
+  });
 });
+

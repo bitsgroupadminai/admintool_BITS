@@ -1,5 +1,5 @@
 import { queueEmailNotification } from '../../core/services/email.service.js';
-import { buildHtmlEmail } from './emailLayout.js';
+import { buildHtmlEmail, stripLeadingEmailGreeting } from './emailLayout.js';
 import { getStudentPortalUrl } from '../helpers/portalUrls.helper.js';
 import { logger } from '../../core/logger/index.js';
 import {
@@ -66,18 +66,15 @@ export function buildWorkflowStepEmail({
   );
   const bodyText = interpolateStudentEmail(template.body, vars);
   const intro = `Hello ${vars.applicantName},`;
-  const bodyWithoutIntro = bodyText.replace(
-    new RegExp(`^Hello\\s+${vars.applicantName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[,\\s]*`, 'i'),
-    '',
-  );
+  const bodyWithoutIntro = stripLeadingEmailGreeting(bodyText);
 
   return {
     subject,
-    text: `${bodyText}\n\n— ${vars.instituteName}`,
+    text: `${intro}\n\n${bodyWithoutIntro}\n\n— ${vars.instituteName}`,
     html: buildHtmlEmail({
       headline,
       intro,
-      body: studentEmailBodyToHtml(bodyWithoutIntro.trim()),
+      body: studentEmailBodyToHtml(bodyWithoutIntro),
       ctaLabel: 'Open your dashboard',
       ctaUrl: vars.dashboardUrl,
       instituteName: vars.instituteName,

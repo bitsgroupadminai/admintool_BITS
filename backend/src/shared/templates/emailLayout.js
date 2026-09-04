@@ -14,6 +14,37 @@ const BRAND = {
   warningText: '#92400E',
 };
 
+const GREETING_OPENER = '(?:hello|hi|hey|dear|greetings)';
+
+/**
+ * Remove a leading Hello/Hi/Hey/Dear line so the layout greeting is not doubled.
+ * @param {unknown} content
+ */
+export function stripLeadingEmailGreeting(content) {
+  let next = String(content ?? '');
+  if (!next.trim()) return next;
+
+  const htmlBlock = new RegExp(
+    `^(?:\\s|<br\\s*/?>)*<(?:p|div)[^>]*>\\s*${GREETING_OPENER}\\s+[^<\\n]{1,120}?[,!.]?\\s*</(?:p|div)>(?:\\s|<br\\s*/?>)*`,
+    'i',
+  );
+  const htmlBreaks = new RegExp(
+    `^(?:\\s|<br\\s*/?>)*${GREETING_OPENER}\\s+[^<\\n]{1,120}?[,!.]?(?:\\s*<br\\s*/?>)+\\s*`,
+    'i',
+  );
+  const plainLines = new RegExp(
+    `^\\s*${GREETING_OPENER}\\s+[^\\n]{1,120}?[,!.]?\\s*(?:\\r?\\n)+\\s*`,
+    'i',
+  );
+
+  for (let i = 0; i < 4; i += 1) {
+    const before = next;
+    next = next.replace(htmlBlock, '').replace(htmlBreaks, '').replace(plainLines, '');
+    if (next === before) break;
+  }
+  return next.trimStart();
+}
+
 /**
  * @param {{
  *   preheader?: string;
@@ -38,6 +69,7 @@ export function buildBrandedEmailHtml({
   notice = null,
   footerNote = 'This is an automated message from EduPortal. Please do not reply to this email.',
 }) {
+  const bodyWithoutGreeting = intro ? stripLeadingEmailGreeting(body) : body;
   const preheaderBlock = preheader
     ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>`
     : '';
@@ -46,8 +78,8 @@ export function buildBrandedEmailHtml({
     ? `<tr><td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:${BRAND.muted};">${intro}</td></tr>`
     : '';
 
-  const bodyRow = body
-    ? `<tr><td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:${BRAND.muted};">${body}</td></tr>`
+  const bodyRow = bodyWithoutGreeting
+    ? `<tr><td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:${BRAND.muted};">${bodyWithoutGreeting}</td></tr>`
     : '';
 
   const noticeRow = notice

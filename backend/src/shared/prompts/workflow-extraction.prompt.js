@@ -230,6 +230,7 @@ Every email MUST:
 - Use placeholders exactly as written: {{applicantName}}, {{offeringName}}, {{serviceName}}, {{instituteName}}, {{dashboardUrl}}, {{paymentAmount}}, {{paymentLabel}}, {{paymentMethods}}, {{nextStepName}}, {{courseStartDate}}, {{campusLocation}}, {{accommodationDetails}}
 - Stay under 4000 characters for body, 200 for subject and headline
 - Sound like a human admissions office, not a legal notice
+- Do NOT start the body with Hello, Hi, Hey, or Dear. The email layout already greets the student by name.
 
 Special rules by step:
 - Offer Release: congratulate them on receiving the offer because they were found eligible and a good fit. Then explain next steps in two numbered sections:

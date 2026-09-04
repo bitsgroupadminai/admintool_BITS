@@ -13,6 +13,9 @@ const {
   buildStaffWelcomeEmail,
   buildStatusUpdateEmail,
 } = await import('../src/shared/templates/applicationEmails.js');
+const { stripLeadingEmailGreeting, buildHtmlEmail } = await import(
+  '../src/shared/templates/emailLayout.js'
+);
 
 describe('resolvePortalUrl', () => {
   it('rewrites the retired student Vercel domain', () => {
@@ -31,6 +34,35 @@ describe('resolvePortalUrl', () => {
       resolvePortalUrl('https://eduportal-admin.vercel.app', 'admin'),
       PRODUCTION_ADMIN_PORTAL,
     );
+  });
+});
+
+describe('email greetings', () => {
+  it('strips a leading Dear line from HTML and plain bodies', () => {
+    assert.equal(
+      stripLeadingEmailGreeting('Dear Harangad Singh Ghai,\n\nWelcome to BITS P.'),
+      'Welcome to BITS P.',
+    );
+    assert.equal(
+      stripLeadingEmailGreeting('<p>Hello Asha,</p><p>Your request is under review.</p>'),
+      '<p>Your request is under review.</p>',
+    );
+    assert.equal(
+      stripLeadingEmailGreeting('Hello Asha,<br/>Your seat is ready.'),
+      'Your seat is ready.',
+    );
+  });
+
+  it('keeps a single Hello when the layout intro already greets the student', () => {
+    const html = buildHtmlEmail({
+      headline: 'Welcome to BITS P',
+      intro: 'Hello Harangad Singh Ghai,',
+      body: 'Dear Harangad Singh Ghai,<br/>Welcome to BITS P — your admission has been confirmed.',
+      instituteName: 'BITS P',
+    });
+    assert.equal((html.match(/Hello Harangad Singh Ghai/gi) ?? []).length, 1);
+    assert.doesNotMatch(html, /Dear Harangad Singh Ghai/);
+    assert.match(html, /your admission has been confirmed/);
   });
 });
 

@@ -1,5 +1,5 @@
 export const OFFERING_MISSING_LABELS = {
-  eligibility_rules: 'Eligibility rules',
+  eligibility_rules: 'Eligibility criteria on each academic document',
   document_requirements: 'At least one required document',
   workflow: 'Workflow steps',
   sla: 'Workflow SLA on every step',

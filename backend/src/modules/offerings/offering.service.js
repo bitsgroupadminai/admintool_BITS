@@ -23,6 +23,11 @@ import {
   flushStudentInstitutesCache,
 } from '../../shared/helpers/cacheInvalidation.helper.js';
 import { isWithinOfferingDates } from '../../shared/helpers/offeringDates.helper.js';
+import {
+  documentHasEligibilityCriteria,
+  flattenDocumentEligibility,
+  normalizeDocumentEligibility,
+} from '../../shared/helpers/documentEligibility.helper.js';
 
 async function flushOfferingCaches(instituteId) {
   await flushInstituteReadCache(instituteId);
@@ -297,9 +302,52 @@ export async function updateOfferingPayment(offeringId, instituteId, paymentConf
  * @param {string} offeringId
  * @param {string} instituteId
  */
-export async function updateEligibilityRules(offeringId, instituteId, rules) {
+export async function updateEligibilityRules(offeringId, instituteId, payload) {
   const offering = await getOfferingDoc(offeringId, instituteId);
-  offering.eligibilityRules = rules;
+
+  if (payload.documents?.length) {
+    const eligibilityByName = new Map(
+      payload.documents.map((item) => [item.name.trim().toLowerCase(), item.eligibility]),
+    );
+    const nextRequirements = (offering.documentRequirements ?? []).map((requirement) => {
+      const eligibility = eligibilityByName.get(requirement.name.trim().toLowerCase());
+      if (!eligibility) return requirement;
+      requirement.eligibility = normalizeDocumentEligibility(eligibility);
+      return requirement;
+    });
+    const unmatched = payload.documents.filter(
+      (item) =>
+        !offering.documentRequirements?.some(
+          (requirement) => requirement.name.trim().toLowerCase() === item.name.trim().toLowerCase(),
+        ),
+    );
+    if (unmatched.length) {
+      throw new AppError(
+        `Eligibility was set for documents that are not in this offering: ${unmatched
+          .map((item) => item.name)
+          .join(', ')}`,
+        400,
+      );
+    }
+    const incomplete = nextRequirements.filter(
+      (requirement) =>
+        requirement.eligibility?.enabled && !documentHasEligibilityCriteria(requirement.eligibility),
+    );
+    if (incomplete.length) {
+      throw new AppError(
+        `Add at least one criterion for: ${incomplete
+          .map((requirement) => requirement.name)
+          .join(', ')} — or turn eligibility off for that document`,
+        400,
+      );
+    }
+    offering.documentRequirements = nextRequirements;
+    offering.markModified('documentRequirements');
+    offering.eligibilityRules = flattenDocumentEligibility(nextRequirements);
+  } else if (payload.rules?.length) {
+    offering.eligibilityRules = payload.rules;
+  }
+
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
@@ -319,7 +367,16 @@ export async function updateDocumentRequirements(offeringId, instituteId, requir
   }
 
   const offering = await getOfferingDoc(offeringId, instituteId);
-  offering.documentRequirements = requirements;
+  offering.documentRequirements = requirements.map((requirement) => ({
+    ...requirement,
+    eligibility: requirement.eligibility
+      ? normalizeDocumentEligibility(requirement.eligibility)
+      : requirement.eligibility,
+  }));
+  const flattened = flattenDocumentEligibility(offering.documentRequirements);
+  if (flattened.length) {
+    offering.eligibilityRules = flattened;
+  }
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();

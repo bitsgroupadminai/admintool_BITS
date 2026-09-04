@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { APPLICATION_UPLOAD_ROOT } from '../../core/config/upload.js';
 import { DOCUMENT_FILE_TYPES } from '../enums/offering.enums.js';
+import { formatDocumentEligibility } from './documentEligibility.helper.js';
 
 const MIME_BY_TYPE = {
   pdf: ['application/pdf'],
@@ -59,11 +60,14 @@ export function getIntakeDocumentRequirement(offering) {
 
 export function formatDocumentRequirements(requirements = []) {
   return requirements.map((requirement) => ({
-    id: requirement._id.toString(),
+    id: requirement._id?.toString?.() ?? requirement.id,
     name: requirement.name,
     required: requirement.required !== false,
     allowedTypes: requirement.allowedTypes ?? ['pdf'],
     maxSizeMb: requirement.maxSizeMb ?? 5,
+    ...(requirement.eligibility
+      ? { eligibility: formatDocumentEligibility(requirement.eligibility) }
+      : {}),
   }));
 }
 

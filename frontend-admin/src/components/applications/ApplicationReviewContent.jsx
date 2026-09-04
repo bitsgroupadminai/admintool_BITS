@@ -11,6 +11,7 @@ import {
   displayEligibilityVerdict,
   eligibilityBadgeMeta,
 } from '@/components/applications/DocumentEligibilityReview';
+import { rulesFromDocumentEligibility } from '@/utils/documentEligibility';
 import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
 import { WorkflowFunnel } from '@/components/applications/WorkflowFunnel';
 import { InlineDocumentPreview } from '@/components/applications/InlineDocumentPreview';
@@ -111,6 +112,8 @@ function DocumentVerificationPanel({
   const aiVerdict = eligibilityBadgeMeta(eligibilityVerdict) ?? AI_VERDICT[eligibilityVerdict];
   const manual = MANUAL_STATUS[uploaded?.reviewStatus] ?? MANUAL_STATUS.pending;
   const eligibilityRules = application.eligibilityRules ?? [];
+  const documentRules = rulesFromDocumentEligibility(requirement?.eligibility);
+  const hasEligibility = documentRules.length > 0 || eligibilityRules.length > 0;
 
   return (
     <div className="space-y-3">
@@ -163,7 +166,7 @@ function DocumentVerificationPanel({
             </div>
           )}
         </div>
-      ) : eligibilityRules.length ? (
+      ) : hasEligibility ? (
         <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">Eligibility</p>
           <div className="mt-3">

@@ -375,8 +375,11 @@ function compareValues(actual, operator, expected, fieldType, fieldKey) {
 }
 
 function buildScoreChecks(rule, profile) {
-  const required = parseNumericValue(rule.value);
-  if (required == null || !profile.subjects?.length) return [];
+  const fallbackMin =
+    profile && Object.prototype.hasOwnProperty.call(profile, 'defaultSubjectThreshold')
+      ? parseNumericValue(profile.defaultSubjectThreshold)
+      : parseNumericValue(rule.value);
+  if (!profile.subjects?.length) return [];
 
   const needed = parseList(profile.requiredSubjects);
   const candidates = needed.length
@@ -387,6 +390,9 @@ function buildScoreChecks(rule, profile) {
     .map((subject) => {
       const score = parseNumericValue(subject.score);
       if (score == null) return null;
+      const required =
+        profile.subjectThresholds?.[normalizeFieldKey(subject.name)] ?? fallbackMin;
+      if (required == null) return null;
       return {
         name: subject.name,
         score,
@@ -411,7 +417,7 @@ export function evaluateEligibilityRules(rules = [], profile = {}, options = {})
     const fieldKey = normalizeFieldKey(rule.field);
     const requirement = describeEligibilityRequirement(rule.operator, rule.value);
 
-    if (options.requirementName && !ruleAppliesToDocument(rule, options.requirementName)) {
+    if (options.requirementName && !options.scoped && !ruleAppliesToDocument(rule, options.requirementName)) {
       results.push({
         field: rule.field,
         status: 'not_applicable',

@@ -11,6 +11,11 @@ import {
   normalizeFieldKey,
   uniqueSubjects,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
+import {
+  hasScopedDocumentEligibility,
+  rulesForDocument,
+  subjectThresholdsFromEligibility,
+} from '../../shared/helpers/documentEligibility.helper.js';
 
 /**
  * Pure decision logic for AI verification. Kept free of DB / OpenAI / queue imports
@@ -193,20 +198,38 @@ export function summarizeDocumentEvaluation(evaluation = {}) {
   return 'not_applicable';
 }
 
-export function evaluateEligibilityByDocument(perDocument = [], eligibilityRules = []) {
+export function evaluateEligibilityByDocument(
+  perDocument = [],
+  eligibilityRules = [],
+  documentRequirements = [],
+) {
+  const requirements = documentRequirements ?? [];
   return (perDocument ?? [])
-    .filter(
-      (doc) =>
+    .filter((doc) => {
+      const requirement = findRequirement(requirements, doc.requirementName);
+      if (requirement?.eligibility) {
+        return requirement.eligibility.enabled !== false;
+      }
+      return (
         doc.relevantToEligibility !== false &&
-        isAcademicEligibilityDocument(doc.requirementName, doc),
-    )
-    .map((doc) => {
-      const extractedFields = doc.extractedFields ?? [];
-      const eligibilityResult = evaluateEligibilityRules(
-        eligibilityRules,
-        buildProfileFromDocument(doc),
-        { requirementName: doc.requirementName },
+        isAcademicEligibilityDocument(doc.requirementName, doc)
       );
+    })
+    .map((doc) => {
+      const requirement = findRequirement(requirements, doc.requirementName);
+      const { rules, scoped, eligibility } = rulesForDocument(requirement, eligibilityRules);
+      const extractedFields = doc.extractedFields ?? [];
+      const eligibilityResult = rules.length
+        ? evaluateEligibilityRules(rules, {
+            ...buildProfileFromDocument(doc),
+            ...(scoped
+              ? {
+                  subjectThresholds: subjectThresholdsFromEligibility(eligibility),
+                  defaultSubjectThreshold: eligibility?.subjectThreshold ?? null,
+                }
+              : {}),
+          }, scoped ? { scoped: true } : { requirementName: doc.requirementName })
+        : { eligible: true, failures: [], results: [] };
       return {
         requirementName: doc.requirementName || 'Document',
         qualification: doc.qualification ?? '',
@@ -218,6 +241,27 @@ export function evaluateEligibilityByDocument(perDocument = [], eligibilityRules
         verdict: summarizeDocumentEvaluation(eligibilityResult),
       };
     });
+}
+
+function findRequirement(documentRequirements, requirementName) {
+  const key = findingNameKey(requirementName);
+  return (documentRequirements ?? []).find(
+    (requirement) => findingNameKey(requirement.name ?? requirement.requirementName) === key,
+  );
+}
+
+function combinePerDocumentEvaluations(perDocument = []) {
+  const results = (perDocument ?? []).flatMap((doc) =>
+    (doc.eligibilityResult?.results ?? [])
+      .filter((result) => result.status !== 'not_applicable')
+      .map((result) => ({
+        ...result,
+        field: `${doc.requirementName}: ${result.field}`,
+      })),
+  );
+  const failures = results.filter((result) => result.status === 'failed').map((result) => result.field);
+  const eligible = (perDocument ?? []).every((doc) => doc.eligibilityResult?.eligible !== false);
+  return { eligible, failures, results };
 }
 
 /**
@@ -388,7 +432,7 @@ function fillDocumentExtraction(doc, decision, fields) {
   };
 }
 
-export function hydrateEligibilityDecision(decision = {}, { eligibilityRules = [], documents = [] } = {}) {
+export function hydrateEligibilityDecision(decision = {}, { eligibilityRules = [], documents = [], documentRequirements = [] } = {}) {
   if (decision.handler && decision.handler !== 'eligibility_screening') {
     return decision;
   }
@@ -397,9 +441,12 @@ export function hydrateEligibilityDecision(decision = {}, { eligibilityRules = [
   const seeded = seedAcademicDocuments(decision, documents, fields).map((doc) =>
     fillDocumentExtraction(doc, decision, fields),
   );
-  const perDocument = evaluateEligibilityByDocument(seeded, eligibilityRules);
+  const perDocument = evaluateEligibilityByDocument(seeded, eligibilityRules, documentRequirements);
   const profile = mergeEligibilityProfile(seeded, fields);
-  const evaluation = evaluateEligibilityRules(eligibilityRules, profile);
+  const scoped = hasScopedDocumentEligibility(documentRequirements);
+  const evaluation = scoped
+    ? combinePerDocumentEvaluations(perDocument)
+    : evaluateEligibilityRules(eligibilityRules, profile);
   const hasUnchecked = (evaluation.results ?? []).some((result) => result.status === 'unchecked');
 
   let summary;
@@ -438,14 +485,18 @@ function findingNameKey(requirementName) {
  */
 export function hydrateDocumentVerificationDecision(
   decision = {},
-  { eligibilityRules = [], documents = [] } = {},
+  { eligibilityRules = [], documents = [], documentRequirements = [] } = {},
 ) {
   const authenticityDocs = asArray(decision.perDocument);
   const fields = collectDecisionFields(decision);
   const seededAcademic = seedAcademicDocuments(decision, documents, fields).map((doc) =>
     fillDocumentExtraction(doc, decision, fields),
   );
-  const academicEvaluated = evaluateEligibilityByDocument(seededAcademic, eligibilityRules);
+  const academicEvaluated = evaluateEligibilityByDocument(
+    seededAcademic,
+    eligibilityRules,
+    documentRequirements,
+  );
   const academicByName = new Map(
     academicEvaluated.map((doc) => [findingNameKey(doc.requirementName), doc]),
   );
@@ -501,9 +552,12 @@ export function hydrateDocumentVerificationDecision(
     perDocument.filter((doc) => isAcademicEligibilityDocument(doc.requirementName, doc)),
     fields,
   );
-  const evaluation = eligibilityRules.length
-    ? evaluateEligibilityRules(eligibilityRules, profile)
-    : { eligible: !overallIneligible, results: [] };
+  const scoped = hasScopedDocumentEligibility(documentRequirements);
+  const evaluation = scoped
+    ? combinePerDocumentEvaluations(academicEvaluated)
+    : eligibilityRules.length
+      ? evaluateEligibilityRules(eligibilityRules, profile)
+      : { eligible: !overallIneligible, results: [] };
   const hasUnchecked = (evaluation.results ?? []).some((result) => result.status === 'unchecked');
   const eligible = !overallIneligible && evaluation.eligible !== false && !hasUnchecked;
 

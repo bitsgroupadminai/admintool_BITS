@@ -25,8 +25,8 @@ export const offeringsApi = {
   remove: (id) => apiClient.delete(`/offerings/${id}`),
   duplicate: (id) => apiClient.post(`/offerings/${id}/duplicate`),
   activate: (id) => apiClient.post(`/offerings/${id}/activate`),
-  updateEligibility: (id, rules) =>
-    apiClient.put(`/offerings/${id}/eligibility`, { rules }),
+  updateEligibility: (id, documents) =>
+    apiClient.put(`/offerings/${id}/eligibility`, { documents }),
   updateDocuments: (id, requirements) =>
     apiClient.put(`/offerings/${id}/documents`, { requirements }),
   updateWorkflow: (id, steps) =>

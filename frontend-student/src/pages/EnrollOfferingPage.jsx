@@ -21,6 +21,7 @@ import {
   formatQueueMode,
   getOfferingStats,
   getTotalSlaLabel,
+  countEligibilityChecks,
 } from '@/utils/offering';
 import { formatOperatingHoursRange } from '@/utils/operatingHours';
 
@@ -139,7 +140,7 @@ export function EnrollOfferingPage() {
     }
   };
 
-  const eligibilityCount = offering?.eligibilityRules?.length ?? 0;
+  const eligibilityCount = countEligibilityChecks(offering);
   const documentCount = offering?.documentRequirements?.length ?? 0;
   const processCount = offering?.workflowSteps?.length ?? 0;
 
@@ -217,7 +218,10 @@ export function EnrollOfferingPage() {
                 count={eligibilityCount}
                 defaultOpen
               >
-                <EligibilityList rules={offering?.eligibilityRules} />
+                <EligibilityList
+                  rules={offering?.eligibilityRules}
+                  documents={offering?.documentRequirements}
+                />
               </EnrollmentAccordion>
 
               <EnrollmentAccordion title="Documents you'll need" count={documentCount}>

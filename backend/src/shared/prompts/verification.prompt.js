@@ -1,4 +1,5 @@
 import { ageFromIsoDate, isDateOfBirthField } from '../helpers/applicantFields.helper.js';
+import { describeDocumentEligibility } from '../helpers/documentEligibility.helper.js';
 
 /**
  * Prompts for AI-driven verification of student application uploads and eligibility.
@@ -283,9 +284,26 @@ function formatEligibilityRulesForPrompt(rules = []) {
     })
     .join('\n');
   return [
-    'ELIGIBILITY RULES (extract each file\'s own qualification, subjects, marks, grades, and totals; the system compares them to these rules):',
+    'ELIGIBILITY RULES (use only when a document does not list its own criteria below):',
     lines || '- (none configured)',
   ].join('\n');
+}
+
+function formatRequiredDocumentsForPrompt(requiredDocuments = []) {
+  return (requiredDocuments ?? [])
+    .map((req) => {
+      const header = `- ${req.name}${req.required === false ? ' (optional)' : ' (required)'}${
+        req.allowedTypes?.length ? ` [types: ${req.allowedTypes.join(', ')}]` : ''
+      }`;
+      const notes = describeDocumentEligibility(req.eligibility);
+      if (!notes.length) {
+        return req.eligibility?.enabled
+          ? `${header}\n  Eligibility: extract marks/subjects from this file if it is academic.`
+          : `${header}\n  Eligibility: none — supporting document only.`;
+      }
+      return `${header}\n  Eligibility for THIS file only: ${notes.join('; ')}`;
+    })
+    .join('\n');
 }
 
 export function buildDocumentVerificationUserPrompt(ctx) {
@@ -293,14 +311,7 @@ export function buildDocumentVerificationUserPrompt(ctx) {
     formatApplicantRecord(ctx),
     '',
     'REQUIRED DOCUMENTS:',
-    (ctx.requiredDocuments ?? [])
-      .map(
-        (req) =>
-          `- ${req.name}${req.required === false ? ' (optional)' : ' (required)'}${
-            req.allowedTypes?.length ? ` [types: ${req.allowedTypes.join(', ')}]` : ''
-          }`,
-      )
-      .join('\n') || '- (none configured)',
+    formatRequiredDocumentsForPrompt(ctx.requiredDocuments) || '- (none configured)',
     '',
     formatEligibilityRulesForPrompt(ctx.eligibilityRules),
     '',

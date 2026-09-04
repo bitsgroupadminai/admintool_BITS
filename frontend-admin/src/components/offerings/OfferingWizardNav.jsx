@@ -4,8 +4,8 @@ import { isOfferingSectionComplete } from "@/constants/offeringCompleteness.cons
 
 export const WIZARD_STEPS = [
   { id: "details", label: "Details" },
-  { id: "eligibility", label: "Eligibility" },
   { id: "documents", label: "Documents" },
+  { id: "eligibility", label: "Eligibility" },
   { id: "workflow", label: "Workflow" },
   { id: "queue", label: "Queue" },
   { id: "payment", label: "Payment" },

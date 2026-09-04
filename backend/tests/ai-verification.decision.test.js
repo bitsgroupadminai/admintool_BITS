@@ -411,6 +411,76 @@ test('evaluateEligibilityByDocument: Class 10 skips 10+2 qualification; photos a
   assert.equal(docs[1].verdict, 'passed');
 });
 
+test('evaluateEligibilityByDocument uses each file\'s own eligibility criteria', () => {
+  const docs = evaluateEligibilityByDocument(
+    [
+      {
+        requirementName: 'Class 10 marksheet',
+        qualification: 'Class X',
+        aggregate: 89,
+        subjects: [
+          { name: 'Science', score: 90 },
+          { name: 'Mathematics', score: 92 },
+        ],
+      },
+      {
+        requirementName: 'Class 12 marksheet',
+        qualification: 'Class XII',
+        aggregate: 76,
+        subjects: [
+          { name: 'Physics', score: 70 },
+          { name: 'Chemistry', score: 68 },
+          { name: 'Mathematics', score: 80 },
+        ],
+      },
+      {
+        requirementName: 'BITSAT scorecard',
+        aggregate: 280,
+        examScore: 280,
+        subjects: [
+          { name: 'Physics', score: 72 },
+          { name: 'Chemistry', score: 80 },
+          { name: 'Mathematics', score: 88 },
+        ],
+      },
+    ],
+    bitsRules,
+    [
+      {
+        name: 'Class 10 marksheet',
+        eligibility: { enabled: true, aggregateMin: 75, subjectThreshold: 60 },
+      },
+      {
+        name: 'Class 12 marksheet',
+        eligibility: {
+          enabled: true,
+          qualification: '10+2 or equivalent',
+          aggregateMin: 75,
+          subjectThreshold: 60,
+          requiredSubjects: [{ name: 'Physics' }, { name: 'Chemistry' }, { name: 'Mathematics' }],
+        },
+      },
+      {
+        name: 'BITSAT scorecard',
+        eligibility: { enabled: true, aggregateMin: 75, subjectThreshold: 60 },
+      },
+      {
+        name: 'Passport-size photograph',
+        eligibility: { enabled: false },
+      },
+    ],
+  );
+
+  const class10 = docs.find((doc) => doc.requirementName === 'Class 10 marksheet');
+  const class12 = docs.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  const bitsat = docs.find((doc) => doc.requirementName === 'BITSAT scorecard');
+  assert.equal(class10.eligibilityResult.results.some((result) => result.field === 'Qualification'), false);
+  assert.equal(class10.eligibilityResult.results.some((result) => result.field === 'Subjects'), false);
+  assert.equal(class10.eligibilityResult.eligible, true);
+  assert.equal(class12.eligibilityResult.eligible, true);
+  assert.equal(bitsat.eligibilityResult.eligible, true);
+});
+
 test('PCM is a subset match and Class 12 counts as 10+2', () => {
   const evaluation = evaluateEligibilityRules(bitsRules, {
     qualification: 'Class XII (10+2)',

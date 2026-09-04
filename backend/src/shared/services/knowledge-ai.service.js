@@ -238,6 +238,7 @@ export async function generateOfferingSectionSuggestions({
           user: buildOfferingEligibilityUserPrompt({
             baseContext,
             priorRules,
+            priorDocs,
             offeringName: offering.name,
           }),
           schema: offeringEligibilityResponseSchema,

@@ -230,7 +230,11 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
       source.handler === AI_DECISION_HANDLER.DOCUMENT_VERIFICATION
         ? hydrateDocumentVerificationDecision
         : hydrateEligibilityDecision;
-    const hydrated = hydrator(source, { eligibilityRules, documents });
+    const hydrated = hydrator(source, {
+      eligibilityRules,
+      documents,
+      documentRequirements: offering?.documentRequirements ?? [],
+    });
     return [
       {
         id: hydrated.id,

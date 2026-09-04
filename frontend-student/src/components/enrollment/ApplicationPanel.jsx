@@ -1,5 +1,5 @@
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
-import { formatQueueMode } from '@/utils/offering';
+import { countEligibilityChecks, formatQueueMode } from '@/utils/offering';
 import { ApplicantDetailsForm } from '@/components/enrollment/ApplicantDetailsForm';
 import { IntakeDocumentInput } from '@/components/enrollment/IntakeDocumentInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
@@ -54,7 +54,7 @@ export function ApplicationPanel({
             Before you start
           </p>
           <ul className="mt-3 space-y-2 text-xs text-[#4B6358]">
-            <ReadinessItem label={`${offering.eligibilityRules?.length ?? 0} eligibility checks`} />
+            <ReadinessItem label={`${countEligibilityChecks(offering)} eligibility checks`} />
             <ReadinessItem
               label={`${offering.documentRequirements?.filter((doc) => doc.required !== false).length ?? 0} required documents`}
             />

@@ -12,6 +12,7 @@ import {
   getCurrentWorkflowStep,
 } from '../../shared/helpers/workflowExecution.helper.js';
 import { formatDocumentRequirements, getIntakeDocumentRequirement } from '../../shared/helpers/applicationDocument.helper.js';
+import { flattenDocumentEligibility, hasScopedDocumentEligibility } from '../../shared/helpers/documentEligibility.helper.js';
 import { prepareDocumentForVerification } from '../../shared/services/document-text.service.js';
 import { ensureApplicationFileLocal } from '../../shared/services/applicationFile.storage.js';
 import { chatJson, chatVisionJson } from '../../shared/services/openai.client.js';
@@ -200,12 +201,7 @@ async function evaluateDocumentStep({
   await refreshApplicantNameFromProfile(application);
   const { docs, images, anyUnreadable } = await gatherApplicationDocuments(application);
   const requiredDocuments = formatDocumentRequirements(offering.documentRequirements ?? []);
-  const eligibilityRules = (offering.eligibilityRules ?? []).map((rule) => ({
-    field: rule.field,
-    fieldType: rule.fieldType,
-    operator: rule.operator,
-    value: rule.value,
-  }));
+  const eligibilityRules = resolveOfferingEligibilityRules(offering);
   const promptOptions = { allowSampleDocuments };
 
   const user = buildDocumentVerificationUserPrompt({
@@ -238,6 +234,7 @@ async function evaluateDocumentStep({
     {
       eligibilityRules,
       documents: application.documents ?? [],
+      documentRequirements: offering.documentRequirements ?? [],
     },
   );
 
@@ -251,7 +248,10 @@ async function evaluateDocumentStep({
     confidence: raw.confidence,
     thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
     forceEscalate: allowSampleDocuments ? false : anyUnreadable && raw.verdict === 'pass',
-    eligibilityEvaluation: eligibilityRules.length ? hydrated.eligibilityResult : null,
+    eligibilityEvaluation:
+      eligibilityRules.length || hasScopedDocumentEligibility(offering.documentRequirements)
+        ? hydrated.eligibilityResult
+        : null,
   });
 
   const issues = [
@@ -328,15 +328,10 @@ async function evaluateEligibilityStep({
 
   await refreshApplicantNameFromProfile(application);
   const { docs, images } = await gatherApplicationDocuments(application);
-  const eligibilityRules = (offering.eligibilityRules ?? []).map((rule) => ({
-    field: rule.field,
-    fieldType: rule.fieldType,
-    operator: rule.operator,
-    value: rule.value,
-  }));
+  const eligibilityRules = resolveOfferingEligibilityRules(offering);
 
   // No rules to check: nothing for AI to gate on, approve.
-  if (!eligibilityRules.length) {
+  if (!eligibilityRules.length && !hasScopedDocumentEligibility(offering.documentRequirements)) {
     return {
       action: INTERNAL_ACTION.APPROVE,
       note: 'No eligibility rules configured for this programme.',
@@ -382,18 +377,36 @@ async function evaluateEligibilityStep({
     {
       eligibilityRules,
       documents: application.documents ?? [],
+      documentRequirements: offering.documentRequirements ?? [],
     },
   );
 
   // Deterministic comparison against the actual rules using AI-extracted values.
-  const { action, evaluation } = decideEligibilityAction({
-    verdict: hydrated.verdict,
-    confidence: raw.confidence,
-    extractedFields,
-    eligibilityRules,
-    thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
-    profile: mergeEligibilityProfile(hydrated.perDocument, extractedFields),
-  });
+  const thresholds = allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS;
+  let action;
+  let evaluation;
+  if (hasScopedDocumentEligibility(offering.documentRequirements)) {
+    evaluation = hydrated.eligibilityResult ?? { eligible: true, results: [] };
+    const hasUnchecked = (evaluation.results ?? []).some((result) => result.status === 'unchecked');
+    if (hasUnchecked || raw.verdict === 'uncertain') {
+      action = INTERNAL_ACTION.ESCALATE;
+    } else if (!evaluation.eligible) {
+      action =
+        raw.confidence >= thresholds.autoReject ? INTERNAL_ACTION.RETURN : INTERNAL_ACTION.ESCALATE;
+    } else {
+      action =
+        raw.confidence >= thresholds.autoApprove ? INTERNAL_ACTION.APPROVE : INTERNAL_ACTION.ESCALATE;
+    }
+  } else {
+    ({ action, evaluation } = decideEligibilityAction({
+      verdict: hydrated.verdict,
+      confidence: raw.confidence,
+      extractedFields,
+      eligibilityRules,
+      thresholds,
+      profile: mergeEligibilityProfile(hydrated.perDocument, extractedFields),
+    }));
+  }
 
   const comparisonIssues = formatEligibilityComparisonIssues(evaluation, extractedFields);
   const issues = comparisonIssues.length ? comparisonIssues : hydrated.issues ?? [];
@@ -770,4 +783,15 @@ async function notifyOutcome(instituteId, application, offering) {
   } catch (err) {
     logger.error({ err, applicationId: application._id.toString() }, 'Failed to emit AI outcome notifications');
   }
+}
+
+function resolveOfferingEligibilityRules(offering) {
+  const fromDocuments = flattenDocumentEligibility(offering?.documentRequirements ?? []);
+  const source = fromDocuments.length ? fromDocuments : offering?.eligibilityRules ?? [];
+  return source.map((rule) => ({
+    field: rule.field,
+    fieldType: rule.fieldType,
+    operator: rule.operator,
+    value: rule.value,
+  }));
 }

@@ -22,6 +22,11 @@ import { isOpenAiConfigured } from '../../shared/services/openai.client.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import {
+  applyEligibilityTemplateToDocuments,
+  eligibilityFromGenericRules,
+  flattenDocumentEligibility,
+} from '../../shared/helpers/documentEligibility.helper.js';
 
 /**
  * @param {string} offeringId
@@ -161,6 +166,18 @@ export async function applySuggestions(offeringId, instituteId, options) {
   if ((!section || section === 'eligibility') && (options.acceptEligibility || section === 'eligibility')) {
     if (payload.eligibilityRules?.length) {
       offering.eligibilityRules = stripExtractedFields(payload.eligibilityRules);
+      if (offering.documentRequirements?.length) {
+        const template = eligibilityFromGenericRules(offering.eligibilityRules);
+        offering.documentRequirements = applyEligibilityTemplateToDocuments(
+          offering.documentRequirements,
+          template,
+        );
+        offering.markModified('documentRequirements');
+        const flattened = flattenDocumentEligibility(offering.documentRequirements);
+        if (flattened.length) {
+          offering.eligibilityRules = flattened;
+        }
+      }
     }
   }
   if ((!section || section === 'documents') && (options.acceptDocuments || section === 'documents')) {

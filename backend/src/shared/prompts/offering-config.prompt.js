@@ -76,13 +76,15 @@ ${docText}
 /**
  * @param {{ baseContext: string, priorRules: string, offeringName: string }} params
  */
-export function buildOfferingEligibilityUserPrompt({ baseContext, priorRules, offeringName }) {
+export function buildOfferingEligibilityUserPrompt({ baseContext, priorRules, offeringName, priorDocs }) {
   return `${baseContext}
 
+Current document requirements: ${priorDocs ?? '(none yet)'}
 Current eligibility rules (may be empty): ${priorRules}
 
 Return JSON: { "eligibilityRules": [ { "field", "fieldType", "operator", "value", "documentExcerpt" } ] }
-Extract eligibility criteria explicitly stated for "${offeringName}". Empty array if none found.`;
+Extract eligibility criteria explicitly stated for "${offeringName}". Empty array if none found.
+These rules will be attached to academic documents (marksheets and scorecards) by an admin, so prefer criteria that can apply to a specific uploaded file: qualification shown on that file, required subjects, overall/aggregate score, and per-subject minimums.`;
 }
 
 /**

@@ -34,6 +34,25 @@ const eligibilityRuleSchema = new mongoose.Schema(
   { _id: true },
 );
 
+const documentSubjectRuleSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 80 },
+    minScore: { type: Number, min: 0, max: 1000, default: null },
+  },
+  { _id: false },
+);
+
+const documentEligibilitySchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    qualification: { type: String, trim: true, maxlength: 200, default: '' },
+    aggregateMin: { type: Number, min: 0, max: 1000, default: null },
+    subjectThreshold: { type: Number, min: 0, max: 1000, default: null },
+    requiredSubjects: { type: [documentSubjectRuleSchema], default: [] },
+  },
+  { _id: false },
+);
+
 const documentRequirementSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -44,6 +63,7 @@ const documentRequirementSchema = new mongoose.Schema(
       default: ['pdf'],
     },
     maxSizeMb: { type: Number, default: 5, min: 1, max: 25 },
+    eligibility: { type: documentEligibilitySchema, default: undefined },
   },
   { _id: true },
 );

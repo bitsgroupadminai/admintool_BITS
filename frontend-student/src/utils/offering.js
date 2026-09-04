@@ -34,11 +34,18 @@ export function formatVisitAccessLabel(offering, application) {
   return formatQueueMode(offering?.queueMode);
 }
 
+export function countEligibilityChecks(offering) {
+  const documents = offering?.documentRequirements ?? [];
+  const scoped = documents.filter((doc) => doc.eligibility?.enabled).length;
+  if (scoped) return scoped;
+  return offering?.eligibilityRules?.length ?? 0;
+}
+
 export function getOfferingStats(offering) {
   return [
     {
       label: 'Things we check',
-      value: offering?.eligibilityRules?.length ?? 0,
+      value: countEligibilityChecks(offering),
     },
     {
       label: 'Documents needed',

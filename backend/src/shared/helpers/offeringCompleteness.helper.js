@@ -1,6 +1,7 @@
 import { QUEUE_MODE, OFFERING_STATUS } from '../enums/offering.enums.js';
 import { normalizeWorkflowSteps } from './workflow.helper.js';
 import { validateOperatingHoursWindow } from './operatingHours.helper.js';
+import { offeringHasEligibilityConfigured } from './documentEligibility.helper.js';
 
 function hasValidAppointmentConfig(config) {
   if (!config?.slotDurationMinutes) return false;
@@ -17,7 +18,7 @@ function hasValidAppointmentConfig(config) {
 export function getOfferingCompleteness(offering) {
   const missing = [];
 
-  if (!offering.eligibilityRules?.length) {
+  if (!offeringHasEligibilityConfigured(offering)) {
     missing.push('eligibility_rules');
   }
 
@@ -83,7 +84,7 @@ export function isOfferingReadyForServiceActivation(offering) {
 }
 
 export const OFFERING_MISSING_LABELS = {
-  eligibility_rules: 'Eligibility rules',
+  eligibility_rules: 'Eligibility criteria on each academic document',
   document_requirements: 'At least one required document',
   workflow: 'Workflow steps',
   sla: 'Workflow SLA on every step',

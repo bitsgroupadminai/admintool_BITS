@@ -81,7 +81,12 @@ export async function getServiceKnowledgeCoverage(instituteId, serviceId) {
 
   const offeringGaps = offerings.map((offering) => {
     const missing = [];
-    if (!offering.eligibilityRules?.length) missing.push('eligibility rules');
+    if (
+      !offering.eligibilityRules?.length &&
+      !(offering.documentRequirements ?? []).some((requirement) => requirement.eligibility?.enabled)
+    ) {
+      missing.push('eligibility rules');
+    }
     if (!offering.documentRequirements?.length) missing.push('document requirements');
     if (!offering.workflowSteps?.length) missing.push('workflow steps');
     return {

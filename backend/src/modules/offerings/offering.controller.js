@@ -93,11 +93,11 @@ export async function updatePayment(req, res, next) {
 
 export async function updateEligibility(req, res, next) {
   try {
-    const { rules } = updateEligibilitySchema.parse(req.body);
+    const payload = updateEligibilitySchema.parse(req.body);
     const offering = await offeringService.updateEligibilityRules(
       req.params.id,
       req.user.instituteId,
-      rules,
+      payload,
     );
     sendSuccess(res, 200, 'Eligibility rules updated', { offering });
   } catch (err) {

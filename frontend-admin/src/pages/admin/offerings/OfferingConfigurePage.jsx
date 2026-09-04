@@ -11,6 +11,7 @@ import {
   intakeDocumentToPayload,
 } from '@/components/offerings/IntakeDocumentConfig';
 import { AiStepAssist } from '@/components/offerings/AiStepAssist';
+import { DocumentEligibilityCard } from '@/components/offerings/DocumentEligibilityCard';
 import { WorkflowTimelineBuilder } from '@/components/offerings/WorkflowTimelineBuilder';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,21 +34,14 @@ import {
   validateOperatingHoursInput,
 } from '@/utils/operatingHours';
 import { validateOfferingDetails } from '@/utils/offeringDetails.validation';
-
-const OPERATORS = [
-  { value: 'eq', label: '=' },
-  { value: 'neq', label: '≠' },
-  { value: 'gte', label: '≥' },
-  { value: 'lte', label: '≤' },
-  { value: 'gt', label: '>' },
-  { value: 'lt', label: '<' },
-];
-
-const FIELD_TYPES = [
-  { value: 'numeric', label: 'Numeric' },
-  { value: 'text', label: 'Text' },
-  { value: 'boolean', label: 'Boolean' },
-];
+import {
+  defaultDocumentEligibility,
+  documentHasEligibilityCriteria,
+  eligibilityPayload,
+  emptyDocumentEligibility,
+  isAcademicDocumentName,
+  normalizeDocumentEligibility,
+} from '@/utils/documentEligibility';
 
 const STAFF_ROLES_FALLBACK = [
   { value: 'document_verifier', label: 'Document Verifier' },
@@ -141,7 +135,6 @@ export function OfferingConfigurePage() {
     visitLocation: '',
     visitInstructions: '',
   });
-  const [rules, setRules] = useState([]);
   const [docs, setDocs] = useState([]);
   const [steps, setSteps] = useState([]);
   const [queueMode, setQueueMode] = useState('queue_only');
@@ -197,18 +190,12 @@ export function OfferingConfigurePage() {
     goToStep(next);
   };
 
-  const defaultRule = () => ({
-    field: 'Marks',
-    fieldType: 'numeric',
-    operator: 'gte',
-    value: 60,
-  });
-
   const defaultDoc = () => ({
     name: 'Government ID',
     required: true,
     allowedTypes: ['pdf', 'jpg', 'jpeg', 'png'],
     maxSizeMb: 5,
+    eligibility: defaultDocumentEligibility('Government ID'),
   });
 
   const defaultSteps = () => relinkStepOutcomes([createStep(1), createStep(2)]);
@@ -236,8 +223,18 @@ export function OfferingConfigurePage() {
       visitLocation: o.visitLocation ?? '',
       visitInstructions: o.visitInstructions ?? '',
     });
-    setRules(o.eligibilityRules?.length ? o.eligibilityRules : [defaultRule()]);
-    setDocs(o.documentRequirements?.length ? o.documentRequirements : [defaultDoc()]);
+    setDocs(
+      o.documentRequirements?.length
+        ? o.documentRequirements.map((doc) => ({
+            ...doc,
+            eligibility: doc.eligibility
+              ? normalizeDocumentEligibility(doc.eligibility, doc.name)
+              : o.eligibilityRules?.length
+                ? emptyDocumentEligibility()
+                : defaultDocumentEligibility(doc.name),
+          }))
+        : [defaultDoc()],
+    );
     const wf = o.workflowSteps?.length ? normalizeSteps(o.workflowSteps) : defaultSteps();
     setSteps(relinkStepOutcomes(wf));
     if (o.queueMode) setQueueMode(o.queueMode);
@@ -357,7 +354,7 @@ export function OfferingConfigurePage() {
       clearDirty('details');
       setShowDetailsValidation(false);
       toast.success('Offering details saved');
-      if (advance) goToStep('eligibility');
+      if (advance) goToStep('documents');
       return true;
     } catch (err) {
       toast.error(err.message);
@@ -368,13 +365,35 @@ export function OfferingConfigurePage() {
   };
 
   const saveEligibility = async ({ advance = false } = {}) => {
+    if (!docs.length) {
+      toast.error('Add documents first, then set eligibility on each file');
+      goToStep('documents');
+      return false;
+    }
+
+    const incomplete = docs.filter(
+      (doc) => doc.eligibility?.enabled && !documentHasEligibilityCriteria(doc.eligibility),
+    );
+    if (incomplete.length) {
+      toast.error(
+        `Add at least one criterion for ${incomplete.map((doc) => doc.name).join(', ')}, or turn eligibility off`,
+      );
+      return false;
+    }
+
     setSaving(true);
     try {
-      const { data } = await offeringsApi.updateEligibility(id, rules);
+      const { data } = await offeringsApi.updateEligibility(
+        id,
+        docs.map((doc) => ({
+          name: doc.name,
+          eligibility: eligibilityPayload(doc.eligibility),
+        })),
+      );
       setOffering(data.data.offering);
       clearDirty('eligibility');
-      toast.success('Eligibility rules saved');
-      if (advance) goToStep('documents');
+      toast.success('Eligibility criteria saved');
+      if (advance) goToStep('workflow');
       return true;
     } catch (err) {
       toast.error(err.message);
@@ -387,11 +406,20 @@ export function OfferingConfigurePage() {
   const saveDocuments = async ({ advance = false } = {}) => {
     setSaving(true);
     try {
-      const { data } = await offeringsApi.updateDocuments(id, docs);
+      const { data } = await offeringsApi.updateDocuments(
+        id,
+        docs.map((doc) => ({
+          name: doc.name,
+          required: doc.required,
+          allowedTypes: doc.allowedTypes,
+          maxSizeMb: doc.maxSizeMb,
+          eligibility: eligibilityPayload(doc.eligibility ?? defaultDocumentEligibility(doc.name)),
+        })),
+      );
       setOffering(data.data.offering);
       clearDirty('documents');
       toast.success('Document requirements saved');
-      if (advance) goToStep('workflow');
+      if (advance) goToStep('eligibility');
       return true;
     } catch (err) {
       toast.error(err.message);
@@ -766,125 +794,14 @@ export function OfferingConfigurePage() {
           </Card>
         )}
 
-        {step === 'eligibility' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Eligibility rules</CardTitle>
-              <CardDescription>
-                All rules use AND logic. Use &ldquo;Extract from documents&rdquo; to pull exact
-                criteria stated in your uploads.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <AiStepAssist
-                section="eligibility"
-                aiSuggestions={aiSuggestions}
-                generating={generatingSection === 'eligibility'}
-                onGenerate={handleGenerateAi}
-                canGenerate={canUseAi}
-              />
-
-              <div className="hidden rounded-lg border border-border bg-[#FAFBFA] px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted lg:grid lg:grid-cols-[minmax(0,1.4fr)_140px_100px_minmax(0,1fr)_48px] lg:gap-3">
-                <span>Field</span>
-                <span>Type</span>
-                <span>Operator</span>
-                <span>Value</span>
-                <span />
-              </div>
-
-              {rules.map((rule, i) => (
-                <div
-                  key={i}
-                  className="grid gap-3 rounded-xl border border-border bg-white p-4 lg:grid-cols-[minmax(0,1.4fr)_140px_100px_minmax(0,1fr)_48px] lg:items-center"
-                >
-                  <Input
-                    placeholder="Field name"
-                    value={rule.field}
-                    onChange={(e) => {
-                      markDirty('eligibility');
-                      const next = [...rules];
-                      next[i].field = e.target.value;
-                      setRules(next);
-                    }}
-                  />
-                  <Select
-                    value={rule.fieldType}
-                    onChange={(nextValue) => {
-                      markDirty('eligibility');
-                      const next = [...rules];
-                      next[i].fieldType = nextValue;
-                      setRules(next);
-                    }}
-                    options={FIELD_TYPES.map((type) => ({
-                      value: type.value,
-                      label: type.label,
-                    }))}
-                  />
-                  <Select
-                    value={rule.operator}
-                    onChange={(nextValue) => {
-                      markDirty('eligibility');
-                      const next = [...rules];
-                      next[i].operator = nextValue;
-                      setRules(next);
-                    }}
-                    options={OPERATORS.map((operator) => ({
-                      value: operator.value,
-                      label: operator.label,
-                    }))}
-                  />
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Value"
-                      value={String(rule.value)}
-                      onChange={(e) => {
-                        markDirty('eligibility');
-                        const next = [...rules];
-                        let val = e.target.value;
-                        if (rule.fieldType === 'numeric') val = Number(val);
-                        if (rule.fieldType === 'boolean') val = val === 'true';
-                        next[i].value = val;
-                        setRules(next);
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        markDirty('eligibility');
-                        setRules(rules.filter((_, idx) => idx !== i));
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  markDirty('eligibility');
-                  setRules([...rules, defaultRule()]);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Add rule
-              </Button>
-              <StepFooter
-                saving={saving}
-                onBack={() => navigateToStep('details')}
-                onSaveDraft={() => saveEligibility()}
-                onContinue={() => saveEligibility({ advance: true })}
-              />
-            </CardContent>
-          </Card>
-        )}
-
         {step === 'documents' && (
           <Card>
             <CardHeader>
               <CardTitle>Document requirements</CardTitle>
-              <CardDescription>Defines what students must upload before workflow steps run.</CardDescription>
+              <CardDescription>
+                List the files students must upload. Next, you will set eligibility criteria on each
+                of these documents.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <AiStepAssist
@@ -897,12 +814,23 @@ export function OfferingConfigurePage() {
               {docs.map((doc, i) => (
                 <div key={i} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-2">
                   <Input
-                    placeholder="Document name"
+                    placeholder="Document name, e.g. Class 12 marksheet"
                     value={doc.name}
                     onChange={(e) => {
                       markDirty('documents');
                       const next = [...docs];
-                      next[i].name = e.target.value;
+                      const name = e.target.value;
+                      next[i] = {
+                        ...next[i],
+                        name,
+                        eligibility: documentHasEligibilityCriteria(next[i].eligibility)
+                          ? next[i].eligibility
+                          : {
+                              ...defaultDocumentEligibility(name),
+                              ...next[i].eligibility,
+                              enabled: isAcademicDocumentName(name),
+                            },
+                      };
                       setDocs(next);
                     }}
                   />
@@ -932,6 +860,19 @@ export function OfferingConfigurePage() {
                       }}
                     />
                     <span className="text-xs text-muted">MB max</span>
+                    {docs.length > 1 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          markDirty('documents');
+                          setDocs(docs.filter((_, idx) => idx !== i));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -947,9 +888,56 @@ export function OfferingConfigurePage() {
               </Button>
               <StepFooter
                 saving={saving}
-                onBack={() => navigateToStep('eligibility')}
+                onBack={() => navigateToStep('details')}
                 onSaveDraft={() => saveDocuments()}
                 onContinue={() => saveDocuments({ advance: true })}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'eligibility' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Eligibility by document</CardTitle>
+              <CardDescription>
+                Each uploaded file is checked against the criteria you set here. Marksheets can
+                require specific subjects and scores. Photos and IDs can skip this.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <AiStepAssist
+                section="eligibility"
+                aiSuggestions={aiSuggestions}
+                generating={generatingSection === 'eligibility'}
+                onGenerate={handleGenerateAi}
+                canGenerate={canUseAi}
+              />
+
+              {!docs.length ? (
+                <p className="text-sm text-muted">
+                  Add document requirements first, then come back to set eligibility on each file.
+                </p>
+              ) : (
+                docs.map((doc, i) => (
+                  <DocumentEligibilityCard
+                    key={`${doc.name}-${i}`}
+                    document={doc}
+                    index={i}
+                    onChange={(index, nextDoc) => {
+                      markDirty('eligibility');
+                      const next = [...docs];
+                      next[index] = nextDoc;
+                      setDocs(next);
+                    }}
+                  />
+                ))
+              )}
+              <StepFooter
+                saving={saving}
+                onBack={() => navigateToStep('documents')}
+                onSaveDraft={() => saveEligibility()}
+                onContinue={() => saveEligibility({ advance: true })}
               />
             </CardContent>
           </Card>
@@ -982,7 +970,7 @@ export function OfferingConfigurePage() {
               />
               <StepFooter
                 saving={saving}
-                onBack={() => navigateToStep('documents')}
+                onBack={() => navigateToStep('eligibility')}
                 onSaveDraft={() => saveWorkflow()}
                 onContinue={() => saveWorkflow({ advance: true })}
               />
@@ -1536,8 +1524,12 @@ export function OfferingConfigurePage() {
                   <dd>{offering.applicantFields?.length ?? applicantFields.length}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Eligibility rules</dt>
-                  <dd>{offering.eligibilityRules?.length ?? 0}</dd>
+                  <dt className="text-muted">Eligibility</dt>
+                  <dd>
+                    {(offering.documentRequirements ?? []).filter((doc) => doc.eligibility?.enabled)
+                      .length || offering.eligibilityRules?.length || 0}{' '}
+                    documents with criteria
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted">Documents</dt>

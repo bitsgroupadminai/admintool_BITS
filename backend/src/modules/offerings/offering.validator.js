@@ -32,11 +32,34 @@ const eligibilityRuleSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean()]),
 });
 
+const optionalScore = z.preprocess(
+  (value) => (value === '' || value === undefined ? null : value),
+  z.number().min(0).max(1000).nullable().optional(),
+);
+
+export const documentEligibilitySchema = z.object({
+  enabled: z.boolean().optional().default(false),
+  qualification: z.string().max(200).optional().default(''),
+  aggregateMin: optionalScore,
+  subjectThreshold: optionalScore,
+  requiredSubjects: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(80),
+        minScore: optionalScore,
+      }),
+    )
+    .max(30)
+    .optional()
+    .default([]),
+});
+
 const documentRequirementSchema = z.object({
   name: z.string().min(1).max(120),
   required: z.boolean(),
   allowedTypes: z.array(z.enum(DOCUMENT_FILE_TYPES)).min(1),
   maxSizeMb: z.number().min(1).max(25),
+  eligibility: documentEligibilitySchema.optional(),
 });
 
 const outcomeRouteSchema = z.object({
@@ -217,9 +240,22 @@ export const updateOfferingSchema = z.object({
     .optional(),
 });
 
-export const updateEligibilitySchema = z.object({
-  rules: z.array(eligibilityRuleSchema).min(1),
-});
+export const updateEligibilitySchema = z
+  .object({
+    documents: z
+      .array(
+        z.object({
+          name: z.string().min(1).max(120),
+          eligibility: documentEligibilitySchema,
+        }),
+      )
+      .min(1)
+      .optional(),
+    rules: z.array(eligibilityRuleSchema).min(1).optional(),
+  })
+  .refine((payload) => Boolean(payload.documents?.length || payload.rules?.length), {
+    message: 'Set eligibility on at least one document',
+  });
 
 export const updateDocumentsSchema = z.object({
   requirements: z.array(documentRequirementSchema).min(1),

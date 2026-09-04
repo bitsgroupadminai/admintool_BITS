@@ -31,17 +31,28 @@ export function formatEligibilityRule(rule) {
 }
 
 /**
- * Attach each eligibility rule to the document that should prove it.
- * Academic / 10+2 / PCM / marks rules go with the Class 12 marksheet when present.
+ * Attach eligibility notes to the document they belong to.
+ * Prefers criteria stored on the document; falls back to programme-level rules.
  *
- * @param {Array<{ id?: string, name?: string, required?: boolean }>} documents
+ * @param {Array<{ id?: string, name?: string, required?: boolean, eligibility?: object }>} documents
  * @param {Array<{ field?: string, fieldType?: string, operator?: string, value?: unknown }>} rules
  * @returns {Map<string, string[]>}
  */
 export function groupEligibilityNotesByDocument(documents = [], rules = []) {
   const notesByKey = new Map();
   const docs = documents.filter(Boolean);
-  if (!docs.length || !rules.length) return notesByKey;
+  if (!docs.length) return notesByKey;
+
+  const hasDocumentCriteria = docs.some((doc) => notesFromDocumentEligibility(doc.eligibility).length);
+  if (hasDocumentCriteria) {
+    for (const document of docs) {
+      const notes = notesFromDocumentEligibility(document.eligibility);
+      if (notes.length) notesByKey.set(documentEligibilityKey(document), notes);
+    }
+    return notesByKey;
+  }
+
+  if (!rules.length) return notesByKey;
 
   for (const rule of rules) {
     const target = pickDocumentForRule(rule, docs);
@@ -53,6 +64,29 @@ export function groupEligibilityNotesByDocument(documents = [], rules = []) {
   }
 
   return notesByKey;
+}
+
+function notesFromDocumentEligibility(eligibility) {
+  if (!eligibility?.enabled) return [];
+  const notes = [];
+  const qualification = String(eligibility.qualification ?? '').trim();
+  if (qualification) notes.push(`You must have: ${qualification}`);
+  const subjects = (eligibility.requiredSubjects ?? [])
+    .map((subject) => String(subject?.name ?? '').trim())
+    .filter(Boolean);
+  if (subjects.length) notes.push(`Required subjects: ${subjects.join(', ')}`);
+  if (eligibility.aggregateMin != null && eligibility.aggregateMin !== '') {
+    notes.push(`Minimum overall score: at least ${eligibility.aggregateMin}`);
+  }
+  if (eligibility.subjectThreshold != null && eligibility.subjectThreshold !== '') {
+    notes.push(`Minimum score in each required subject: at least ${eligibility.subjectThreshold}`);
+  }
+  for (const subject of eligibility.requiredSubjects ?? []) {
+    if (subject?.name && subject.minScore != null && subject.minScore !== '') {
+      notes.push(`${subject.name}: at least ${subject.minScore}`);
+    }
+  }
+  return notes;
 }
 
 export function getDocumentEligibilityNotes(document, documents = [], rules = []) {

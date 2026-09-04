@@ -1,3 +1,5 @@
+import { rulesFromDocumentEligibility } from '@/utils/documentEligibility';
+
 const OPERATOR_LABELS = {
   eq: 'must be',
   neq: 'must not be',
@@ -134,7 +136,12 @@ function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
 }
 
 export function DocumentEligibilityDetails({ requirement, finding, eligibilityRules = [] }) {
-  const academic = isAcademicDocumentName(requirement.name);
+  const documentRules = rulesFromDocumentEligibility(requirement?.eligibility);
+  const configuredRules = documentRules.length ? documentRules : eligibilityRules;
+  const usesEligibility =
+    requirement?.eligibility?.enabled === true ||
+    (requirement?.eligibility?.enabled !== false &&
+      (documentRules.length > 0 || isAcademicDocumentName(requirement.name)));
   const results = finding?.eligibilityResult?.results ?? [];
   const applicableResults = results.filter((result) => result.status !== 'not_applicable');
   const scoreChecks = results.flatMap((result) => result.scoreChecks ?? []);
@@ -150,7 +157,7 @@ export function DocumentEligibilityDetails({ requirement, finding, eligibilityRu
         <p className="text-xs font-bold uppercase tracking-wide text-[#052E1C]">
           Eligibility requirement
         </p>
-        {!academic ? (
+        {!usesEligibility ? (
           <p className="mt-1 text-xs leading-relaxed text-[#4B6358]">
             This file is not used for academic eligibility. The verdict is based on whether the
             upload is the required document and belongs to the applicant.
@@ -175,9 +182,9 @@ export function DocumentEligibilityDetails({ requirement, finding, eligibilityRu
               );
             })}
           </ul>
-        ) : eligibilityRules.length ? (
+        ) : configuredRules.length ? (
           <ul className="mt-2 space-y-1">
-            {eligibilityRules.map((rule, index) => (
+            {configuredRules.map((rule, index) => (
               <li key={`${rule.field}-${index}`} className="text-xs text-[#4B6358]">
                 {formatEligibilityRule(rule)}
               </li>
@@ -190,7 +197,7 @@ export function DocumentEligibilityDetails({ requirement, finding, eligibilityRu
 
       {facts.length ? <p className="text-xs text-[#4B6358]">{facts.join(' · ')}</p> : null}
 
-      {academic ? (
+      {usesEligibility ? (
         <SubjectScoreTable subjects={finding?.subjects ?? []} scoreChecks={scoreChecks} />
       ) : null}
     </div>

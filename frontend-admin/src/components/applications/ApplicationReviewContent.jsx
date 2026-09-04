@@ -116,7 +116,7 @@ function DocumentVerificationPanel({
   const hasEligibility = documentRules.length > 0 || eligibilityRules.length > 0;
 
   return (
-    <div className="space-y-3">
+    <div className="flex h-full flex-col space-y-3">
       {usesAiVerification ? (
         <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -616,12 +616,18 @@ export function ApplicationReviewContent({
                   ) : null}
                 </div>
 
-                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
-                  <div>
+                <div className="mt-4 grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                  <div className="relative min-h-[360px]">
                     {uploaded ? (
-                      <InlineDocumentPreview document={uploaded} fetchBlob={fetchDocumentBlob} />
+                      <div className="h-full min-h-[360px] lg:absolute lg:inset-0 lg:min-h-0">
+                        <InlineDocumentPreview
+                          document={uploaded}
+                          fetchBlob={fetchDocumentBlob}
+                          onDownload={() => onDownload(uploaded)}
+                        />
+                      </div>
                     ) : (
-                      <p className="rounded-xl border border-dashed border-[#FDE68A] bg-[#FFFBEB] px-4 py-10 text-center text-sm text-[#92400E]">
+                      <p className="flex h-full min-h-[360px] items-center justify-center rounded-xl border border-dashed border-[#FDE68A] bg-[#FFFBEB] px-4 text-center text-sm text-[#92400E] lg:absolute lg:inset-0">
                         This document has not been uploaded.
                       </p>
                     )}

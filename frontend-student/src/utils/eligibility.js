@@ -69,17 +69,19 @@ export function groupEligibilityNotesByDocument(documents = [], rules = []) {
 function notesFromDocumentEligibility(eligibility) {
   if (!eligibility?.enabled) return [];
   const notes = [];
-  const qualification = String(eligibility.qualification ?? '').trim();
-  if (qualification) notes.push(`You must have: ${qualification}`);
   const subjects = (eligibility.requiredSubjects ?? [])
     .map((subject) => String(subject?.name ?? '').trim())
     .filter(Boolean);
-  if (subjects.length) notes.push(`Required subjects: ${subjects.join(', ')}`);
   if (eligibility.aggregateMin != null && eligibility.aggregateMin !== '') {
     notes.push(`Minimum overall score: at least ${eligibility.aggregateMin}`);
   }
+  if (subjects.length) notes.push(`Required subjects: ${subjects.join(', ')}`);
   if (eligibility.subjectThreshold != null && eligibility.subjectThreshold !== '') {
-    notes.push(`Minimum score in each required subject: at least ${eligibility.subjectThreshold}`);
+    notes.push(
+      subjects.length
+        ? `Minimum score in each required subject: at least ${eligibility.subjectThreshold}`
+        : `Minimum score in each subject: at least ${eligibility.subjectThreshold}`,
+    );
   }
   for (const subject of eligibility.requiredSubjects ?? []) {
     if (subject?.name && subject.minScore != null && subject.minScore !== '') {

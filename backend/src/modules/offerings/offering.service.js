@@ -27,6 +27,7 @@ import {
   documentHasEligibilityCriteria,
   flattenDocumentEligibility,
   normalizeDocumentEligibility,
+  requiredSubjectsMissingThreshold,
 } from '../../shared/helpers/documentEligibility.helper.js';
 
 async function flushOfferingCaches(instituteId) {
@@ -338,6 +339,17 @@ export async function updateEligibilityRules(offeringId, instituteId, payload) {
         `Add at least one criterion for: ${incomplete
           .map((requirement) => requirement.name)
           .join(', ')} — or turn eligibility off for that document`,
+        400,
+      );
+    }
+    const missingSubjectMins = nextRequirements.filter((requirement) =>
+      requiredSubjectsMissingThreshold(requirement.eligibility),
+    );
+    if (missingSubjectMins.length) {
+      throw new AppError(
+        `Set a minimum score for required subjects on: ${missingSubjectMins
+          .map((requirement) => requirement.name)
+          .join(', ')}`,
         400,
       );
     }

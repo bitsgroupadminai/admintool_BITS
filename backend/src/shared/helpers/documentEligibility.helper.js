@@ -2,7 +2,6 @@ import {
   isAcademicEligibilityDocument,
   normalizeFieldKey,
   parseNumericValue,
-  parseSubjectEntries,
 } from './eligibilityEvaluation.helper.js';
 
 export function emptyDocumentEligibility() {
@@ -29,7 +28,7 @@ export function normalizeDocumentEligibility(eligibility) {
 
   return {
     enabled: Boolean(eligibility.enabled),
-    qualification: String(eligibility.qualification ?? '').trim(),
+    qualification: '',
     aggregateMin: parseNumericValue(eligibility.aggregateMin),
     subjectThreshold: parseNumericValue(eligibility.subjectThreshold),
     requiredSubjects: (eligibility.requiredSubjects ?? [])
@@ -45,11 +44,17 @@ export function documentHasEligibilityCriteria(eligibility) {
   const normalized = normalizeDocumentEligibility(eligibility);
   if (!normalized.enabled) return false;
   return Boolean(
-    normalized.qualification ||
-      normalized.aggregateMin != null ||
+    normalized.aggregateMin != null ||
       normalized.subjectThreshold != null ||
       normalized.requiredSubjects.length,
   );
+}
+
+export function requiredSubjectsMissingThreshold(eligibility) {
+  const normalized = normalizeDocumentEligibility(eligibility);
+  if (!normalized.enabled || !normalized.requiredSubjects.length) return false;
+  const allHaveMin = normalized.requiredSubjects.every((subject) => subject.minScore != null);
+  return normalized.subjectThreshold == null && !allHaveMin;
 }
 
 export function rulesFromDocumentEligibility(eligibility) {
@@ -57,14 +62,6 @@ export function rulesFromDocumentEligibility(eligibility) {
   if (!normalized.enabled) return [];
 
   const rules = [];
-  if (normalized.qualification) {
-    rules.push({
-      field: 'Qualification',
-      fieldType: 'text',
-      operator: 'eq',
-      value: normalized.qualification,
-    });
-  }
   if (normalized.requiredSubjects.length) {
     rules.push({
       field: 'Subjects',
@@ -152,8 +149,7 @@ export function describeDocumentEligibility(eligibility) {
   const normalized = normalizeDocumentEligibility(eligibility);
   const notes = [];
   for (const rule of rules) {
-    if (rule.field === 'Qualification') notes.push(`Qualification: ${rule.value}`);
-    else if (rule.field === 'Subjects') notes.push(`Required subjects: ${rule.value}`);
+    if (rule.field === 'Subjects') notes.push(`Required subjects: ${rule.value}`);
     else if (rule.field === 'Aggregate Requirement') notes.push(`Minimum overall score: ${rule.value}`);
     else if (rule.field === 'Subject Threshold') notes.push(`Minimum score in each required subject: ${rule.value}`);
   }
@@ -173,14 +169,10 @@ export function eligibilityFromGenericRules(rules = []) {
 
   for (const rule of rules) {
     const key = normalizeFieldKey(rule.field);
-    if (/qualification|degree|education/.test(key) && !/subject/.test(key)) {
-      eligibility.qualification = String(rule.value ?? '').trim();
+    if (/subject/.test(key) && !/threshold|mark|score/.test(key)) {
       continue;
     }
-    if (/subject/.test(key) && !/threshold|mark|score/.test(key)) {
-      eligibility.requiredSubjects = parseSubjectEntries(rule.value)
-        .map((subject) => ({ name: subject.name, minScore: null }))
-        .filter((subject) => subject.name);
+    if (/qualification|degree|education/.test(key) && !/subject/.test(key)) {
       continue;
     }
     if (/aggregate|percentage|overall|total percent|cgpa/.test(key)) {
@@ -207,8 +199,11 @@ export function applyEligibilityTemplateToDocuments(documentRequirements = [], t
     return {
       ...(typeof requirement.toObject === 'function' ? requirement.toObject() : requirement),
       eligibility: {
-        ...normalizeDocumentEligibility(template),
+        ...emptyDocumentEligibility(),
         enabled: true,
+        aggregateMin: template.aggregateMin ?? current?.aggregateMin ?? null,
+        subjectThreshold: template.subjectThreshold ?? current?.subjectThreshold ?? null,
+        requiredSubjects: normalizeDocumentEligibility(current).requiredSubjects,
       },
     };
   });

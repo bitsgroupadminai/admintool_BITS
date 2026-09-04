@@ -1,7 +1,6 @@
 export function emptyDocumentEligibility() {
   return {
     enabled: false,
-    qualification: '',
     aggregateMin: '',
     subjectThreshold: '',
     requiredSubjects: [],
@@ -31,7 +30,6 @@ export function normalizeDocumentEligibility(eligibility, documentName = '') {
   }
   return {
     enabled: Boolean(eligibility.enabled),
-    qualification: eligibility.qualification ?? '',
     aggregateMin: eligibility.aggregateMin ?? '',
     subjectThreshold: eligibility.subjectThreshold ?? '',
     requiredSubjects: (eligibility.requiredSubjects ?? []).map((subject) => ({
@@ -41,21 +39,29 @@ export function normalizeDocumentEligibility(eligibility, documentName = '') {
   };
 }
 
+export function namedRequiredSubjects(eligibility) {
+  return (eligibility?.requiredSubjects ?? []).filter((subject) => String(subject?.name ?? '').trim());
+}
+
 export function documentHasEligibilityCriteria(eligibility) {
   if (!eligibility?.enabled) return false;
-  if (String(eligibility.qualification ?? '').trim()) return true;
   if (eligibility.aggregateMin !== '' && eligibility.aggregateMin != null) return true;
   if (eligibility.subjectThreshold !== '' && eligibility.subjectThreshold != null) return true;
-  return (eligibility.requiredSubjects ?? []).some((subject) => String(subject?.name ?? '').trim());
+  return namedRequiredSubjects(eligibility).length > 0;
+}
+
+export function requiredSubjectsMissingThreshold(eligibility) {
+  const subjects = namedRequiredSubjects(eligibility);
+  if (!eligibility?.enabled || !subjects.length) return false;
+  const hasDefault =
+    eligibility.subjectThreshold !== '' && eligibility.subjectThreshold != null;
+  const allHaveMin = subjects.every((subject) => subject.minScore !== '' && subject.minScore != null);
+  return !hasDefault && !allHaveMin;
 }
 
 export function rulesFromDocumentEligibility(eligibility) {
   if (!eligibility?.enabled) return [];
   const rules = [];
-  const qualification = String(eligibility.qualification ?? '').trim();
-  if (qualification) {
-    rules.push({ field: 'Qualification', fieldType: 'text', operator: 'eq', value: qualification });
-  }
   const subjects = (eligibility.requiredSubjects ?? [])
     .map((subject) => String(subject?.name ?? '').trim())
     .filter(Boolean);
@@ -92,7 +98,7 @@ export function eligibilityPayload(eligibility) {
 
   return {
     enabled: Boolean(eligibility?.enabled),
-    qualification: String(eligibility?.qualification ?? '').trim(),
+    qualification: '',
     aggregateMin:
       eligibility?.aggregateMin === '' || eligibility?.aggregateMin == null
         ? null

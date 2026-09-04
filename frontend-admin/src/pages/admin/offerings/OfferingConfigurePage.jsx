@@ -41,6 +41,7 @@ import {
   emptyDocumentEligibility,
   isAcademicDocumentName,
   normalizeDocumentEligibility,
+  requiredSubjectsMissingThreshold,
 } from '@/utils/documentEligibility';
 
 const STAFF_ROLES_FALLBACK = [
@@ -377,6 +378,16 @@ export function OfferingConfigurePage() {
     if (incomplete.length) {
       toast.error(
         `Add at least one criterion for ${incomplete.map((doc) => doc.name).join(', ')}, or turn eligibility off`,
+      );
+      return false;
+    }
+
+    const missingSubjectMins = docs.filter((doc) =>
+      requiredSubjectsMissingThreshold(doc.eligibility),
+    );
+    if (missingSubjectMins.length) {
+      toast.error(
+        `Set a minimum score for required subjects on ${missingSubjectMins.map((doc) => doc.name).join(', ')}`,
       );
       return false;
     }
@@ -901,8 +912,8 @@ export function OfferingConfigurePage() {
             <CardHeader>
               <CardTitle>Eligibility by document</CardTitle>
               <CardDescription>
-                Each uploaded file is checked against the criteria you set here. Marksheets can
-                require specific subjects and scores. Photos and IDs can skip this.
+                Set scores on each uploaded file. Required subjects are optional — add them only
+                when that marksheet must include specific subjects.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

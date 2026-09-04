@@ -7,13 +7,13 @@ import { isAcademicDocumentName } from '@/utils/documentEligibility';
 export function DocumentEligibilityCard({ document, index, onChange }) {
   const eligibility = document.eligibility ?? {
     enabled: false,
-    qualification: '',
     aggregateMin: '',
     subjectThreshold: '',
     requiredSubjects: [],
   };
   const academic = isAcademicDocumentName(document.name);
   const subjects = eligibility.requiredSubjects ?? [];
+  const hasRequiredSubjects = subjects.some((subject) => String(subject?.name ?? '').trim());
 
   const patch = (nextEligibility) => {
     onChange(index, { ...document, eligibility: { ...eligibility, ...nextEligibility } });
@@ -32,7 +32,7 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
           <p className="font-semibold text-forest">{document.name || `Document ${index + 1}`}</p>
           <p className="mt-1 text-xs text-muted">
             {academic
-              ? 'Marksheet or scorecard — set the scores and subjects this file must prove.'
+              ? 'Set the overall score for this marksheet. Add required subjects only if this file must include specific ones.'
               : 'Supporting file. Turn eligibility on only if this upload should be scored.'}
           </p>
         </div>
@@ -47,15 +47,7 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
       </div>
 
       {eligibility.enabled ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Qualification this document should show</Label>
-            <Input
-              placeholder={academic ? 'e.g. 10+2 or equivalent, Class X' : 'Optional'}
-              value={eligibility.qualification}
-              onChange={(event) => patch({ qualification: event.target.value })}
-            />
-          </div>
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Minimum overall score</Label>
             <Input
@@ -66,24 +58,16 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
               onChange={(event) => patch({ aggregateMin: event.target.value })}
             />
             <p className="text-[11px] text-muted">
-              Aggregate, percentage, or exam total on this file.
+              The aggregate, percentage, or exam total for this entire file.
             </p>
           </div>
-          <div className="space-y-1.5">
-            <Label>Minimum score in each required subject</Label>
-            <Input
-              type="number"
-              min={0}
-              placeholder="e.g. 60"
-              value={eligibility.subjectThreshold}
-              onChange={(event) => patch({ subjectThreshold: event.target.value })}
-            />
+
+          <div className="space-y-2">
+            <Label>Required subjects (optional)</Label>
             <p className="text-[11px] text-muted">
-              Used when a subject below does not have its own minimum.
+              Add subjects only when this file must include them, such as Physics, Chemistry, and
+              Mathematics on Class 12. Leave empty for Class 10 or an exam total.
             </p>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Required subjects</Label>
             <div className="space-y-2">
               {subjects.map((subject, subjectIndex) => (
                 <div key={subjectIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px_40px]">
@@ -123,9 +107,25 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
               <Plus className="h-4 w-4" />
               Add subject
             </Button>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>
+              {hasRequiredSubjects
+                ? 'Minimum score in each required subject'
+                : 'Minimum score in each subject on this file'}
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              placeholder="e.g. 60"
+              value={eligibility.subjectThreshold}
+              onChange={(event) => patch({ subjectThreshold: event.target.value })}
+            />
             <p className="text-[11px] text-muted">
-              Leave the list empty if this file only needs an overall score, such as Class 10 or an
-              exam total.
+              {hasRequiredSubjects
+                ? 'Applies to every required subject unless that subject has its own minimum above.'
+                : 'Optional. Used when this file has subject scores but no required-subject list.'}
             </p>
           </div>
         </div>

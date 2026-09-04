@@ -6,6 +6,7 @@ import {
   offeringHasEligibilityConfigured,
   rulesFromDocumentEligibility,
   eligibilityFromGenericRules,
+  requiredSubjectsMissingThreshold,
 } from '../src/shared/helpers/documentEligibility.helper.js';
 import { getOfferingCompleteness } from '../src/shared/helpers/offeringCompleteness.helper.js';
 
@@ -13,12 +14,11 @@ describe('document eligibility', () => {
   test('converts per-document criteria into evaluation rules', () => {
     const rules = rulesFromDocumentEligibility({
       enabled: true,
-      qualification: '10+2 or equivalent',
       aggregateMin: 75,
       subjectThreshold: 60,
       requiredSubjects: [{ name: 'Physics' }, { name: 'Chemistry', minScore: 70 }, { name: 'Mathematics' }],
     });
-    assert.equal(rules.find((rule) => rule.field === 'Qualification').value, '10+2 or equivalent');
+    assert.equal(rules.find((rule) => rule.field === 'Qualification'), undefined);
     assert.equal(rules.find((rule) => rule.field === 'Subjects').value, 'Physics, Chemistry, Mathematics');
     assert.equal(rules.find((rule) => rule.field === 'Aggregate Requirement').value, 75);
     assert.equal(rules.find((rule) => rule.field === 'Subject Threshold').value, 60);
@@ -44,7 +44,6 @@ describe('document eligibility', () => {
           required: true,
           eligibility: {
             enabled: true,
-            qualification: '10+2',
             aggregateMin: 75,
             requiredSubjects: [{ name: 'Physics' }],
           },
@@ -90,7 +89,7 @@ describe('document eligibility', () => {
     );
   });
 
-  test('maps extracted programme rules onto a document template', () => {
+  test('maps extracted programme rules onto score fields only', () => {
     const template = eligibilityFromGenericRules([
       { field: 'Qualification', fieldType: 'text', operator: 'eq', value: '10+2 or equivalent' },
       { field: 'Subjects', fieldType: 'text', operator: 'eq', value: 'Physics, Chemistry, Mathematics' },
@@ -98,12 +97,27 @@ describe('document eligibility', () => {
       { field: 'Subject Threshold', fieldType: 'numeric', operator: 'gte', value: 60 },
     ]);
     assert.equal(template.enabled, true);
-    assert.equal(template.qualification, '10+2 or equivalent');
+    assert.equal(template.qualification, '');
     assert.equal(template.aggregateMin, 75);
     assert.equal(template.subjectThreshold, 60);
-    assert.deepEqual(
-      template.requiredSubjects.map((subject) => subject.name),
-      ['Physics', 'Chemistry', 'Mathematics'],
+    assert.deepEqual(template.requiredSubjects, []);
+  });
+
+  test('required subjects need a default or per-subject minimum', () => {
+    assert.equal(
+      requiredSubjectsMissingThreshold({
+        enabled: true,
+        requiredSubjects: [{ name: 'Physics' }, { name: 'Chemistry' }],
+      }),
+      true,
+    );
+    assert.equal(
+      requiredSubjectsMissingThreshold({
+        enabled: true,
+        subjectThreshold: 60,
+        requiredSubjects: [{ name: 'Physics' }],
+      }),
+      false,
     );
   });
 });

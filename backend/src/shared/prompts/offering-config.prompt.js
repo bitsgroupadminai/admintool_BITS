@@ -84,7 +84,7 @@ Current eligibility rules (may be empty): ${priorRules}
 
 Return JSON: { "eligibilityRules": [ { "field", "fieldType", "operator", "value", "documentExcerpt" } ] }
 Extract eligibility criteria explicitly stated for "${offeringName}". Empty array if none found.
-These rules will be attached to academic documents (marksheets and scorecards) by an admin, so prefer criteria that can apply to a specific uploaded file: qualification shown on that file, required subjects, overall/aggregate score, and per-subject minimums.`;
+Prefer overall/aggregate scores and per-subject minimums that can be attached to a specific marksheet or scorecard. Do not invent a qualification label. Required subjects should only be extracted when the text names them for a specific exam or class.`;
 }
 
 /**

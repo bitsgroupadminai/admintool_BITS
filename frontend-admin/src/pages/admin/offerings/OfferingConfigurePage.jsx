@@ -311,12 +311,12 @@ export function OfferingConfigurePage() {
       const { data } = await offeringsApi.generateWorkflowEmails(id);
       applyGeneratedEmails(data.data.offering);
       if (!silent) {
-        toast.success('Student email templates are ready. Review and edit them on each step.');
+        toast.success('Instructions and student emails are ready. Review and edit them on each step.');
       }
     } catch (err) {
       emailsHydrated.current = false;
       if (!silent) {
-        toast.error(err.message || 'Could not generate student emails');
+        toast.error(err.message || 'Could not generate workflow copy');
       }
     } finally {
       setGeneratingEmails(false);
@@ -325,7 +325,9 @@ export function OfferingConfigurePage() {
 
   useEffect(() => {
     if (!offering?.workflowSteps?.length || emailsHydrated.current) return;
-    if (offering.workflowSteps.every((item) => hasStudentEmailTemplate(item))) {
+    const emailsReady = offering.workflowSteps.every((item) => hasStudentEmailTemplate(item));
+    const instructionsReady = offering.workflowSteps.every((item) => hasAudienceInstructions(item));
+    if (emailsReady && instructionsReady) {
       emailsHydrated.current = true;
       return;
     }
@@ -489,7 +491,7 @@ export function OfferingConfigurePage() {
     const missing = steps.find((step) => !hasAudienceInstructions(step));
     if (missing) {
       toast.error(
-        `“${missing.name || 'Untitled step'}” needs staff, admin, and student instructions. Extract from documents or enter them on the step.`,
+        `“${missing.name || 'Untitled step'}” needs staff, admin, and student instructions. Extract from documents or edit the generated text on the step.`,
       );
       return false;
     }
@@ -1012,9 +1014,10 @@ export function OfferingConfigurePage() {
             <CardHeader>
               <CardTitle>Workflow timeline</CardTitle>
               <CardDescription>
-                Extract the journey from knowledge documents, or add steps by hand. Every step
-                needs staff, admin, and student instructions. Each step also has a student email
-                sent when that stage is completed — AI drafts it, and you can edit it.
+                Extract the journey from knowledge documents, or add steps by hand. AI
+                drafts staff, admin, and student instructions for every step — you can
+                edit them. Each step also has a student email sent when that stage is
+                completed.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1027,15 +1030,15 @@ export function OfferingConfigurePage() {
               />
               {generatingEmails ? (
                 <p className="text-xs font-medium text-[#0A6640]">
-                  Generating student email templates for each step…
+                  Generating instructions and student emails for each step…
                 </p>
-              ) : steps.some((item) => !hasStudentEmailTemplate(item)) ? (
+              ) : steps.some((item) => !hasStudentEmailTemplate(item) || !hasAudienceInstructions(item)) ? (
                 <button
                   type="button"
                   onClick={() => handleGenerateWorkflowEmails()}
                   className="text-xs font-semibold text-[#0A6640] hover:underline"
                 >
-                  Generate student email templates
+                  Generate instructions and student emails
                 </button>
               ) : null}
               <WorkflowTimelineBuilder

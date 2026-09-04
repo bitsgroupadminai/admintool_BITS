@@ -10,6 +10,7 @@ import {
   offeringWorkflowSkeletonResponseSchema,
   offeringWorkflowOutcomesResponseSchema,
   offeringWorkflowEmailsResponseSchema,
+  offeringWorkflowInstructionsResponseSchema,
   offeringQueueResponseSchema,
 } from '../schemas/knowledge-ai.schemas.js';
 import { mergeWorkflowSkeletonAndOutcomes } from '../helpers/workflow.helper.js';
@@ -17,6 +18,11 @@ import {
   applyCanonicalStudentEmails,
   mergeGeneratedStudentEmails,
 } from '../helpers/workflowStudentEmail.helper.js';
+import {
+  applyCanonicalAudienceInstructions,
+  hasAudienceInstructions,
+  mergeGeneratedAudienceInstructions,
+} from '../helpers/workflowAudienceInstructions.helper.js';
 import {
   ensureAdmissionWorkflowSkeleton,
   ensureAdmissionStepOutcomes,
@@ -45,12 +51,14 @@ import {
   buildOfferingWorkflowSkeletonUserPrompt,
   buildOfferingWorkflowOutcomesUserPrompt,
   buildOfferingWorkflowEmailsUserPrompt,
+  buildOfferingWorkflowInstructionsUserPrompt,
   buildOfferingQueueUserPrompt,
   OFFERING_ELIGIBILITY_SYSTEM_PROMPT,
   OFFERING_DOCUMENTS_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_SKELETON_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_OUTCOMES_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_EMAILS_SYSTEM_PROMPT,
+  OFFERING_WORKFLOW_INSTRUCTIONS_SYSTEM_PROMPT,
   OFFERING_QUEUE_SYSTEM_PROMPT,
 } from '../prompts/index.js';
 
@@ -192,8 +200,29 @@ function formatOpenAiError(err) {
 }
 
 /**
+ * Fill staff/admin/student instructions for workflow steps. Uses OpenAI when configured,
+ * otherwise canonical copy. Existing non-empty fields are kept.
+ */
+export async function generateWorkflowAudienceInstructions(
+  steps,
+  { offering, service, documents = [], insights } = {},
+) {
+  if (!steps?.length) return steps;
+  const fullDocText = documents.length ? await buildCombinedDocumentText(documents) : '';
+  const docText = offering?.name ? focusDocumentForOffering(fullDocText, offering.name) : fullDocText;
+  const baseContext = buildOfferingBaseContext({
+    serviceName: service?.name ?? 'Service',
+    offeringName: offering?.name ?? 'Offering',
+    offeringDescription: offering?.description,
+    understandingSummary: insights?.understandingSummary,
+    docText: docText || '(no knowledge document text)',
+  });
+  return attachAudienceInstructions(steps, { offering, baseContext, docText });
+}
+
+/**
  * Fill student email templates for workflow steps. Uses OpenAI when configured, otherwise canonical copy.
- * Existing non-empty templates are kept.
+ * Existing non-empty templates are kept. Also fills missing audience instructions.
  */
 export async function generateWorkflowStudentEmails(
   steps,
@@ -209,7 +238,50 @@ export async function generateWorkflowStudentEmails(
     understandingSummary: insights?.understandingSummary,
     docText: docText || '(no knowledge document text)',
   });
-  return attachStudentEmails(steps, { offering, baseContext, docText });
+  const withInstructions = await attachAudienceInstructions(steps, { offering, baseContext, docText });
+  return attachStudentEmails(withInstructions, { offering, baseContext, docText });
+}
+
+async function attachAudienceInstructions(steps, { offering = {}, baseContext = '', docText = '' } = {}) {
+  if (!steps?.length) return steps;
+  if (steps.every((step) => hasAudienceInstructions(step))) {
+    return steps;
+  }
+  if (!isOpenAiConfigured() || !String(docText ?? '').trim()) {
+    return applyCanonicalAudienceInstructions(steps);
+  }
+
+  try {
+    const workflowStepsJson = JSON.stringify(
+      steps.map((step) => ({
+        order: step.order,
+        name: step.name,
+        description: step.description,
+        handledBy: step.handledBy,
+        staffInstructions: step.staffInstructions ?? '',
+        adminInstructions: step.adminInstructions ?? '',
+        studentInstructions: step.studentInstructions ?? '',
+      })),
+      null,
+      2,
+    );
+    const result = await chatJson({
+      system: OFFERING_WORKFLOW_INSTRUCTIONS_SYSTEM_PROMPT,
+      user: buildOfferingWorkflowInstructionsUserPrompt({
+        baseContext,
+        offeringName: offering.name,
+        workflowStepsJson,
+      }),
+      schema: offeringWorkflowInstructionsResponseSchema,
+    });
+    return mergeGeneratedAudienceInstructions(steps, result.stepInstructions ?? []);
+  } catch (err) {
+    logger.warn(
+      { err: err.message, offering: offering.name },
+      'Workflow audience instruction generation failed; using canonical copy',
+    );
+    return applyCanonicalAudienceInstructions(steps);
+  }
 }
 
 async function attachStudentEmails(steps, { offering = {}, baseContext = '', docText = '' } = {}) {
@@ -449,9 +521,12 @@ export async function generateOfferingSectionSuggestions({
 
       return {
         workflowSteps: await attachStudentEmails(
-          mergeWorkflowSkeletonAndOutcomes(skeletonSteps, alignedOutcomes, {
-            documentNames: uniqueDocNames,
-          }),
+          await attachAudienceInstructions(
+            mergeWorkflowSkeletonAndOutcomes(skeletonSteps, alignedOutcomes, {
+              documentNames: uniqueDocNames,
+            }),
+            { offering, baseContext, docText },
+          ),
           { offering, baseContext, docText },
         ),
       };

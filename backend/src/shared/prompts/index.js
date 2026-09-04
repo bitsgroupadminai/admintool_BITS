@@ -24,6 +24,7 @@ export {
   WORKFLOW_SKELETON_JSON_EXAMPLE,
   WORKFLOW_OUTCOMES_JSON_EXAMPLE,
   WORKFLOW_STUDENT_EMAIL_RULES,
+  WORKFLOW_AUDIENCE_INSTRUCTION_RULES,
 } from './workflow-extraction.prompt.js';
 
 export { ADMISSION_WORKFLOW_REFERENCE } from './admission-workflow-reference.prompt.js';
@@ -34,6 +35,7 @@ export {
   OFFERING_WORKFLOW_SKELETON_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_OUTCOMES_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_EMAILS_SYSTEM_PROMPT,
+  OFFERING_WORKFLOW_INSTRUCTIONS_SYSTEM_PROMPT,
   OFFERING_QUEUE_SYSTEM_PROMPT,
   buildOfferingBaseContext,
   buildOfferingEligibilityUserPrompt,
@@ -41,6 +43,7 @@ export {
   buildOfferingWorkflowSkeletonUserPrompt,
   buildOfferingWorkflowOutcomesUserPrompt,
   buildOfferingWorkflowEmailsUserPrompt,
+  buildOfferingWorkflowInstructionsUserPrompt,
   buildOfferingQueueUserPrompt,
 } from './offering-config.prompt.js';
 

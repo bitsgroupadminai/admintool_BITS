@@ -5,6 +5,7 @@ import {
   WORKFLOW_OUTCOMES_EXTRACTION_RULES,
   WORKFLOW_OUTCOMES_JSON_EXAMPLE,
   WORKFLOW_STUDENT_EMAIL_RULES,
+  WORKFLOW_AUDIENCE_INSTRUCTION_RULES,
 } from './workflow-extraction.prompt.js';
 
 const EXTRACTIVE_SYSTEM = `${DOCUMENT_EXTRACTION_RULES}
@@ -45,6 +46,13 @@ ${WORKFLOW_STUDENT_EMAIL_RULES}
 
 Write student emails for an offering whose workflow steps are already defined.
 Ground campus, fee, hostel, and joining details in the knowledge documents when present. Always keep the required placeholders.`;
+
+export const OFFERING_WORKFLOW_INSTRUCTIONS_SYSTEM_PROMPT = `${DOCUMENT_EXTRACTION_RULES}
+
+${WORKFLOW_AUDIENCE_INSTRUCTION_RULES}
+
+Write portal instructions for an offering whose workflow steps are already defined.
+Ground staff, admin, and student guidance in the knowledge documents when present. Never leave a field empty.`;
 
 /** @deprecated Use two-phase skeleton + outcomes prompts */
 export const OFFERING_WORKFLOW_SYSTEM_PROMPT = OFFERING_WORKFLOW_SKELETON_SYSTEM_PROMPT;
@@ -209,4 +217,25 @@ Return one student email per step order:
 { "stepEmails": [ { "order": 1, "subject": "...", "headline": "...", "body": "..." } ] }
 
 The Offer Release email must congratulate the student and spell out Fee Payment and Admission Confirmation next steps.`;
+}
+
+/**
+ * Portal instructions for each workflow step (staff / admin / student).
+ */
+export function buildOfferingWorkflowInstructionsUserPrompt({
+  baseContext,
+  offeringName,
+  workflowStepsJson,
+}) {
+  return `${baseContext}
+
+Offering: ${offeringName}
+
+Workflow steps (JSON):
+${workflowStepsJson}
+
+Return one instruction set per step order:
+{ "stepInstructions": [ { "order": 1, "staffInstructions": "...", "adminInstructions": "...", "studentInstructions": "..." } ] }
+
+Write all three fields for every step. Never leave a field empty.`;
 }

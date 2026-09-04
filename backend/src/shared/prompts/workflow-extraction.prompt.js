@@ -209,6 +209,18 @@ ${ADMISSION_WORKFLOW_REFERENCE}`;
 export const WORKFLOW_BUILDER_JSON_EXAMPLE = WORKFLOW_SKELETON_JSON_EXAMPLE;
 export const WORKFLOW_BUILDER_EXTRACTION_RULES = WORKFLOW_SKELETON_EXTRACTION_RULES;
 
+export const WORKFLOW_AUDIENCE_INSTRUCTION_RULES = `PHASE 3a — PORTAL INSTRUCTIONS:
+
+Write staffInstructions, adminInstructions, and studentInstructions for EVERY workflow step. These appear on staff, admin, and student portals. Admins can edit them after you draft them.
+
+Rules:
+- staffInstructions: what the assigned staff member (or AI handler's human backup) must do, in plain language. Include how they move the request forward or reject it.
+- adminInstructions: what an institute admin should know or do, including oversight (re-run, send back, assign).
+- studentInstructions: what the applicant should do, or that they should wait. Say clearly if they have no action.
+- Ground wording in the knowledge document (documents, eligibility, counselling, seats, fees, joining). Do not invent campus-specific facts that are not in the document.
+- Each field is required, 1–1000 characters, no empty strings.
+- Do not copy the step description verbatim into all three fields — write audience-specific guidance.`;
+
 export const WORKFLOW_STUDENT_EMAIL_RULES = `PHASE 3 — STUDENT EMAIL TEMPLATES:
 
 Write one warm, friendly email the student receives when THAT step is completed.

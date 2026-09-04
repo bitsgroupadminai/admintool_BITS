@@ -139,7 +139,7 @@ export async function generateWorkflowEmails(req, res, next) {
       req.params.id,
       req.user.instituteId,
     );
-    sendSuccess(res, 200, 'Student email templates ready', { offering });
+    sendSuccess(res, 200, 'Workflow copy ready', { offering });
   } catch (err) {
     next(err);
   }

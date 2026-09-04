@@ -8,6 +8,18 @@ import {
   TERMINAL_STATE,
 } from '../enums/workflow.enums.js';
 import { normalizeStudentEmail } from './workflowStudentEmail.helper.js';
+import {
+  AUDIENCE_INSTRUCTION_MAX,
+  canonicalAudienceInstructionsForStep,
+  hasAudienceInstructions,
+  normalizeAudienceInstructions,
+} from './workflowAudienceInstructions.helper.js';
+
+export {
+  AUDIENCE_INSTRUCTION_MAX,
+  hasAudienceInstructions,
+  normalizeAudienceInstructions,
+};
 
 const STAFF_ASSIGNEES = new Set(['document_verifier', 'approver', 'counter_staff', 'general']);
 const AI_ASSIGNEES = new Set(Object.values(AI_HANDLER));
@@ -25,31 +37,6 @@ export function toPlainObject(value) {
     return value.map(toPlainObject);
   }
   return value;
-}
-
-export const AUDIENCE_INSTRUCTION_MAX = 1000;
-
-/**
- * @param {Object} [step]
- */
-export function normalizeAudienceInstructions(step = {}) {
-  return {
-    staffInstructions: String(step.staffInstructions ?? '').trim(),
-    adminInstructions: String(step.adminInstructions ?? '').trim(),
-    studentInstructions: String(step.studentInstructions ?? '').trim(),
-  };
-}
-
-/**
- * @param {Object} [step]
- */
-export function hasAudienceInstructions(step) {
-  const instructions = normalizeAudienceInstructions(step);
-  return Boolean(
-    instructions.staffInstructions &&
-      instructions.adminInstructions &&
-      instructions.studentInstructions,
-  );
 }
 
 /**
@@ -100,9 +87,10 @@ export function createWorkflowStep(order, nextStepId) {
     },
     slaValue: 24,
     slaUnit: 'hours',
-    staffInstructions: '',
-    adminInstructions: '',
-    studentInstructions: '',
+    ...canonicalAudienceInstructionsForStep({
+      name: order === 1 ? 'Document Verification' : 'Final Approval',
+      order,
+    }),
     studentEmail: { subject: '', headline: '', body: '' },
     outcomes: defaultOutcomes(order === 1 ? 'Document Verification' : 'Final Approval', order, nextStepId),
   };
@@ -285,7 +273,7 @@ export function validateWorkflowSteps(steps) {
     }
     if (!hasAudienceInstructions(step)) {
       throw new AppError(
-        `"${step.name}" needs staff, admin, and student instructions. Extract them from knowledge documents, or enter them when you add a step.`,
+        `"${step.name}" needs staff, admin, and student instructions. Extract from documents or edit the generated text on the step.`,
         400,
       );
     }

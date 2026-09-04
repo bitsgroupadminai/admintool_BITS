@@ -1,3 +1,5 @@
+import { audienceInstructionsForStep } from './workflowAudienceInstructions';
+
 export const HANDLER_TYPE = {
   STAFF: 'staff',
   STUDENT: 'student',
@@ -76,9 +78,10 @@ export function createStep(order, nextStepId) {
     },
     slaValue: order === 1 ? 4 : 48,
     slaUnit: 'hours',
-    staffInstructions: '',
-    adminInstructions: '',
-    studentInstructions: '',
+    ...audienceInstructionsForStep({
+      name: order === 1 ? 'Document Verification' : 'Final Approval',
+      order,
+    }),
     studentEmail: { subject: '', headline: '', body: '' },
     outcomes: defaultOutcomes(nextStepId),
   };

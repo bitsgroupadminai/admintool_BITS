@@ -103,6 +103,17 @@ export const offeringWorkflowEmailsResponseSchema = z.object({
   stepEmails: z.array(workflowStepEmailSchema).min(1).max(15),
 });
 
+const workflowStepInstructionsSchema = z.object({
+  order: z.number().int().min(1),
+  staffInstructions: z.string().min(1).max(1000),
+  adminInstructions: z.string().min(1).max(1000),
+  studentInstructions: z.string().min(1).max(1000),
+});
+
+export const offeringWorkflowInstructionsResponseSchema = z.object({
+  stepInstructions: z.array(workflowStepInstructionsSchema).min(1).max(15),
+});
+
 export const offeringQueueResponseSchema = z.object({
   queueMode: z.enum(['queue_only', 'appointment_only', 'hybrid']).nullable().optional(),
   queueConfig: z

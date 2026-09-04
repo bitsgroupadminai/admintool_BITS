@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
+import { audienceInstructionsForStep, isUneditedAudienceCopy } from "@/utils/workflowAudienceInstructions";
 import {
   AI_HANDLERS,
   HANDLER_TYPE,
@@ -189,6 +190,14 @@ function StepCard({
 }) {
   const update = (patch) => onChange({ ...step, ...patch });
 
+  const renameStep = (name) => {
+    if (!isUneditedAudienceCopy(step)) {
+      update({ name });
+      return;
+    }
+    update({ name, ...audienceInstructionsForStep({ ...step, name }) });
+  };
+
   const setHandler = (type, assignee) =>
     update({ handledBy: { type, assignee } });
 
@@ -279,6 +288,7 @@ function StepCard({
                   className="h-10 w-full rounded-lg border border-[#E8EDE6] bg-white px-3 text-sm text-[#1A2E16] placeholder-[#C4D4C2] focus:border-[#3D6B35] focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
                   value={step.name}
                   onChange={(e) => update({ name: e.target.value })}
+                  onBlur={(e) => renameStep(e.target.value)}
                   placeholder="e.g. Document verification"
                 />
               </div>
@@ -302,9 +312,10 @@ function StepCard({
                   Audience instructions
                 </p>
                 <p className="mt-1 text-xs text-[#6B7C69]">
-                  Extracted from knowledge documents, or entered here if you add a step
-                  by hand. Required for every step. These texts appear on the staff,
-                  admin, and student portals.
+                  AI drafts these from your knowledge documents when you extract a
+                  workflow, and when you add a step by hand. Edit freely. Required
+                  for every step. These texts appear on the staff, admin, and student
+                  portals.
                 </p>
               </div>
               {[

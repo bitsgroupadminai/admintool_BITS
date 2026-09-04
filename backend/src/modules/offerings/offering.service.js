@@ -32,6 +32,7 @@ import {
 } from '../../shared/helpers/documentEligibility.helper.js';
 import { generateWorkflowStudentEmails } from '../../shared/services/knowledge-ai.service.js';
 import { hasStudentEmailTemplate } from '../../shared/helpers/workflowStudentEmail.helper.js';
+import { hasAudienceInstructions } from '../../shared/helpers/workflowAudienceInstructions.helper.js';
 
 async function flushOfferingCaches(instituteId) {
   await flushInstituteReadCache(instituteId);
@@ -406,7 +407,23 @@ export async function updateDocumentRequirements(offeringId, instituteId, requir
  */
 export async function updateWorkflow(offeringId, instituteId, steps) {
   const offering = await getOfferingDoc(offeringId, instituteId);
-  offering.workflowSteps = validateWorkflowSteps(steps);
+  let nextSteps = normalizeWorkflowSteps(steps);
+  const needsGeneratedCopy =
+    nextSteps.some((step) => !hasAudienceInstructions(step)) ||
+    nextSteps.some((step) => !hasStudentEmailTemplate(step));
+  if (needsGeneratedCopy) {
+    const [service, documents] = await Promise.all([
+      Service.findOne({ _id: offering.serviceId, instituteId }),
+      KnowledgeDocument.find({ serviceId: offering.serviceId, instituteId }),
+    ]);
+    nextSteps = await generateWorkflowStudentEmails(nextSteps, {
+      offering,
+      service,
+      documents,
+      insights: service?.knowledgeInsights,
+    });
+  }
+  offering.workflowSteps = validateWorkflowSteps(nextSteps);
   offering.configurationVersion += 1;
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
@@ -416,18 +433,19 @@ export async function updateWorkflow(offeringId, instituteId, steps) {
 }
 
 /**
- * Generate student email templates for each workflow step when they are missing.
- * Existing edited templates are left unchanged.
+ * Generate staff/admin/student instructions and student emails for workflow steps when they are missing.
+ * Existing edited copy is left unchanged.
  */
 export async function ensureWorkflowStudentEmails(offeringId, instituteId) {
   const offering = await getOfferingDoc(offeringId, instituteId);
   const steps = normalizeWorkflowSteps(offering.workflowSteps);
   if (!steps.length) {
-    throw new AppError('Add workflow steps before generating student emails', 400);
+    throw new AppError('Add workflow steps before generating workflow copy', 400);
   }
 
-  const missing = steps.some((step) => !hasStudentEmailTemplate(step));
-  if (!missing) {
+  const missingEmails = steps.some((step) => !hasStudentEmailTemplate(step));
+  const missingInstructions = steps.some((step) => !hasAudienceInstructions(step));
+  if (!missingEmails && !missingInstructions) {
     return formatOffering(offering);
   }
 

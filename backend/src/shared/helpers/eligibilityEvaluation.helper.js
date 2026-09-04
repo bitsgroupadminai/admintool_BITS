@@ -96,6 +96,15 @@ export function uniqueSubjects(subjects = []) {
   return [...byKey.values()];
 }
 
+export function preferScoredSubjects(primary = [], fallback = []) {
+  const first = uniqueSubjects(primary);
+  const second = uniqueSubjects(fallback);
+  const scoredCount = (rows) => rows.filter((row) => row.score != null).length;
+  if (scoredCount(first) > scoredCount(second)) return first;
+  if (scoredCount(second) > scoredCount(first)) return second;
+  return first.length ? first : second;
+}
+
 export function subjectsForDocument(subjects = [], requirementName) {
   if (!subjects.length) return [];
   if (isBitsatDocumentName(requirementName)) {

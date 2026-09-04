@@ -108,47 +108,147 @@ async function extractDocxText(filePath) {
 }
 
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 /** Cap text sent to the verification model per document (keeps prompts small). */
 const MAX_VERIFY_TEXT_CHARS = 12_000;
+const MAX_VERIFY_PDF_PAGES = 2;
+const PDF_SCREENSHOT_WIDTH = 1280;
+
+/**
+ * @param {Buffer} buffer
+ * @returns {string | null}
+ */
+function sniffImageMime(buffer) {
+  if (!buffer?.length) return null;
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return 'image/png';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  return null;
+}
+
+function normalizeMime(mimeType = '') {
+  return String(mimeType)
+    .toLowerCase()
+    .split(';')[0]
+    .trim();
+}
+
+function pageScreenshotDataUrl(page) {
+  if (typeof page?.dataUrl === 'string' && page.dataUrl.startsWith('data:')) return page.dataUrl;
+  if (typeof page?.data === 'string' && page.data.startsWith('data:')) return page.data;
+  const buffer = page?.data ?? page?.buffer;
+  if (Buffer.isBuffer(buffer) && buffer.length) {
+    return `data:image/png;base64,${buffer.toString('base64')}`;
+  }
+  return null;
+}
+
+/**
+ * Render the first pages of a PDF so the vision model can read marks tables
+ * that live in the visual layout rather than a text layer.
+ * @param {string} filePath
+ * @returns {Promise<string[]>}
+ */
+async function screenshotPdfPages(filePath) {
+  let parser;
+  try {
+    const { PDFParse } = await import('pdf-parse');
+    parser = new PDFParse({ data: fs.readFileSync(filePath) });
+    const result = await parser.getScreenshot({
+      first: MAX_VERIFY_PDF_PAGES,
+      desiredWidth: PDF_SCREENSHOT_WIDTH,
+      imageBuffer: false,
+      imageDataUrl: true,
+    });
+    return (result?.pages ?? []).map(pageScreenshotDataUrl).filter(Boolean);
+  } catch (err) {
+    logger.warn({ err, filePath }, 'PDF screenshot for AI verification failed');
+    return [];
+  } finally {
+    if (parser) {
+      await parser.destroy().catch(() => {});
+    }
+  }
+}
 
 /**
  * Decide how a single uploaded file should be fed to the AI verifier:
  * - images -> base64 data URL for a vision model
- * - text-based PDF/DOCX/TXT -> extracted text
- * - scanned PDF (no text layer) or unknown -> unreadable (escalate to staff)
+ * - PDFs -> page screenshots (and extracted text when a text layer exists)
+ * - text-based DOCX/TXT -> extracted text
+ * - unknown / unreadable -> escalate to staff
  *
  * @param {string} filePath
  * @param {string} mimeType
- * @returns {Promise<{ kind: 'image' | 'text' | 'unreadable', text?: string, dataUrl?: string, reason?: string }>}
+ * @returns {Promise<{ kind: 'image' | 'text' | 'unreadable', text?: string, dataUrl?: string, dataUrls?: string[], reason?: string }>}
  */
 export async function prepareDocumentForVerification(filePath, mimeType) {
   if (!filePath || !fs.existsSync(filePath)) {
     return { kind: 'unreadable', reason: 'File is missing on the server' };
   }
 
-  if (IMAGE_MIME_TYPES.has(mimeType)) {
-    try {
-      const buffer = fs.readFileSync(filePath);
-      const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
-      return { kind: 'image', dataUrl };
-    } catch {
-      return { kind: 'unreadable', reason: 'Image could not be read' };
+  const mime = normalizeMime(mimeType);
+  const ext = path.extname(filePath).toLowerCase();
+  let buffer;
+  try {
+    buffer = fs.readFileSync(filePath);
+  } catch {
+    return { kind: 'unreadable', reason: 'File could not be read' };
+  }
+
+  const sniffedImage = sniffImageMime(buffer);
+  const imageMime =
+    sniffedImage ||
+    (IMAGE_MIME_TYPES.has(mime) ? (mime === 'image/jpg' ? 'image/jpeg' : mime) : null) ||
+    (IMAGE_EXTENSIONS.has(ext)
+      ? ext === '.png'
+        ? 'image/png'
+        : ext === '.webp'
+          ? 'image/webp'
+          : 'image/jpeg'
+      : null);
+
+  if (imageMime) {
+    return { kind: 'image', dataUrl: `data:${imageMime};base64,${buffer.toString('base64')}` };
+  }
+
+  const isPdf = resolveExtractKind(filePath, mime) === 'pdf';
+  if (isPdf) {
+    const [text, dataUrls] = await Promise.all([
+      extractTextFromDocument(filePath, mime || 'application/pdf'),
+      screenshotPdfPages(filePath),
+    ]);
+    const trimmed = text.trim();
+    if (dataUrls.length) {
+      return {
+        kind: 'image',
+        dataUrl: dataUrls[0],
+        dataUrls,
+        text: trimmed.length >= 20 ? trimmed.slice(0, MAX_VERIFY_TEXT_CHARS) : undefined,
+      };
     }
-  }
-
-  const text = await extractTextFromDocument(filePath, mimeType);
-  const trimmed = text.trim();
-
-  if (trimmed.length >= 20) {
-    return { kind: 'text', text: trimmed.slice(0, MAX_VERIFY_TEXT_CHARS) };
-  }
-
-  if (resolveExtractKind(filePath, mimeType) === 'pdf') {
+    if (trimmed.length >= 20) {
+      return { kind: 'text', text: trimmed.slice(0, MAX_VERIFY_TEXT_CHARS) };
+    }
     return {
       kind: 'unreadable',
       reason: 'PDF appears to be scanned with no extractable text layer',
     };
+  }
+
+  const text = await extractTextFromDocument(filePath, mimeType);
+  const trimmed = text.trim();
+  if (trimmed.length >= 20) {
+    return { kind: 'text', text: trimmed.slice(0, MAX_VERIFY_TEXT_CHARS) };
   }
 
   return { kind: 'unreadable', reason: 'No readable content found in the file' };

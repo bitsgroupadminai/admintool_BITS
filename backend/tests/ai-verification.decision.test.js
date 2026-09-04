@@ -14,7 +14,7 @@ import {
   documentEligibilityVerdict,
   ELIGIBILITY_VERDICT,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
-import { evaluateEligibilityRules, uniqueSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
+import { evaluateEligibilityRules, uniqueSubjects, preferScoredSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
   documentVerificationResponseSchema,
   eligibilityVerificationResponseSchema,
@@ -194,6 +194,28 @@ test('documentVerificationResponseSchema: valid payload parses and applies defau
   assert.deepEqual(parsed.issues, []);
 });
 
+test('documentVerificationResponseSchema: keeps scores when the model writes long text or string subjects', () => {
+  const parsed = documentVerificationResponseSchema.parse({
+    verdict: 'pass',
+    confidence: 0.92,
+    summary: 'x'.repeat(4000),
+    perDocument: [
+      {
+        requirementName: 'Class 12 marksheet',
+        present: true,
+        matchesRequirement: true,
+        verdict: 'pass',
+        observedContent: 'y'.repeat(800),
+        subjects: 'Physics: 84; Chemistry: 82; Mathematics: 90',
+      },
+    ],
+  });
+  assert.equal(parsed.summary.length, 2500);
+  assert.equal(parsed.perDocument[0].observedContent.length, 400);
+  assert.equal(parsed.perDocument[0].subjects.length, 3);
+  assert.equal(parsed.perDocument[0].subjects[0].score, 84);
+});
+
 test('documentVerificationResponseSchema: out-of-range confidence fails', () => {
   const result = documentVerificationResponseSchema.safeParse({
     verdict: 'pass',
@@ -230,6 +252,24 @@ test('document verification prompt includes eligibility rules', () => {
   });
   assert.match(prompt, /ELIGIBILITY RULES/);
   assert.match(prompt, /Aggregate Requirement: at least 75/);
+});
+
+test('document verification prompt tells the model to read attached marksheet images', () => {
+  const prompt = buildDocumentVerificationUserPrompt({
+    applicantName: 'Aarav Mehta',
+    requiredDocuments: [{ name: 'Class 12 marksheet', required: true }],
+    documents: [
+      {
+        requirementName: 'Class 12 marksheet',
+        originalName: 'class12.pdf',
+        kind: 'image',
+        imageNumber: 1,
+        imageNumbers: [1],
+      },
+    ],
+  });
+  assert.match(prompt, /see attached image #1/);
+  assert.match(prompt, /Read the marks table from the image/);
 });
 
 test('document verification prompt includes the full applicant record', () => {
@@ -671,6 +711,19 @@ test('uniqueSubjects drops repeated names and keeps scored rows', () => {
   ]);
   assert.equal(unique.length, 2);
   assert.equal(unique[0].score, 85);
+});
+
+test('preferScoredSubjects keeps the set that actually has marks', () => {
+  const chosen = preferScoredSubjects(
+    [{ name: 'Physics' }, { name: 'Chemistry' }],
+    [
+      { name: 'Physics', score: 84 },
+      { name: 'Chemistry', score: 82 },
+      { name: 'English Core', score: 88 },
+    ],
+  );
+  assert.equal(chosen.length, 3);
+  assert.equal(chosen.find((item) => item.name === 'English Core').score, 88);
 });
 
 test('hydrateEligibilityDecision does not duplicate subjects from raw', () => {

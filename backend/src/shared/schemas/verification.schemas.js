@@ -14,10 +14,48 @@ export const VERIFICATION_VERDICT = {
 
 const verdictEnum = z.enum(['pass', 'fail', 'uncertain']);
 
+function clippedString(max, fallback = '') {
+  return z.preprocess((value) => {
+    if (value == null) return fallback;
+    const text = String(value);
+    const next = text.trim() ? text : fallback;
+    return next.length > max ? next.slice(0, max) : next;
+  }, z.string().max(max).optional().default(fallback));
+}
+
+function normalizeSubjectList(value) {
+  if (value == null || value === '') return [];
+  const rows = Array.isArray(value)
+    ? value
+    : String(value)
+        .split(/[;|\n]+/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+          const scored = part.match(/^(.+?)\s*[:=\-]\s*(\d{1,3}(?:\.\d+)?)/);
+          return scored ? { name: scored[1].trim(), score: Number(scored[2]) } : { name: part };
+        });
+  return rows
+    .map((item) => {
+      if (typeof item === 'string') return { name: item.trim() };
+      if (!item || typeof item !== 'object') return null;
+      const name = String(item.name ?? item.subject ?? '').trim();
+      if (!name) return null;
+      return {
+        name: name.slice(0, 120),
+        score: item.score,
+        maxScore: item.maxScore,
+        grade: item.grade,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 30);
+}
+
 const extractedFieldSchema = z.object({
-  field: z.string().min(1).max(120),
+  field: clippedString(120, 'Field'),
   value: z.union([z.string(), z.number(), z.boolean()]).nullable(),
-  documentExcerpt: z.string().max(500).optional().default(''),
+  documentExcerpt: clippedString(500),
 });
 
 const looseNumber = z.preprocess((value) => {
@@ -31,53 +69,53 @@ const subjectScoreSchema = z.object({
   name: z.string().min(1).max(120),
   score: looseNumber,
   maxScore: looseNumber,
-  grade: z.string().max(20).optional().default(''),
+  grade: clippedString(20),
 });
 
 const documentFindingSchema = z.object({
-  requirementName: z.string().min(1).max(200),
+  requirementName: clippedString(200, 'Document'),
   present: z.boolean().default(false),
   matchesRequirement: z.boolean().default(false),
   legible: z.boolean().default(true),
   belongsToApplicant: z.boolean().default(true),
   verdict: verdictEnum,
-  observedContent: z.string().max(400).optional().default(''),
-  issue: z.string().max(1200).optional().default(''),
-  documentExcerpt: z.string().max(500).optional().default(''),
+  observedContent: clippedString(400),
+  issue: clippedString(1200),
+  documentExcerpt: clippedString(500),
   relevantToEligibility: z.boolean().optional().default(false),
-  qualification: z.string().max(200).optional().default(''),
+  qualification: clippedString(200),
   aggregate: looseNumber,
   examScore: looseNumber,
-  subjects: z.array(subjectScoreSchema).max(30).default([]),
+  subjects: z.preprocess(normalizeSubjectList, z.array(subjectScoreSchema).max(30).default([])),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
 });
 
 export const documentVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(2500),
+  summary: clippedString(2500, 'Verification complete.'),
   perDocument: z.array(documentFindingSchema).max(30).default([]),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
-  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
+  issues: z.array(clippedString(800)).max(30).default([]),
 });
 
 const eligibilityDocumentExtractionSchema = z.object({
-  requirementName: z.string().min(1).max(200),
+  requirementName: clippedString(200, 'Document'),
   relevantToEligibility: z.boolean().optional().default(true),
-  qualification: z.string().max(200).optional().default(''),
+  qualification: clippedString(200),
   aggregate: looseNumber,
   examScore: looseNumber,
-  subjects: z.array(subjectScoreSchema).max(30).default([]),
+  subjects: z.preprocess(normalizeSubjectList, z.array(subjectScoreSchema).max(30).default([])),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
 });
 
 export const eligibilityVerificationResponseSchema = z.object({
   verdict: verdictEnum,
   confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(2500),
+  summary: clippedString(2500, 'Extraction complete.'),
   perDocument: z.array(eligibilityDocumentExtractionSchema).max(30).default([]),
   extractedFields: z.array(extractedFieldSchema).max(40).default([]),
-  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
+  issues: z.array(clippedString(800)).max(30).default([]),
 });
 
 export const intakeVerificationResponseSchema = z.object({

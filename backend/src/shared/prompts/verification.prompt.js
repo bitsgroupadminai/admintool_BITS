@@ -449,7 +449,11 @@ function formatUploadedDocuments(documents) {
     .map((doc, idx) => {
       const label = doc.requirementName || doc.originalName || `Document ${idx + 1}`;
       if (doc.kind === 'image') {
-        return `[${idx + 1}] ${label} (${doc.originalName ?? 'image'}) — see attached image #${doc.imageNumber ?? idx + 1}`;
+        const imageRef = Array.isArray(doc.imageNumbers) && doc.imageNumbers.length > 1
+          ? `images #${doc.imageNumbers.join(', #')}`
+          : `image #${doc.imageNumber ?? idx + 1}`;
+        const header = `[${idx + 1}] ${label} (${doc.originalName ?? 'image'}) — see attached ${imageRef}. Read the marks table from the image.`;
+        return doc.text ? `${header}\nExtracted text layer (may be incomplete):\n"""\n${doc.text}\n"""` : header;
       }
       if (doc.kind === 'unreadable') {
         return `[${idx + 1}] ${label} (${doc.originalName ?? 'file'}) — UNREADABLE: ${doc.reason ?? 'no text available'}`;

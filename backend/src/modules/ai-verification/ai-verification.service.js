@@ -224,6 +224,19 @@ async function evaluateDocumentStep({
     schema: documentVerificationResponseSchema,
   });
 
+  logger.info(
+    {
+      applicationId: application._id.toString(),
+      perDocument: (raw.perDocument ?? []).map((doc) => ({
+        requirementName: doc.requirementName,
+        subjectCount: doc.subjects?.length ?? 0,
+        scoredSubjects: (doc.subjects ?? []).filter((subject) => subject?.score != null).length,
+        aggregate: doc.aggregate ?? null,
+      })),
+    },
+    'AI document extraction received',
+  );
+
   const hydrated = hydrateDocumentVerificationDecision(
     {
       handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
@@ -690,9 +703,22 @@ async function gatherApplicationDocuments(application) {
     };
 
     if (prep.kind === 'image') {
-      imageCount += 1;
-      entry.imageNumber = imageCount;
-      images.push({ dataUrl: prep.dataUrl, detail: 'high' });
+      const dataUrls = (prep.dataUrls?.length ? prep.dataUrls : [prep.dataUrl]).filter(Boolean);
+      if (!dataUrls.length) {
+        entry.kind = 'unreadable';
+        entry.reason = 'Image could not be attached for verification';
+        anyUnreadable = true;
+      } else {
+        const imageNumbers = [];
+        for (const dataUrl of dataUrls) {
+          imageCount += 1;
+          imageNumbers.push(imageCount);
+          images.push({ dataUrl, detail: 'high' });
+        }
+        entry.imageNumber = imageNumbers[0];
+        entry.imageNumbers = imageNumbers;
+        if (prep.text) entry.text = prep.text;
+      }
     } else if (prep.kind === 'text') {
       entry.text = prep.text;
     } else {
@@ -702,6 +728,20 @@ async function gatherApplicationDocuments(application) {
 
     docs.push(entry);
   }
+
+  logger.info(
+    {
+      applicationId: application._id.toString(),
+      documents: docs.map((doc) => ({
+        requirementName: doc.requirementName,
+        kind: doc.kind,
+        imageNumbers: doc.imageNumbers,
+        textChars: doc.text?.length ?? 0,
+        reason: doc.reason,
+      })),
+    },
+    'Prepared documents for AI verification',
+  );
 
   return { docs, images, anyUnreadable };
 }

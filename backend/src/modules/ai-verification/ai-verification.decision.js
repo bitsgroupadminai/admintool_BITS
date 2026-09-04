@@ -10,6 +10,7 @@ import {
   parseNumericValue,
   normalizeFieldKey,
   uniqueSubjects,
+  preferScoredSubjects,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
 import {
   hasScopedDocumentEligibility,
@@ -362,9 +363,7 @@ function seedAcademicDocuments(decision = {}, uploadedDocuments = [], fields = [
       ...extra,
       requirementName: current.requirementName || name,
       extractedFields: [...asArray(current.extractedFields), ...asArray(extra.extractedFields)],
-      subjects: uniqueSubjects(
-        current.subjects?.length ? current.subjects : extra.subjects,
-      ),
+      subjects: preferScoredSubjects(current.subjects, extra.subjects),
     });
   };
 
@@ -403,7 +402,7 @@ function fillDocumentExtraction(doc, decision, fields) {
   const ownSubjects = uniqueSubjects(doc.subjects);
   const localSubjectField = asArray(doc.extractedFields)
     .filter((field) => /subject/.test(normalizeFieldKey(field.field)) && !/threshold/.test(normalizeFieldKey(field.field)))
-    .map((field) => field.value)
+    .flatMap((field) => [field.value, field.documentExcerpt])
     .filter((value) => value != null && value !== '')
     .join('; ');
   let subjects = ownSubjects.length ? ownSubjects : uniqueSubjects(parseSubjectEntries(localSubjectField));
@@ -512,9 +511,7 @@ export function hydrateDocumentVerificationDecision(
           qualification: finding.qualification || academic.qualification,
           aggregate: finding.aggregate ?? academic.aggregate,
           examScore: finding.examScore ?? academic.examScore,
-          subjects: uniqueSubjects(
-            asArray(finding.subjects).length ? finding.subjects : academic.subjects,
-          ),
+          subjects: preferScoredSubjects(finding.subjects, academic.subjects),
           extractedFields: [
             ...asArray(finding.extractedFields),
             ...asArray(academic.extractedFields),

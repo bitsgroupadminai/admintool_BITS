@@ -7,6 +7,7 @@ import { AppError } from '../../core/utils/AppError.js';
 import { APPLICATION_STATUS, DOCUMENT_REVIEW_STATUS } from '../../shared/enums/application.enums.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { notifyApplicationAssigned, notifyApplicationStatusChange } from '../../shared/templates/applicationEmails.js';
+import { notifyWorkflowStepCompleted } from '../../shared/templates/workflowStepEmails.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
@@ -318,7 +319,7 @@ export async function loadApplicationContext(application, instituteId) {
   const [service, offering, institute] = await Promise.all([
     Service.findOne({ _id: application.serviceId, instituteId }).select('name'),
     Offering.findOne({ _id: application.offeringId, instituteId }).select(
-      'name documentRequirements eligibilityRules',
+      'name documentRequirements eligibilityRules paymentConfig startDate visitLocation visitInstructions workflowSteps',
     ),
     Institute.findById(instituteId).select('name'),
   ]);
@@ -643,6 +644,7 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
     role: user.role,
   }, payload.note, {
     correctionRequiredDocuments: payload.correctionRequiredDocuments,
+    auditNote: payload.auditNote,
   });
 
   let enqueueAiVerification = false;
@@ -668,9 +670,29 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
   const context = await loadApplicationContext(application, instituteId);
   const assignee = await loadAssignee(application);
 
-  if (application.status !== previousStatus) {
-    notifyApplicationStatusChange(application, context, application.status).catch(() => {});
+  let sentStepEmail = false;
+  if (payload.outcome === OUTCOME_TYPE.APPROVED) {
+    const following = getWorkflowSteps(application).find(
+      (item) => Number(item.order) > Number(step.order),
+    );
+    sentStepEmail = await notifyWorkflowStepCompleted({
+      application,
+      step,
+      steps: getWorkflowSteps(application),
+      context: {
+        ...context,
+        nextStepName: following?.name,
+      },
+      offering: context.offering ?? {},
+    });
+  }
 
+  const statusChanged = application.status !== previousStatus;
+  if (statusChanged && !sentStepEmail) {
+    notifyApplicationStatusChange(application, context, application.status).catch(() => {});
+  }
+
+  if (statusChanged || sentStepEmail) {
     const studentUser = await User.findOne({
       instituteId,
       email: application.applicantEmail,
@@ -682,8 +704,10 @@ async function executeWorkflowAction(application, instituteId, user, payload, op
         instituteId,
         userId: studentUser._id.toString(),
         type: 'status',
-        title: 'Request status updated',
-        body: `Your request is now: ${application.status.replace(/_/g, ' ')}`,
+        title: sentStepEmail ? `${step.name} is complete` : 'Request status updated',
+        body: sentStepEmail
+          ? 'We emailed you with what happens next. Open your dashboard to continue.'
+          : `Your request is now: ${application.status.replace(/_/g, ' ')}`,
         link: `/services/${application.serviceId.toString()}`,
         metadata: { applicationId: application._id.toString(), status: application.status },
       }).catch(() => {});

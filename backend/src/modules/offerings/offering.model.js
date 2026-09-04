@@ -122,6 +122,11 @@ const workflowStepSchema = new mongoose.Schema(
     staffInstructions: { type: String, trim: true, default: '' },
     adminInstructions: { type: String, trim: true, default: '' },
     studentInstructions: { type: String, trim: true, default: '' },
+    studentEmail: {
+      subject: { type: String, trim: true, maxlength: 200, default: '' },
+      headline: { type: String, trim: true, maxlength: 200, default: '' },
+      body: { type: String, trim: true, maxlength: 4000, default: '' },
+    },
     handledBy: {
       type: {
         type: String,

@@ -4,6 +4,7 @@ import {
   WORKFLOW_SKELETON_JSON_EXAMPLE,
   WORKFLOW_OUTCOMES_EXTRACTION_RULES,
   WORKFLOW_OUTCOMES_JSON_EXAMPLE,
+  WORKFLOW_STUDENT_EMAIL_RULES,
 } from './workflow-extraction.prompt.js';
 
 const EXTRACTIVE_SYSTEM = `${DOCUMENT_EXTRACTION_RULES}
@@ -37,6 +38,13 @@ ${WORKFLOW_OUTCOMES_EXTRACTION_RULES}
 
 Configure outcome routing for an offering workflow whose steps are already defined.
 Ground routing in the knowledge documents; do not invent steps.`;
+
+export const OFFERING_WORKFLOW_EMAILS_SYSTEM_PROMPT = `${DOCUMENT_EXTRACTION_RULES}
+
+${WORKFLOW_STUDENT_EMAIL_RULES}
+
+Write student emails for an offering whose workflow steps are already defined.
+Ground campus, fee, hostel, and joining details in the knowledge documents when present. Always keep the required placeholders.`;
 
 /** @deprecated Use two-phase skeleton + outcomes prompts */
 export const OFFERING_WORKFLOW_SYSTEM_PROMPT = OFFERING_WORKFLOW_SKELETON_SYSTEM_PROMPT;
@@ -176,4 +184,29 @@ Extract only explicitly stated queue/appointment/counter arrangements.
 Prefer lines like: queueMode: hybrid | capacity: 120 | processingRatePerHour: 20 | slotDurationMinutes: 20 | operatingHoursStart: 09:30 | operatingHoursEnd: 17:30.
 If virtual appointments are mentioned, note them in documentExcerpt (enabled providers / default provider).
 queueMode null if not described.`;
+}
+
+/**
+ * Phase 3 — student email templates for each workflow step.
+ */
+export function buildOfferingWorkflowEmailsUserPrompt({
+  baseContext,
+  offeringName,
+  paymentSummary = '',
+  campusSummary = '',
+  workflowStepsJson,
+}) {
+  return `${baseContext}
+
+Offering: ${offeringName}
+Payment configuration: ${paymentSummary || '(not configured yet — still mention {{paymentAmount}}, {{paymentLabel}}, {{paymentMethods}})'}
+Campus / accommodation notes: ${campusSummary || '(use {{campusLocation}} and {{accommodationDetails}})'}
+
+Workflow steps (JSON):
+${workflowStepsJson}
+
+Return one student email per step order:
+{ "stepEmails": [ { "order": 1, "subject": "...", "headline": "...", "body": "..." } ] }
+
+The Offer Release email must congratulate the student and spell out Fee Payment and Admission Confirmation next steps.`;
 }

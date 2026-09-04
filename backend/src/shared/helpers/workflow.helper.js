@@ -7,6 +7,7 @@ import {
   ROUTE_ACTION,
   TERMINAL_STATE,
 } from '../enums/workflow.enums.js';
+import { normalizeStudentEmail } from './workflowStudentEmail.helper.js';
 
 const STAFF_ASSIGNEES = new Set(['document_verifier', 'approver', 'counter_staff', 'general']);
 const AI_ASSIGNEES = new Set(Object.values(AI_HANDLER));
@@ -102,6 +103,7 @@ export function createWorkflowStep(order, nextStepId) {
     staffInstructions: '',
     adminInstructions: '',
     studentInstructions: '',
+    studentEmail: { subject: '', headline: '', body: '' },
     outcomes: defaultOutcomes(order === 1 ? 'Document Verification' : 'Final Approval', order, nextStepId),
   };
 }
@@ -222,6 +224,7 @@ export function sanitizeWorkflowSteps(steps) {
     ...s,
     stepId: stepIds[i],
     order: s.order ?? i + 1,
+    studentEmail: normalizeStudentEmail(s.studentEmail),
     handledBy: s.handledBy?.type
       ? s.handledBy
       : normalizeHandler(
@@ -494,6 +497,7 @@ export function mapExtractedWorkflowSteps(rawSteps, options = {}) {
       name: s.name,
       description: s.description ?? '',
       ...normalizeAudienceInstructions(s),
+      studentEmail: normalizeStudentEmail(s.studentEmail),
       handledBy,
       slaValue: s.slaValue ?? 24,
       slaUnit: s.slaUnit ?? 'hours',

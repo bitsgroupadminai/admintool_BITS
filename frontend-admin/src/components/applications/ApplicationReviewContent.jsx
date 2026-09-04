@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Download, Loader2, RefreshCw, Undo2 } from 'lucide-react';
+import { ArrowUpRight, Download, Loader2, RefreshCw, Undo2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { Dialog } from '@/components/ui/dialog';
 import { useConfirm } from '@/components/ui/confirm-context';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
 import {
@@ -20,7 +20,6 @@ import {
   APPLICATION_STATUS_BADGE_VARIANT,
   APPLICATION_STATUS_LABELS,
   getApplicationStatusActions,
-  WORKFLOW_OUTCOME_LABELS,
 } from '@/constants/applicationManagement.constants';
 import {
   getStaffApproveConfirm,
@@ -265,9 +264,14 @@ export function ApplicationReviewContent({
 }) {
   const confirm = useConfirm();
   const [note, setNote] = useState('');
+  const [auditNote, setAuditNote] = useState('');
+  const [escalateNote, setEscalateNote] = useState('');
   const [selectedCorrectionDocs, setSelectedCorrectionDocs] = useState([]);
-  const [rollbackStepId, setRollbackStepId] = useState('');
+  const [sendBackStepId, setSendBackStepId] = useState('');
+  const [sendBackMode, setSendBackMode] = useState(null);
   const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [escalateLoading, setEscalateLoading] = useState(false);
+  const [escalateOpen, setEscalateOpen] = useState(false);
   const uploadedMap = new Map(
     (application?.documents ?? []).map((document) => [document.requirementId, document]),
   );
@@ -307,38 +311,50 @@ export function ApplicationReviewContent({
     showRollbackUi &&
     earlierSteps.length > 0 &&
     ROLLBACK_STATUSES.includes(application.status);
-  const rollbackDisabledReason = !showRollbackUi
-    ? ''
-    : TERMINAL_STATUSES.includes(application.status)
-      ? 'This request is closed, so it cannot be sent back to an earlier step.'
-      : !ROLLBACK_STATUSES.includes(application.status)
-        ? 'Send back is available while the request is in review.'
-        : earlierSteps.length === 0
-          ? 'This request is still on the first step. After a later step is current, you can send it back from here.'
-          : '';
 
-  const commitRollback = async (targetStepId) => {
-    const step = steps.find((item) => item.stepId === targetStepId);
+  const canEscalate =
+    Boolean(lifecycleRole && onLifecycleUpdated) &&
+    Boolean(application?.status) &&
+    application.status !== 'draft' &&
+    !TERMINAL_STATUSES.includes(application.status);
+
+  const resetSendBackForm = () => {
+    setNote('');
+    setAuditNote('');
+    setSelectedCorrectionDocs([]);
+    setSendBackStepId('');
+    setSendBackMode(null);
+  };
+
+  const openSendBack = (targetStepId, mode = 'rollback') => {
+    setSendBackStepId(targetStepId);
+    setSendBackMode(mode);
+    setNote('');
+    setAuditNote('');
+    setSelectedCorrectionDocs([]);
+  };
+
+  const closeSendBack = () => {
+    if (rollbackLoading || escalateOpen) return;
+    resetSendBackForm();
+  };
+
+  const commitRollback = async () => {
+    const step = steps.find((item) => item.stepId === sendBackStepId);
     if (!step) return;
     if (!note.trim()) {
       toast.error('Explain what the student should fix before sending the request back.');
       return;
     }
-    const ok = await confirm({
-      title: `Send back to “${step.name}”?`,
-      description:
-        'The student will be notified, asked to fix the items you listed, and must complete that step again. This is recorded in the activity log.',
-      confirmLabel: 'Send back',
-    });
-    if (!ok) return;
 
     setRollbackLoading(true);
     try {
       await applicationLifecycleApi.rollback(
         application.id,
         {
-          targetStepId,
+          targetStepId: sendBackStepId,
           note: note.trim(),
+          ...(auditNote.trim() ? { auditNote: auditNote.trim() } : {}),
           ...(selectedCorrectionDocs.length
             ? { correctionRequiredDocuments: selectedCorrectionDocs }
             : {}),
@@ -346,9 +362,7 @@ export function ApplicationReviewContent({
         lifecycleRole,
       );
       toast.success(`Request sent back to ${step.name}`);
-      setRollbackStepId('');
-      setNote('');
-      setSelectedCorrectionDocs([]);
+      resetSendBackForm();
       onLifecycleUpdated?.();
     } catch (err) {
       toast.error(err.message || 'Could not send this request back');
@@ -357,15 +371,41 @@ export function ApplicationReviewContent({
     }
   };
 
-  const selectRollbackTarget = (targetStepId) => {
-    setRollbackStepId(targetStepId);
-    document.getElementById('send-back-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const openEscalate = () => {
+    setEscalateNote(auditNote);
+    setEscalateOpen(true);
+  };
+
+  const closeEscalate = () => {
+    if (escalateLoading) return;
+    setEscalateOpen(false);
+    setEscalateNote('');
+  };
+
+  const commitEscalate = async () => {
+    setEscalateLoading(true);
+    try {
+      await applicationLifecycleApi.escalate(
+        application.id,
+        { note: escalateNote.trim() || undefined },
+        lifecycleRole,
+      );
+      toast.success('Request escalated');
+      setEscalateOpen(false);
+      setEscalateNote('');
+      resetSendBackForm();
+      onLifecycleUpdated?.();
+    } catch (err) {
+      toast.error(err.message || 'Could not escalate this request');
+    } finally {
+      setEscalateLoading(false);
+    }
   };
 
   const handleWorkflowClick = async (outcome) => {
     if (outcome === 'needs_correction' && !note.trim()) {
       toast.error('Explain what the student should fix.');
-      return;
+      return false;
     }
     if (outcome === 'approved') {
       const ok = await confirm({
@@ -373,7 +413,7 @@ export function ApplicationReviewContent({
         description: getStaffApproveConfirm(currentStep, nextStep?.name),
         confirmLabel: 'Continue',
       });
-      if (!ok) return;
+      if (!ok) return false;
     }
     if (outcome === 'rejected') {
       const ok = await confirm({
@@ -382,15 +422,27 @@ export function ApplicationReviewContent({
         confirmLabel: 'Reject request',
         variant: 'danger',
       });
-      if (!ok) return;
+      if (!ok) return false;
     }
-    onWorkflowAction?.({
+    const applied = await onWorkflowAction?.({
       outcome,
       note: note.trim() || undefined,
+      ...(outcome === 'needs_correction' && auditNote.trim() ? { auditNote: auditNote.trim() } : {}),
       ...(outcome === 'needs_correction' && selectedCorrectionDocs.length
         ? { correctionRequiredDocuments: selectedCorrectionDocs }
         : {}),
     });
+    return applied !== false;
+  };
+
+  const commitCorrection = async () => {
+    setRollbackLoading(true);
+    try {
+      const ok = await handleWorkflowClick('needs_correction');
+      if (ok) resetSendBackForm();
+    } finally {
+      setRollbackLoading(false);
+    }
   };
 
   const toggleCorrectionDoc = (name) => {
@@ -414,23 +466,32 @@ export function ApplicationReviewContent({
   );
 
   const showCorrectionOnCurrentStep = Boolean(correctionAction) && !canRollback;
+  const sendBackStep = steps.find((step) => step.stepId === sendBackStepId);
+  const sendBackOpen = Boolean(sendBackMode && sendBackStepId);
   const documentFixFields = (
     <>
-      <textarea
-        value={note}
-        onChange={(event) => setNote(event.target.value)}
-        rows={3}
-        placeholder="Explain what the student should fix"
-        className="w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
-      />
+      <div>
+        <label htmlFor="student-fix-note" className="text-xs font-bold text-[#052E1C]">
+          What the student should fix
+        </label>
+        <textarea
+          id="student-fix-note"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="Explain what the student should fix"
+          className="mt-1.5 w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-sm text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+        />
+      </div>
       {(application.documentRequirements ?? []).length > 0 ? (
-        <div className="rounded-xl border border-[#E2EEE8] bg-white p-3">
+        <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-3">
           <p className="text-xs font-bold text-[#052E1C]">Which documents need fixing?</p>
           <div className="mt-2 space-y-2">
             {(application.documentRequirements ?? []).map((requirement) => (
               <label
                 key={requirement.id}
-                className="flex items-center gap-2 text-xs text-[#4B6358]"
+                className="flex items-center gap-2 text-sm text-[#4B6358]"
               >
                 <input
                   type="checkbox"
@@ -444,6 +505,20 @@ export function ApplicationReviewContent({
           </div>
         </div>
       ) : null}
+      <div>
+        <label htmlFor="send-back-audit-note" className="text-xs font-bold text-[#052E1C]">
+          Optional note for the audit log
+        </label>
+        <textarea
+          id="send-back-audit-note"
+          value={auditNote}
+          onChange={(event) => setAuditNote(event.target.value)}
+          rows={2}
+          maxLength={500}
+          placeholder="Internal note — not shown to the student"
+          className="mt-1.5 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-3 py-2 text-sm text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+        />
+      </div>
     </>
   );
 
@@ -464,39 +539,30 @@ export function ApplicationReviewContent({
         }
       : null;
 
-  const rollbackPanel = showRollbackUi ? (
-    <div id="send-back-panel" className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
-      <p className="text-sm font-semibold text-[#052E1C]">Send back to an earlier step</p>
-      <p className="mt-1 text-xs text-[#4B6358]">
-        {canRollback
-          ? 'Use this when the student must fix documents or repeat an earlier stage. Tell them what to change, then send the request back. They will be notified and must complete that step again.'
-          : rollbackDisabledReason}
-      </p>
-      {canRollback ? <div className="mt-3 space-y-3">{documentFixFields}</div> : null}
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <Select
-            value={rollbackStepId}
-            onChange={setRollbackStepId}
-            placeholder={canRollback ? 'Select an earlier step' : 'No earlier step yet'}
-            options={earlierSteps.map((step) => ({
-              value: step.stepId,
-              label: `Step ${step.order}: ${step.name}`,
-            }))}
-            disabled={!canRollback || rollbackLoading}
-          />
-        </div>
-        <Button
-          type="button"
-          disabled={!canRollback || !rollbackStepId || rollbackLoading}
-          onClick={() => commitRollback(rollbackStepId)}
-        >
-          <Undo2 className="mr-1.5 h-3.5 w-3.5" />
-          {rollbackLoading ? 'Sending back...' : 'Send back to step'}
+  const sendBackFooter = (
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" disabled={rollbackLoading} onClick={closeSendBack}>
+          <XCircle className="h-3.5 w-3.5" />
+          Cancel
         </Button>
+        {canEscalate ? (
+          <Button type="button" variant="outline" disabled={rollbackLoading} onClick={openEscalate}>
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            Escalate
+          </Button>
+        ) : null}
       </div>
+      <Button
+        type="button"
+        disabled={rollbackLoading || updating}
+        onClick={sendBackMode === 'correction' ? commitCorrection : commitRollback}
+      >
+        <Undo2 className="h-3.5 w-3.5" />
+        {rollbackLoading ? 'Sending back...' : 'Send back'}
+      </Button>
     </div>
-  ) : null;
+  );
 
   return (
     <>
@@ -545,56 +611,32 @@ export function ApplicationReviewContent({
           steps={steps}
           currentStepName={currentStep?.name}
           statusLabel={APPLICATION_STATUS_LABELS[application.status]}
-          onRollbackToStep={canRollback ? selectRollbackTarget : undefined}
+          onRollbackToStep={canRollback ? (stepId) => openSendBack(stepId, 'rollback') : undefined}
+          onSendBackCurrent={
+            showCorrectionOnCurrentStep
+              ? () => openSendBack(currentStep.stepId, 'correction')
+              : undefined
+          }
           rollbackLoading={rollbackLoading}
           currentStepAction={currentStepAction}
-        >
-          {showCorrectionOnCurrentStep ? (
-            <div className="mt-4 space-y-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-              <p className="text-sm font-semibold text-[#92400E]">Ask the student to fix documents</p>
-              <p className="text-xs text-[#92400E]">
-                This request is still on the first step, so send a correction instead of rolling
-                back. Tell the student what to change.
-              </p>
-              {documentFixFields}
-              <Button
-                type="button"
-                disabled={updating}
-                onClick={() => handleWorkflowClick('needs_correction')}
-              >
-                {correctionAction.label ??
-                  WORKFLOW_OUTCOME_LABELS.needs_correction ??
-                  'Request correction'}
-              </Button>
-            </div>
-          ) : null}
-        </WorkflowFunnel>
-      </div>
-
-      <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-[#052E1C]">Other request actions</h2>
-        <p className="mt-1 text-sm text-[#4B6358]">
-          Complete the current step from the workflow map above. Use this section to send the
-          request back, change SLA, or apply a lifecycle action. Notes are saved to the activity
-          log.
-        </p>
-        <p className="mt-3 text-xs text-[#4B6358]">
+          onEscalate={canEscalate ? openEscalate : undefined}
+          escalateLoading={escalateLoading}
+        />
+        <p className="mt-2 px-1 text-xs text-[#4B6358]">
           Updated {new Date(application.updatedAt).toLocaleString()}
           {application.currentStepDueAt
             ? ` · SLA due ${new Date(application.currentStepDueAt).toLocaleString()}`
             : ''}
           {application.slaBreached || application.slaOverdue ? ' · overdue' : ''}
         </p>
-
         {onSlaAction ? (
           <SlaBreachActions
             application={application}
             loading={slaActionLoading}
             onExtend={() => onSlaAction('extend')}
-            onEscalate={() => onSlaAction('escalate')}
+            showEscalate={false}
           />
         ) : null}
-
         {workflowActions.length === 0 && legacyActions.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {legacyActions.map((action) => (
@@ -610,11 +652,55 @@ export function ApplicationReviewContent({
             ))}
           </div>
         ) : null}
+      </div>
 
-        {rollbackPanel}
+      <Dialog
+        open={sendBackOpen}
+        title={
+          sendBackStep
+            ? `Send back to “${sendBackStep.name}”`
+            : 'Send back'
+        }
+        description="The student will be notified and must complete this step again. Tell them what to change."
+        onClose={closeSendBack}
+        footer={sendBackFooter}
+      >
+        {documentFixFields}
+      </Dialog>
 
-        {requestActions ? <div className="mt-5 border-t border-[#E2EEE8] pt-5">{requestActions}</div> : null}
-      </section>
+      <Dialog
+        open={escalateOpen}
+        nested={sendBackOpen}
+        title="Escalate this request"
+        description="Add an optional note for the audit log, then escalate. The note is not shown to the student."
+        onClose={closeEscalate}
+        footer={
+          <div className="flex w-full flex-wrap items-center justify-end gap-2">
+            <Button type="button" variant="outline" disabled={escalateLoading} onClick={closeEscalate}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={escalateLoading} onClick={commitEscalate}>
+              <ArrowUpRight className="h-3.5 w-3.5" />
+              {escalateLoading ? 'Escalating...' : 'Escalate'}
+            </Button>
+          </div>
+        }
+      >
+        <div>
+          <label htmlFor="escalate-audit-note" className="text-xs font-bold text-[#052E1C]">
+            Optional note for the audit log
+          </label>
+          <textarea
+            id="escalate-audit-note"
+            value={escalateNote}
+            onChange={(event) => setEscalateNote(event.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Why this request needs another reviewer"
+            className="mt-1.5 w-full rounded-xl border border-[#C4E8D4] bg-[#F0FAF5] px-3 py-2 text-sm text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+          />
+        </div>
+      </Dialog>
 
       {assignmentSection}
 
@@ -731,6 +817,16 @@ export function ApplicationReviewContent({
       </section>
 
       {afterDocuments}
+
+      {requestActions ? (
+        <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-[#052E1C]">More actions</h2>
+          <p className="mt-1 text-sm text-[#4B6358]">
+            Cancel, reopen, or transfer this request. Notes are saved to the activity log.
+          </p>
+          <div className="mt-4">{requestActions}</div>
+        </section>
+      ) : null}
 
       <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold text-[#052E1C]">Activity log</h2>

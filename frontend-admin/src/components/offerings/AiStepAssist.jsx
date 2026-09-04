@@ -25,7 +25,7 @@ export function AiStepAssist({
           </div>
           <p className="text-xs leading-relaxed text-[#6B7C69] max-w-sm">
             {section === "workflow"
-              ? "Extracts workflow steps plus staff, admin, and student instructions from your knowledge documents."
+              ? "Extracts workflow steps, portal instructions, and the student email sent when each step is completed."
               : "Extracts eligibility, documents, workflow, and queue settings from your knowledge documents into the fields below."}
           </p>
         </div>

@@ -33,6 +33,7 @@ router.put('/:id/payment', offeringController.updatePayment);
 router.put('/:id/eligibility', offeringController.updateEligibility);
 router.put('/:id/documents', offeringController.updateDocuments);
 router.put('/:id/workflow', offeringController.updateWorkflow);
+router.post('/:id/workflow-emails/generate', offeringController.generateWorkflowEmails);
 router.put('/:id/queue', offeringController.updateQueue);
 
 router.post('/:id/ai-suggestions/generate', offeringController.generateAiSuggestions);

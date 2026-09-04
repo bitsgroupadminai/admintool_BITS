@@ -5,6 +5,7 @@ import {
   ChevronUp,
   Flag,
   GripVertical,
+  Mail,
   Plus,
   Trash2,
   User,
@@ -20,6 +21,7 @@ import {
   ROUTE_ACTION,
   createStep,
   hasAudienceInstructions,
+  hasStudentEmailTemplate,
   getHandlerLabel,
   getOutcomeSummary,
   normalizeSteps,
@@ -245,6 +247,16 @@ function StepCard({
                 Staff, admin, and student instructions required
               </p>
             ) : null}
+            {hasStudentEmailTemplate(step) ? (
+              <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#0A6640]">
+                <Mail className="h-3 w-3" strokeWidth={2} />
+                Student email ready
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] font-medium text-[#6B7C69]">
+                Student email will be generated from this workflow
+              </p>
+            )}
           </div>
           <div className="shrink-0 text-[#9BAE99]">
             {expanded ? (
@@ -328,6 +340,79 @@ function StepCard({
                   />
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-[#D4E5D0] bg-white p-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                  Student email — sent when this step is completed
+                </p>
+                <p className="mt-1 text-xs text-[#6B7C69]">
+                  AI drafts this from your knowledge documents. Edit freely. Use placeholders
+                  such as {"{{applicantName}}"}, {"{{dashboardUrl}}"}, {"{{paymentAmount}}"},{" "}
+                  {"{{paymentMethods}}"}, {"{{courseStartDate}}"}, and {"{{accommodationDetails}}"}.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                  Subject
+                </p>
+                <input
+                  type="text"
+                  maxLength={200}
+                  className="h-10 w-full rounded-lg border border-[#E8EDE6] bg-[#FAFBF9] px-3 text-sm text-[#1A2E16] placeholder-[#C4D4C2] focus:border-[#3D6B35] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                  value={step.studentEmail?.subject ?? ""}
+                  onChange={(e) =>
+                    update({
+                      studentEmail: {
+                        ...(step.studentEmail ?? {}),
+                        subject: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Email subject the student will see"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                  Headline
+                </p>
+                <input
+                  type="text"
+                  maxLength={200}
+                  className="h-10 w-full rounded-lg border border-[#E8EDE6] bg-[#FAFBF9] px-3 text-sm text-[#1A2E16] placeholder-[#C4D4C2] focus:border-[#3D6B35] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                  value={step.studentEmail?.headline ?? ""}
+                  onChange={(e) =>
+                    update({
+                      studentEmail: {
+                        ...(step.studentEmail ?? {}),
+                        headline: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Headline inside the email"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                  Body
+                </p>
+                <textarea
+                  rows={8}
+                  maxLength={4000}
+                  className="w-full rounded-lg border border-[#E8EDE6] bg-[#FAFBF9] px-3 py-2 text-sm leading-relaxed text-[#1A2E16] placeholder-[#C4D4C2] focus:border-[#3D6B35] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                  value={step.studentEmail?.body ?? ""}
+                  onChange={(e) =>
+                    update({
+                      studentEmail: {
+                        ...(step.studentEmail ?? {}),
+                        body: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="What the student should read when this step is completed"
+                />
+              </div>
             </div>
 
             <div className="space-y-2.5">

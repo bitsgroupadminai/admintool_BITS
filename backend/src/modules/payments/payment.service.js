@@ -26,7 +26,7 @@ import { ROLES } from '../../shared/constants/roles.js';
 import { refreshApplicationRuntime } from '../../shared/services/applicationRuntime.service.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
 import { emitApplicationUpdated } from '../../shared/helpers/realtime.helper.js';
-import { notifyApplicationStatusChange } from '../../shared/templates/applicationEmails.js';
+import { notifyWorkflowStepCompleted } from '../../shared/templates/workflowStepEmails.js';
 import { notifyPaymentReceipt } from '../../shared/templates/paymentEmails.js';
 import { Service } from '../services/service.model.js';
 import { Offering } from '../offerings/offering.model.js';
@@ -234,15 +234,21 @@ async function advanceWorkflowAfterPayment(application, offering, user, institut
       Service.findById(application.serviceId).select('name'),
       Institute.findById(instituteId).select('name'),
     ]);
-    notifyApplicationStatusChange(
+    const following = getWorkflowSteps(application).find(
+      (item) => Number(item.order) > Number(step.order),
+    );
+    await notifyWorkflowStepCompleted({
       application,
-      {
+      step,
+      steps: getWorkflowSteps(application),
+      context: {
         serviceName: service?.name ?? 'Service',
         offeringName: offering.name,
         instituteName: institute?.name ?? 'Your institute',
+        nextStepName: following?.name,
       },
-      application.status,
-    ).catch(() => {});
+      offering,
+    });
   }
 
   return { enqueueAiVerification };

@@ -30,6 +30,7 @@ export const workflowActionSchema = z.object({
     OUTCOME_TYPE.NEEDS_CORRECTION,
   ]),
   note: z.string().trim().max(2000).optional(),
+  auditNote: z.string().trim().max(500).optional(),
   correctionRequiredDocuments: z.array(z.string().trim().min(1)).max(30).optional(),
 });
 

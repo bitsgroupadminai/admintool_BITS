@@ -9,9 +9,14 @@ import {
   offeringDocumentsResponseSchema,
   offeringWorkflowSkeletonResponseSchema,
   offeringWorkflowOutcomesResponseSchema,
+  offeringWorkflowEmailsResponseSchema,
   offeringQueueResponseSchema,
 } from '../schemas/knowledge-ai.schemas.js';
 import { mergeWorkflowSkeletonAndOutcomes } from '../helpers/workflow.helper.js';
+import {
+  applyCanonicalStudentEmails,
+  mergeGeneratedStudentEmails,
+} from '../helpers/workflowStudentEmail.helper.js';
 import {
   ensureAdmissionWorkflowSkeleton,
   ensureAdmissionStepOutcomes,
@@ -39,11 +44,13 @@ import {
   buildOfferingDocumentsUserPrompt,
   buildOfferingWorkflowSkeletonUserPrompt,
   buildOfferingWorkflowOutcomesUserPrompt,
+  buildOfferingWorkflowEmailsUserPrompt,
   buildOfferingQueueUserPrompt,
   OFFERING_ELIGIBILITY_SYSTEM_PROMPT,
   OFFERING_DOCUMENTS_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_SKELETON_SYSTEM_PROMPT,
   OFFERING_WORKFLOW_OUTCOMES_SYSTEM_PROMPT,
+  OFFERING_WORKFLOW_EMAILS_SYSTEM_PROMPT,
   OFFERING_QUEUE_SYSTEM_PROMPT,
 } from '../prompts/index.js';
 
@@ -182,6 +189,78 @@ function formatOpenAiError(err) {
     return 'OpenAI analysis timed out on a large document. Offering names were still extracted from the document structure where available.';
   }
   return `OpenAI analysis failed (${msg}). Showing basic fallback results.`;
+}
+
+/**
+ * Fill student email templates for workflow steps. Uses OpenAI when configured, otherwise canonical copy.
+ * Existing non-empty templates are kept.
+ */
+export async function generateWorkflowStudentEmails(
+  steps,
+  { offering, service, documents = [], insights } = {},
+) {
+  if (!steps?.length) return steps;
+  const fullDocText = documents.length ? await buildCombinedDocumentText(documents) : '';
+  const docText = offering?.name ? focusDocumentForOffering(fullDocText, offering.name) : fullDocText;
+  const baseContext = buildOfferingBaseContext({
+    serviceName: service?.name ?? 'Service',
+    offeringName: offering?.name ?? 'Offering',
+    offeringDescription: offering?.description,
+    understandingSummary: insights?.understandingSummary,
+    docText: docText || '(no knowledge document text)',
+  });
+  return attachStudentEmails(steps, { offering, baseContext, docText });
+}
+
+async function attachStudentEmails(steps, { offering = {}, baseContext = '', docText = '' } = {}) {
+  if (!steps?.length) return steps;
+  const alreadyComplete = steps.every((step) =>
+    String(step?.studentEmail?.subject ?? '').trim() && String(step?.studentEmail?.body ?? '').trim(),
+  );
+  if (alreadyComplete) {
+    return applyCanonicalStudentEmails(steps);
+  }
+  if (!isOpenAiConfigured() || !String(docText ?? '').trim()) {
+    return applyCanonicalStudentEmails(steps);
+  }
+
+  try {
+    const payment = offering.paymentConfig ?? {};
+    const paymentSummary = payment.enabled
+      ? `${payment.label || 'Fee'}: ${payment.amount} ${payment.currency || 'INR'}`
+      : 'not enabled';
+    const campusSummary = [offering.visitLocation, offering.visitInstructions]
+      .filter(Boolean)
+      .join(' — ');
+    const workflowStepsJson = JSON.stringify(
+      steps.map((step) => ({
+        order: step.order,
+        name: step.name,
+        description: step.description,
+        handledBy: step.handledBy,
+      })),
+      null,
+      2,
+    );
+    const result = await chatJson({
+      system: OFFERING_WORKFLOW_EMAILS_SYSTEM_PROMPT,
+      user: buildOfferingWorkflowEmailsUserPrompt({
+        baseContext,
+        offeringName: offering.name,
+        paymentSummary,
+        campusSummary,
+        workflowStepsJson,
+      }),
+      schema: offeringWorkflowEmailsResponseSchema,
+    });
+    return mergeGeneratedStudentEmails(steps, result.stepEmails ?? []);
+  } catch (err) {
+    logger.warn(
+      { err: err.message, offering: offering.name },
+      'Workflow student email generation failed; using canonical templates',
+    );
+    return applyCanonicalStudentEmails(steps);
+  }
 }
 
 /**
@@ -369,9 +448,12 @@ export async function generateOfferingSectionSuggestions({
       }
 
       return {
-        workflowSteps: mergeWorkflowSkeletonAndOutcomes(skeletonSteps, alignedOutcomes, {
-          documentNames: uniqueDocNames,
-        }),
+        workflowSteps: await attachStudentEmails(
+          mergeWorkflowSkeletonAndOutcomes(skeletonSteps, alignedOutcomes, {
+            documentNames: uniqueDocNames,
+          }),
+          { offering, baseContext, docText },
+        ),
       };
     }
 

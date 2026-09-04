@@ -133,6 +133,18 @@ export async function updateWorkflow(req, res, next) {
   }
 }
 
+export async function generateWorkflowEmails(req, res, next) {
+  try {
+    const offering = await offeringService.ensureWorkflowStudentEmails(
+      req.params.id,
+      req.user.instituteId,
+    );
+    sendSuccess(res, 200, 'Student email templates ready', { offering });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function updateQueue(req, res, next) {
   try {
     const payload = updateQueueSchema.parse(req.body);

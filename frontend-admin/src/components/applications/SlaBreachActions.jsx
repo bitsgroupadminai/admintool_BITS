@@ -17,8 +17,7 @@ export function SlaBreachActions({ application, loading, onExtend, onEscalate, s
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-[#991B1B]">SLA breach</p>
           <p className="mt-1 text-xs text-[#7F1D1D]">
-            This request is past its review deadline. Extend the SLA window or escalate it to another
-            staff member.
+            This request is past its review deadline. Extend the SLA window to continue reviewing.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={loading} onClick={onExtend} className={primaryBtn}>

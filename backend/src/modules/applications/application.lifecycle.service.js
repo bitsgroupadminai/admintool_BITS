@@ -343,6 +343,7 @@ const ROLLBACK_ALLOWED_STATUSES = new Set([
  * @param {Object} actor — { userId, name, role }
  * @param {string} [note] — optional reason shown to student
  * @param {string[]} [correctionRequiredDocuments]
+ * @param {string} [auditNote]
  */
 export async function rollbackToStep(
   instituteId,
@@ -351,6 +352,7 @@ export async function rollbackToStep(
   actor,
   note = '',
   correctionRequiredDocuments = [],
+  auditNote = '',
 ) {
   const application = await getApplicationForActor(instituteId, applicationId, actor);
 
@@ -378,7 +380,7 @@ export async function rollbackToStep(
     actedBy: actor.userId,
     actedByName: actor.name,
     actedByRole: actor.role,
-    note: note?.trim() || `Rolled back to step: ${targetStep.name}`,
+    note: auditNote?.trim() || note?.trim() || `Rolled back to step: ${targetStep.name}`,
     createdAt: new Date(),
   });
 

@@ -9,6 +9,7 @@ const noteSchema = z.object({
 const rollbackSchema = z.object({
   targetStepId: z.string().min(1),
   note: z.string().max(1000).optional(),
+  auditNote: z.string().max(500).optional(),
   correctionRequiredDocuments: z.array(z.string().min(1)).max(40).optional(),
 });
 
@@ -126,6 +127,7 @@ export async function rollback(req, res, next) {
       req.user,
       payload.note,
       payload.correctionRequiredDocuments,
+      payload.auditNote,
     );
     sendSuccess(res, 200, 'Request rolled back', {
       application: { id: application._id.toString(), status: application.status },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, MapPin, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { offeringsApi } from '@/api/offerings.api';
 import { servicesApi } from '@/api/services.api';
 import { userApi } from '@/api/user.api';
-import { createStep, hasAudienceInstructions, normalizeSteps, relinkStepOutcomes } from '@/utils/workflow';
+import { createStep, hasAudienceInstructions, hasStudentEmailTemplate, normalizeSteps, relinkStepOutcomes } from '@/utils/workflow';
 import { formatOfferingMissing } from '@/constants/offeringCompleteness.constants';
 import {
   normalizeOperatingHoursTime,
@@ -120,6 +120,8 @@ export function OfferingConfigurePage() {
   const [staffRoles, setStaffRoles] = useState(STAFF_ROLES_FALLBACK);
   const [aiSuggestions, setAiSuggestions] = useState(null);
   const [generatingSection, setGeneratingSection] = useState(null);
+  const [generatingEmails, setGeneratingEmails] = useState(false);
+  const emailsHydrated = useRef(false);
   const [saving, setSaving] = useState(false);
   const [dirtySteps, setDirtySteps] = useState({});
   const [showDetailsValidation, setShowDetailsValidation] = useState(false);
@@ -285,11 +287,53 @@ export function OfferingConfigurePage() {
   };
 
   useEffect(() => {
+    emailsHydrated.current = false;
+  }, [id]);
+
+  useEffect(() => {
     userApi.getStaffRoles().then((res) => {
       setStaffRoles(res.data.data.roles);
     });
     loadOffering().catch((err) => toast.error(err.message));
   }, [id]);
+
+  const applyGeneratedEmails = (nextOffering) => {
+    setOffering(nextOffering);
+    if (nextOffering.workflowSteps?.length) {
+      setSteps(relinkStepOutcomes(normalizeSteps(nextOffering.workflowSteps)));
+    }
+  };
+
+  const handleGenerateWorkflowEmails = async ({ silent = false } = {}) => {
+    if (!offering?.workflowSteps?.length && !steps.length) return;
+    setGeneratingEmails(true);
+    try {
+      const { data } = await offeringsApi.generateWorkflowEmails(id);
+      applyGeneratedEmails(data.data.offering);
+      if (!silent) {
+        toast.success('Student email templates are ready. Review and edit them on each step.');
+      }
+    } catch (err) {
+      emailsHydrated.current = false;
+      if (!silent) {
+        toast.error(err.message || 'Could not generate student emails');
+      }
+    } finally {
+      setGeneratingEmails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!offering?.workflowSteps?.length || emailsHydrated.current) return;
+    if (offering.workflowSteps.every((item) => hasStudentEmailTemplate(item))) {
+      emailsHydrated.current = true;
+      return;
+    }
+    emailsHydrated.current = true;
+    handleGenerateWorkflowEmails({ silent: true }).catch(() => {
+      emailsHydrated.current = false;
+    });
+  }, [offering]);
 
   const handleGenerateAi = async (section) => {
     setGeneratingSection(section);
@@ -312,6 +356,7 @@ export function OfferingConfigurePage() {
       }
 
       await offeringsApi.applyAi(id, { section });
+      if (section === 'workflow') emailsHydrated.current = false;
       await loadOffering();
       toast.success(`${label.charAt(0).toUpperCase()}${label.slice(1)} have been populated below.`);
     } catch (err) {
@@ -968,7 +1013,8 @@ export function OfferingConfigurePage() {
               <CardTitle>Workflow timeline</CardTitle>
               <CardDescription>
                 Extract the journey from knowledge documents, or add steps by hand. Every step
-                needs staff, admin, and student instructions so each portal knows what to do.
+                needs staff, admin, and student instructions. Each step also has a student email
+                sent when that stage is completed — AI drafts it, and you can edit it.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -979,6 +1025,19 @@ export function OfferingConfigurePage() {
                 onGenerate={handleGenerateAi}
                 canGenerate={canUseAi}
               />
+              {generatingEmails ? (
+                <p className="text-xs font-medium text-[#0A6640]">
+                  Generating student email templates for each step…
+                </p>
+              ) : steps.some((item) => !hasStudentEmailTemplate(item)) ? (
+                <button
+                  type="button"
+                  onClick={() => handleGenerateWorkflowEmails()}
+                  className="text-xs font-semibold text-[#0A6640] hover:underline"
+                >
+                  Generate student email templates
+                </button>
+              ) : null}
               <WorkflowTimelineBuilder
                 steps={steps}
                 onChange={(nextSteps) => {

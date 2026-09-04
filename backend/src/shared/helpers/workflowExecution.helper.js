@@ -23,6 +23,11 @@ export function snapshotOfferingWorkflow(offering) {
       staffInstructions: step.staffInstructions ?? '',
       adminInstructions: step.adminInstructions ?? '',
       studentInstructions: step.studentInstructions ?? '',
+      studentEmail: {
+        subject: step.studentEmail?.subject ?? '',
+        headline: step.studentEmail?.headline ?? '',
+        body: step.studentEmail?.body ?? '',
+      },
       handledBy: step.handledBy,
       slaValue: step.slaValue,
       slaUnit: step.slaUnit,
@@ -120,6 +125,7 @@ export function getAvailableWorkflowActions(step, user, options = {}) {
  * @param {Object} outcome
  * @param {{ userId: string, name: string, role: string }} actor
  * @param {string} [note]
+ * @param {string} [options.auditNote]
  */
 export function applyWorkflowOutcome(application, step, outcome, actor, note = '', options = {}) {
   const steps = getWorkflowSteps(application);
@@ -133,7 +139,7 @@ export function applyWorkflowOutcome(application, step, outcome, actor, note = '
     actedBy: actor.userId,
     actedByName: actor.name,
     actedByRole: actor.role,
-    note: note?.trim() ?? '',
+    note: options.auditNote?.trim() || note?.trim() || '',
     createdAt: new Date(),
   });
 

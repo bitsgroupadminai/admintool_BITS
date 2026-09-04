@@ -17,7 +17,7 @@ import {
   normalizeWorkflowSteps,
   sanitizeWorkflowSteps,
 } from '../../shared/helpers/workflow.helper.js';
-import { generateOfferingSectionSuggestions } from '../../shared/services/knowledge-ai.service.js';
+import { generateOfferingSectionSuggestions, generateWorkflowStudentEmails } from '../../shared/services/knowledge-ai.service.js';
 import { isOpenAiConfigured } from '../../shared/services/openai.client.js';
 import { cachedRead } from '../../shared/helpers/cachedRead.helper.js';
 import { cacheNs } from '../../shared/constants/cacheKeys.js';
@@ -91,6 +91,14 @@ export async function generateSuggestions(offeringId, instituteId, section) {
             : [];
       } else if (!useExtractiveOnly) {
         payload.workflowSteps = buildWorkflowSuggestions(context, offering);
+      }
+      if (payload.workflowSteps?.length) {
+        payload.workflowSteps = await generateWorkflowStudentEmails(payload.workflowSteps, {
+          offering,
+          service,
+          documents,
+          insights,
+        });
       }
     }
 

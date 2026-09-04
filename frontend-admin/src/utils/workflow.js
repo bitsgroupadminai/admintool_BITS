@@ -79,6 +79,7 @@ export function createStep(order, nextStepId) {
     staffInstructions: '',
     adminInstructions: '',
     studentInstructions: '',
+    studentEmail: { subject: '', headline: '', body: '' },
     outcomes: defaultOutcomes(nextStepId),
   };
 }
@@ -88,6 +89,13 @@ export function hasAudienceInstructions(step) {
     String(step?.staffInstructions ?? '').trim() &&
       String(step?.adminInstructions ?? '').trim() &&
       String(step?.studentInstructions ?? '').trim(),
+  );
+}
+
+export function hasStudentEmailTemplate(step) {
+  return Boolean(
+    String(step?.studentEmail?.subject ?? '').trim() &&
+      String(step?.studentEmail?.body ?? '').trim(),
   );
 }
 

@@ -34,6 +34,8 @@ export const offeringsApi = {
   updateQueue: (id, data) => apiClient.put(`/offerings/${id}/queue`, data),
   generateAi: (id, { section } = {}) =>
     apiClient.post(`/offerings/${id}/ai-suggestions/generate`, section ? { section } : {}),
+  generateWorkflowEmails: (id) =>
+    apiClient.post(`/offerings/${id}/workflow-emails/generate`),
   getAi: (id) => apiClient.get(`/offerings/${id}/ai-suggestions`),
   applyAi: (id, data) => apiClient.post(`/offerings/${id}/ai-suggestions/apply`, data),
   rejectAi: (id) => apiClient.post(`/offerings/${id}/ai-suggestions/reject`),

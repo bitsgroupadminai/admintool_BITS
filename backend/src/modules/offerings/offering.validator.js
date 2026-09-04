@@ -83,6 +83,13 @@ const workflowStepSchema = z.object({
   staffInstructions: z.string().trim().min(1).max(1000),
   adminInstructions: z.string().trim().min(1).max(1000),
   studentInstructions: z.string().trim().min(1).max(1000),
+  studentEmail: z
+    .object({
+      subject: z.string().trim().max(200).optional().default(''),
+      headline: z.string().trim().max(200).optional().default(''),
+      body: z.string().trim().max(4000).optional().default(''),
+    })
+    .optional(),
   handledBy: z.object({
     type: z.enum(Object.values(HANDLER_TYPE)),
     assignee: z.string().min(1).max(80),

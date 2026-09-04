@@ -93,8 +93,10 @@ export function ApplicationDetailPage() {
       const { data } = await applicationsApi.workflowAction(id, payload);
       setApplication(data.data.application);
       toast.success('Workflow updated — student will be notified by email');
+      return true;
     } catch (err) {
       toast.error(err.message || 'Could not apply workflow action');
+      return false;
     } finally {
       setUpdating(false);
     }
@@ -225,6 +227,7 @@ export function ApplicationDetailPage() {
                   role="admin"
                   onUpdated={loadApplication}
                   embedded
+                  showEscalate={false}
                 />
               ) : null
             }

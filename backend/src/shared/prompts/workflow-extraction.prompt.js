@@ -208,3 +208,23 @@ ${ADMISSION_WORKFLOW_REFERENCE}`;
 
 export const WORKFLOW_BUILDER_JSON_EXAMPLE = WORKFLOW_SKELETON_JSON_EXAMPLE;
 export const WORKFLOW_BUILDER_EXTRACTION_RULES = WORKFLOW_SKELETON_EXTRACTION_RULES;
+
+export const WORKFLOW_STUDENT_EMAIL_RULES = `PHASE 3 — STUDENT EMAIL TEMPLATES:
+
+Write one warm, friendly email the student receives when THAT step is completed.
+Use the knowledge document for programme-specific details (fees, campus, hostel/accommodation, joining dates) when they appear. Otherwise keep placeholders.
+
+Every email MUST:
+- Use placeholders exactly as written: {{applicantName}}, {{offeringName}}, {{serviceName}}, {{instituteName}}, {{dashboardUrl}}, {{paymentAmount}}, {{paymentLabel}}, {{paymentMethods}}, {{nextStepName}}, {{courseStartDate}}, {{campusLocation}}, {{accommodationDetails}}
+- Stay under 4000 characters for body, 200 for subject and headline
+- Sound like a human admissions office, not a legal notice
+
+Special rules by step:
+- Offer Release: congratulate them on receiving the offer because they were found eligible and a good fit. Then explain next steps in two numbered sections:
+  1. Fee Payment — include {{dashboardUrl}}, mention {{paymentMethods}}, state {{paymentAmount}} / {{paymentLabel}}
+  2. Admission Confirmation — course start / joining dates ({{courseStartDate}}), campus ({{campusLocation}}), accommodation ({{accommodationDetails}})
+- Fee Payment: thank them for paying and point to admission confirmation.
+- Admission Confirmation: welcome them; share start date, joining, campus, and accommodation.
+- Earlier AI/staff steps: short progress updates; tell them if they should wait.
+
+Return JSON: { "stepEmails": [ { "order", "subject", "headline", "body" } ] } with one entry per workflow step order.`;

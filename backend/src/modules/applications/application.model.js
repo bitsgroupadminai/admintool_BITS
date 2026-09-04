@@ -18,6 +18,11 @@ const workflowStepSnapshotSchema = new mongoose.Schema(
     staffInstructions: { type: String, trim: true, default: '' },
     adminInstructions: { type: String, trim: true, default: '' },
     studentInstructions: { type: String, trim: true, default: '' },
+    studentEmail: {
+      subject: { type: String, trim: true, default: '' },
+      headline: { type: String, trim: true, default: '' },
+      body: { type: String, trim: true, default: '' },
+    },
     handledBy: {
       type: { type: String, required: true },
       assignee: { type: String, required: true, trim: true },

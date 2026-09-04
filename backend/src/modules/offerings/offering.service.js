@@ -1,6 +1,7 @@
 import { Offering } from './offering.model.js';
 import { Service } from '../services/service.model.js';
 import { Application } from '../applications/application.model.js';
+import { KnowledgeDocument } from '../knowledge-documents/knowledgeDocument.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import {
@@ -29,6 +30,8 @@ import {
   normalizeDocumentEligibility,
   requiredSubjectsMissingThreshold,
 } from '../../shared/helpers/documentEligibility.helper.js';
+import { generateWorkflowStudentEmails } from '../../shared/services/knowledge-ai.service.js';
+import { hasStudentEmailTemplate } from '../../shared/helpers/workflowStudentEmail.helper.js';
 
 async function flushOfferingCaches(instituteId) {
   await flushInstituteReadCache(instituteId);
@@ -408,6 +411,41 @@ export async function updateWorkflow(offeringId, instituteId, steps) {
   offering.status = deriveOfferingStatus(offering);
   await offering.save();
   await scheduleOfferingReindex(offering);
+  await flushOfferingCaches(instituteId);
+  return formatOffering(offering);
+}
+
+/**
+ * Generate student email templates for each workflow step when they are missing.
+ * Existing edited templates are left unchanged.
+ */
+export async function ensureWorkflowStudentEmails(offeringId, instituteId) {
+  const offering = await getOfferingDoc(offeringId, instituteId);
+  const steps = normalizeWorkflowSteps(offering.workflowSteps);
+  if (!steps.length) {
+    throw new AppError('Add workflow steps before generating student emails', 400);
+  }
+
+  const missing = steps.some((step) => !hasStudentEmailTemplate(step));
+  if (!missing) {
+    return formatOffering(offering);
+  }
+
+  const [service, documents] = await Promise.all([
+    Service.findOne({ _id: offering.serviceId, instituteId }),
+    KnowledgeDocument.find({ serviceId: offering.serviceId, instituteId }),
+  ]);
+
+  offering.workflowSteps = await generateWorkflowStudentEmails(steps, {
+    offering,
+    service,
+    documents,
+    insights: service?.knowledgeInsights,
+  });
+  offering.markModified('workflowSteps');
+  offering.configurationVersion += 1;
+  offering.status = deriveOfferingStatus(offering);
+  await offering.save();
   await flushOfferingCaches(instituteId);
   return formatOffering(offering);
 }

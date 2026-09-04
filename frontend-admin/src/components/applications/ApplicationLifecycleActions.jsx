@@ -26,6 +26,7 @@ export function ApplicationLifecycleActions({
   role,
   onUpdated,
   embedded = false,
+  showEscalate = true,
 }) {
   const [note, setNote] = useState('');
   const [staffList, setStaffList] = useState([]);
@@ -77,7 +78,9 @@ export function ApplicationLifecycleActions({
       <div>
         <h2 className="text-sm font-bold text-[#052E1C]">Request actions</h2>
         <p className="mt-1 text-sm text-[#4B6358]">
-          Cancel, reopen, escalate, or transfer this request. Notes are saved to the audit log.
+          {showEscalate
+            ? 'Cancel, reopen, escalate, or transfer this request. Notes are saved to the audit log.'
+            : 'Cancel, reopen, or transfer this request. Notes are saved to the audit log.'}
         </p>
       </div>
       )}
@@ -112,7 +115,7 @@ export function ApplicationLifecycleActions({
             Reopen
           </button>
         )}
-        {!terminal && (
+        {showEscalate && !terminal && (
           <button
             type="button"
             disabled={loading}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Clock3, Info, Sparkles, Undo2 } from 'lucide-react';
+import { Check, Clock3, Info, Sparkles, Undo2, ArrowUpRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -130,6 +130,9 @@ export function WorkflowFunnel({
   onRollbackToStep,
   rollbackLoading = false,
   currentStepAction = null,
+  onSendBackCurrent = null,
+  onEscalate = null,
+  escalateLoading = false,
   children,
 }) {
   if (!steps.length) return null;
@@ -150,9 +153,23 @@ export function WorkflowFunnel({
             )}
           </p>
         </div>
-        {statusLabel ? (
-          <Badge variant="default">{statusLabel}</Badge>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {statusLabel ? (
+            <Badge variant="default">{statusLabel}</Badge>
+          ) : null}
+          {onEscalate ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={escalateLoading}
+              onClick={onEscalate}
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+              {escalateLoading ? 'Escalating...' : 'Escalate'}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <ol className="mt-5 flex gap-2 overflow-x-auto pb-1">
@@ -160,6 +177,7 @@ export function WorkflowFunnel({
           const isCurrent = step.state === 'current';
           const isComplete = step.state === 'complete';
           const canSendBack = Boolean(onRollbackToStep) && isComplete;
+          const canSendBackCurrent = Boolean(onSendBackCurrent) && isCurrent;
           const guidance = isCurrent
             ? currentStepAction?.guidance
             : step.staffInstructions || step.adminInstructions || '';
@@ -239,15 +257,17 @@ export function WorkflowFunnel({
                     Completed
                   </p>
                 ) : null}
-                {canSendBack ? (
+                {canSendBack || canSendBackCurrent ? (
                   <button
                     type="button"
                     disabled={rollbackLoading}
-                    onClick={() => onRollbackToStep(step.stepId)}
+                    onClick={() =>
+                      canSendBackCurrent ? onSendBackCurrent() : onRollbackToStep(step.stepId)
+                    }
                     className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0A6640] hover:underline disabled:opacity-60"
                   >
                     <Undo2 className="h-3 w-3" />
-                    Send back here
+                    Send back{canSendBackCurrent ? '' : ' here'}
                   </button>
                 ) : null}
               </div>

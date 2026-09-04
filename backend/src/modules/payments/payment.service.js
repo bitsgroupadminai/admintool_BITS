@@ -122,6 +122,40 @@ async function findPaidPayment(applicationId, purpose, workflowStepId = null) {
   return Payment.findOne(query).sort({ paidAt: -1 });
 }
 
+const PAYMENT_OPEN_STATUSES = new Set([
+  APPLICATION_STATUS.IN_REVIEW,
+  APPLICATION_STATUS.SUBMITTED,
+  APPLICATION_STATUS.NEEDS_CORRECTION,
+]);
+
+/**
+ * A rollback onto the fee step voids the previous checkout so the student can pay again.
+ */
+function paidStillCounts(application, paid, workflowStepId) {
+  if (!paid) return null;
+  if (
+    workflowStepId &&
+    application.rolledBackToStepId === workflowStepId &&
+    application.rolledBackAt &&
+    paid.paidAt &&
+    new Date(paid.paidAt) <= new Date(application.rolledBackAt)
+  ) {
+    return null;
+  }
+  return paid;
+}
+
+export function isWorkflowFeeStepId(offering, application, stepId) {
+  if (!stepId) return false;
+  const config = resolvePaymentConfig(offering, application);
+  return Boolean(
+    config.enabled &&
+      config.timing === PAYMENT_TIMING.WORKFLOW_STEP &&
+      config.workflowStepId &&
+      config.workflowStepId === stepId,
+  );
+}
+
 /**
  * @param {import('../offerings/offering.model.js').Offering} offering
  * @param {import('../applications/application.model.js').Application} application
@@ -158,8 +192,7 @@ export async function getApplicationPaymentState(offering, application) {
 
   const currentStep = getCurrentWorkflowStep(application);
   let atFeeStep =
-    [APPLICATION_STATUS.IN_REVIEW, APPLICATION_STATUS.SUBMITTED].includes(application.status) &&
-    currentStep?.stepId === config.workflowStepId;
+    PAYMENT_OPEN_STATUSES.has(application.status) && currentStep?.stepId === config.workflowStepId;
 
   if (!atFeeStep && config.workflowStepId && currentStep?.stepId === config.workflowStepId) {
     const visitCompleted = await Appointment.exists({
@@ -173,7 +206,11 @@ export async function getApplicationPaymentState(offering, application) {
 
   if (!atFeeStep) {
     const paid = config.workflowStepId
-      ? await findPaidPayment(application._id, PAYMENT_PURPOSE.WORKFLOW_STEP, config.workflowStepId)
+      ? paidStillCounts(
+          application,
+          await findPaidPayment(application._id, PAYMENT_PURPOSE.WORKFLOW_STEP, config.workflowStepId),
+          config.workflowStepId,
+        )
       : null;
     return {
       ...base,
@@ -183,9 +220,13 @@ export async function getApplicationPaymentState(offering, application) {
     };
   }
 
-  const paid = await findPaidPayment(
-    application._id,
-    PAYMENT_PURPOSE.WORKFLOW_STEP,
+  const paid = paidStillCounts(
+    application,
+    await findPaidPayment(
+      application._id,
+      PAYMENT_PURPOSE.WORKFLOW_STEP,
+      config.workflowStepId,
+    ),
     config.workflowStepId,
   );
 

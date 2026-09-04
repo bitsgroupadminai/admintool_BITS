@@ -14,6 +14,8 @@ import {
 import { getWorkflowSteps, getCurrentWorkflowStep } from '../../shared/helpers/workflowExecution.helper.js';
 import { loadApplicationContext } from './application.service.js';
 import { purgeApplicationRecord } from './application.purge.helper.js';
+import { Offering } from '../offerings/offering.model.js';
+import { isWorkflowFeeStepId } from '../payments/payment.service.js';
 const TERMINAL_STATUSES = new Set([
   APPLICATION_STATUS.ADMITTED,
   APPLICATION_STATUS.REJECTED,
@@ -396,9 +398,15 @@ export async function rollbackToStep(
     createdAt: new Date(),
   });
 
-  // Move the application back — use NEEDS_CORRECTION so the student can edit documents and resubmit
+  // Fee-step rollbacks stay in review so checkout can open; other steps ask the student to fix and resubmit.
+  const offering = await Offering.findById(application.offeringId).select(
+    'paymentConfig workflowSteps',
+  );
+  const reopenPayment = isWorkflowFeeStepId(offering, application, targetStepId);
   application.currentStepId = targetStepId;
-  application.status = APPLICATION_STATUS.NEEDS_CORRECTION;
+  application.status = reopenPayment
+    ? APPLICATION_STATUS.IN_REVIEW
+    : APPLICATION_STATUS.NEEDS_CORRECTION;
   application.correctionNote = note?.trim() || undefined;
   application.correctionRequiredDocuments = Array.isArray(correctionRequiredDocuments)
     ? correctionRequiredDocuments.filter((name) => String(name).trim())

@@ -1,7 +1,7 @@
 import { formatQueueMode } from '@/utils/offering';
 import { areAllRequiredDocumentsUploaded } from '@/utils/applicationDocuments';
 import { areApplicantDetailsComplete, applicantDetailsToMap } from '@/utils/applicantDetails';
-import { isFeePaymentStep, isPaymentPaid, isPaymentPending } from '@/utils/payment';
+import { isAtWorkflowFeeStep, isFeePaymentStep, isPaymentPaid, isPaymentPending } from '@/utils/payment';
 import {
   getStudentStepDescription,
   getStudentWaitingOn,
@@ -212,6 +212,9 @@ export function getPrimaryAction(application, offering, applicantDetails = {}) {
   }
 
   if (application.status === 'needs_correction') {
+    if (isAtWorkflowFeeStep(application, offering) && !isPaymentPaid(application)) {
+      return null;
+    }
     if (hasApplicantFields && !detailsComplete) {
       return null;
     }

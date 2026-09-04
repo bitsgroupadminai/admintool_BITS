@@ -135,6 +135,13 @@ export function validateUploadedFile(requirement, file) {
   return null;
 }
 
+function idString(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value.toString === 'function') return value.toString();
+  return String(value);
+}
+
 /**
  * @param {import('../modules/offerings/offering.model.js').Offering} offering
  * @param {import('../modules/applications/application.model.js').Application} application
@@ -148,7 +155,7 @@ export function getMissingRequiredDocuments(offering, application) {
   }
 
   const uploadedIds = new Set(
-    (application.documents ?? []).map((document) => document.requirementId.toString()),
+    (application.documents ?? []).map((document) => idString(document.requirementId)).filter(Boolean),
   );
   const uploadedNames = new Set(
     (application.documents ?? [])
@@ -157,8 +164,8 @@ export function getMissingRequiredDocuments(offering, application) {
   );
 
   return requiredRequirements.filter((requirement) => {
-    const requirementId = requirement._id.toString();
-    if (uploadedIds.has(requirementId)) {
+    const requirementId = idString(requirement._id ?? requirement.id);
+    if (requirementId && uploadedIds.has(requirementId)) {
       return false;
     }
 
@@ -182,8 +189,8 @@ export function getDocumentUploadProgress(offering, application) {
 
   return {
     documents: (application.documents ?? []).map((document) => ({
-      id: document._id.toString(),
-      requirementId: document.requirementId.toString(),
+      id: idString(document._id ?? document.id),
+      requirementId: idString(document.requirementId),
       requirementName: document.requirementName,
       originalName: document.originalName,
       mimeType: document.mimeType,
@@ -193,7 +200,7 @@ export function getDocumentUploadProgress(offering, application) {
     requiredDocumentCount: requiredRequirements.length,
     uploadedRequiredCount: requiredRequirements.length - missingRequired.length,
     missingRequiredDocuments: missingRequired.map((requirement) => ({
-      id: requirement._id.toString(),
+      id: idString(requirement._id ?? requirement.id),
       name: requirement.name,
     })),
     documentsComplete: missingRequired.length === 0,

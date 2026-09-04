@@ -901,8 +901,8 @@ function formatStudentApplication(application) {
     updatedAt: application.updatedAt,
     applicantDetails: application.applicantDetails ?? [],
     documents: (application.documents ?? []).map((document) => ({
-      id: document._id.toString(),
-      requirementId: document.requirementId.toString(),
+      id: document._id?.toString?.() ?? document.id ?? '',
+      requirementId: document.requirementId?.toString?.() ?? '',
       requirementName: document.requirementName,
       originalName: document.originalName,
       mimeType: document.mimeType,

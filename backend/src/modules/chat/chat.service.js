@@ -77,6 +77,30 @@ function formatQueueModeLabel(mode) {
   return labels[mode] ?? mode?.replace(/_/g, ' ') ?? 'visit planning';
 }
 
+function studentEmailOf(user) {
+  return String(user?.email ?? '').trim().toLowerCase();
+}
+
+function sanitizeReplyText(text) {
+  const cleaned = String(text ?? '')
+    .replace(/\u0000/g, '')
+    .trim();
+  return (
+    cleaned ||
+    'I could not complete that answer just now. Please try again, or check the documents and steps on this page.'
+  );
+}
+
+function sanitizeCitations(citations) {
+  if (!Array.isArray(citations)) return [];
+  return citations
+    .map((item) => ({
+      source: String(item?.source ?? '').trim().slice(0, 300),
+      excerpt: String(item?.excerpt ?? '').trim().slice(0, 500),
+    }))
+    .filter((item) => item.source);
+}
+
 function isGreeting(text) {
   return /^(hi|hello|hey|hiya|good\s+(morning|afternoon|evening))\b/.test(text);
 }
@@ -154,9 +178,9 @@ function buildServiceContext(service, offerings, options = {}) {
       id: offering._id.toString(),
       name: offering.name,
       description: offering.description ?? '',
-      eligibility: (offering.eligibilityRules ?? []).map(
-        (rule) => `${rule.field} ${rule.operator} ${rule.value}`,
-      ),
+      eligibility: (offering.eligibilityRules ?? [])
+        .filter((rule) => rule && (rule.field || rule.operator || rule.value))
+        .map((rule) => `${rule.field} ${rule.operator} ${rule.value}`),
       documents: docs.map((doc) => ({
         name: doc.name,
         required: doc.required !== false,
@@ -177,14 +201,19 @@ function buildServiceContext(service, offerings, options = {}) {
 
   let applicationSummary = null;
   if (application && focusOffering) {
-    const progress = getDocumentUploadProgress(focusOffering, application);
-    applicationSummary = {
-      status: application.status,
-      documentsComplete: progress.documentsComplete,
-      uploadedRequiredCount: progress.uploadedRequiredCount,
-      requiredDocumentCount: progress.requiredDocumentCount,
-      missingRequiredDocuments: progress.missingRequiredDocuments?.map((item) => item.name) ?? [],
-    };
+    try {
+      const progress = getDocumentUploadProgress(focusOffering, application);
+      applicationSummary = {
+        status: application.status,
+        documentsComplete: progress.documentsComplete,
+        uploadedRequiredCount: progress.uploadedRequiredCount,
+        requiredDocumentCount: progress.requiredDocumentCount,
+        missingRequiredDocuments: progress.missingRequiredDocuments?.map((item) => item.name) ?? [],
+      };
+    } catch (err) {
+      logger.warn({ err: err?.message }, 'Chat could not summarize application documents');
+      applicationSummary = { status: application.status };
+    }
   }
 
   return {
@@ -367,7 +396,7 @@ function buildRetrievalFallbackReply(message, context, retrieved) {
   const primary = ranked[0];
   const citations = ranked.slice(0, 2).map((chunk) => ({
     source: chunk.sourceName,
-    excerpt: chunk.text.slice(0, 140),
+    excerpt: String(chunk.text ?? '').slice(0, 140),
   }));
 
   let intro = 'Here is what I found for your question:';
@@ -380,32 +409,46 @@ function buildRetrievalFallbackReply(message, context, retrieved) {
   }
 
   return {
-    reply: [intro, '', primary.text].join('\n'),
+    reply: [intro, '', String(primary?.text ?? '')].join('\n'),
     citations,
   };
 }
 
 async function buildAssistantReply(message, context, history, instituteId, serviceId) {
-  const retrieved = await retrieveRelevantChunks(instituteId, serviceId, message);
+  let retrieved = [];
+  try {
+    retrieved = await retrieveRelevantChunks(instituteId, serviceId, message);
+  } catch (err) {
+    logger.warn({ err: err?.message }, 'Chat retrieval failed; continuing without knowledge chunks');
+  }
 
-  const retrievedKnowledge = retrieved.map((chunk, index) => ({
-    rank: index + 1,
-    relevanceScore: Number(chunk.score?.toFixed(3) ?? 0),
-    sourceType: chunk.sourceType,
-    sourceName: chunk.sourceName,
-    excerpt: chunk.text.slice(0, 700),
-  }));
+  const retrievedKnowledge = retrieved
+    .filter((chunk) => chunk && (chunk.text || chunk.sourceName))
+    .map((chunk, index) => ({
+      rank: index + 1,
+      relevanceScore: Number(Number(chunk.score ?? 0).toFixed(3)),
+      sourceType: chunk.sourceType,
+      sourceName: chunk.sourceName,
+      excerpt: String(chunk.text ?? '').slice(0, 700),
+    }));
 
   if (isOpenAiConfigured()) {
     try {
-      const result = await chatJson({
-        system: INSTRUCTOR_SYSTEM_PROMPT,
-        user: JSON.stringify({
+      let payload;
+      try {
+        payload = JSON.stringify({
           retrievedKnowledge,
           studentContext: context,
-          conversationHistory: history.slice(-6),
+          conversationHistory: Array.isArray(history) ? history.slice(-6) : [],
           studentQuestion: message,
-        }),
+        });
+      } catch (err) {
+        logger.warn({ err: err?.message }, 'Chat context could not be serialized');
+        payload = JSON.stringify({ studentQuestion: message });
+      }
+      const result = await chatJson({
+        system: INSTRUCTOR_SYSTEM_PROMPT,
+        user: payload,
         schema: chatReplySchema,
       });
 
@@ -415,12 +458,12 @@ async function buildAssistantReply(message, context, history, instituteId, servi
             ? result.citations
             : retrieved.slice(0, 2).map((chunk) => ({
                 source: chunk.sourceName,
-                excerpt: chunk.text.slice(0, 120),
+                excerpt: String(chunk.text ?? '').slice(0, 120),
               }));
 
         return {
-          reply: result.reply.replace(/\*\*/g, '').trim(),
-          citations,
+          reply: sanitizeReplyText(result.reply.replace(/\*\*/g, '')),
+          citations: sanitizeCitations(citations),
         };
       }
     } catch (err) {
@@ -429,11 +472,15 @@ async function buildAssistantReply(message, context, history, instituteId, servi
   }
 
   if (retrieved.length) {
-    return buildRetrievalFallbackReply(message, context, retrieved);
+    const fallback = buildRetrievalFallbackReply(message, context, retrieved);
+    return {
+      reply: sanitizeReplyText(fallback.reply),
+      citations: sanitizeCitations(fallback.citations),
+    };
   }
 
   return {
-    reply: buildHeuristicReply(message, context),
+    reply: sanitizeReplyText(buildHeuristicReply(message, context)),
     citations: [],
   };
 }
@@ -449,11 +496,18 @@ async function loadOfferings(instituteId, serviceId) {
 }
 
 async function getOrCreateSession(instituteId, serviceId, studentEmail) {
-  let session = await ChatSession.findOne({ instituteId, serviceId, studentEmail });
-  if (!session) {
-    session = await ChatSession.create({ instituteId, serviceId, studentEmail });
+  try {
+    return await ChatSession.findOneAndUpdate(
+      { instituteId, serviceId, studentEmail },
+      { $setOnInsert: { instituteId, serviceId, studentEmail } },
+      { new: true, upsert: true },
+    );
+  } catch (err) {
+    if (err?.code === 11000) {
+      return ChatSession.findOne({ instituteId, serviceId, studentEmail });
+    }
+    throw err;
   }
-  return session;
 }
 
 async function loadChatContext(instituteId, serviceId, user, offeringId) {
@@ -468,12 +522,12 @@ async function loadChatContext(instituteId, serviceId, user, offeringId) {
     : offerings[0] ?? null;
 
   let application = null;
-  if (focusOffering) {
+  if (focusOffering && studentEmailOf(user)) {
     application = await Application.findOne({
       instituteId,
       serviceId,
       offeringId: focusOffering._id,
-      applicantEmail: user.email.toLowerCase(),
+      applicantEmail: studentEmailOf(user),
     });
   }
 
@@ -493,8 +547,12 @@ function streamTextChunks(text, onChunk) {
  * Prepare session + context for WebSocket chat.
  */
 export async function prepareChatSession(instituteId, serviceId, user, offeringId) {
+  const email = studentEmailOf(user);
+  if (!email) {
+    throw new AppError('Your session is missing an email. Please sign in again.', 401);
+  }
   const { context } = await loadChatContext(instituteId, serviceId, user, offeringId);
-  const session = await getOrCreateSession(instituteId, serviceId, user.email.toLowerCase());
+  const session = await getOrCreateSession(instituteId, serviceId, email);
   const previousMessages = await ChatMessage.find({
     instituteId,
     sessionId: session._id,
@@ -529,25 +587,46 @@ export async function generateAssistantReply(
   history,
   onStream,
 ) {
-  const { reply, citations } = await buildAssistantReply(
-    message,
-    context,
-    history,
-    instituteId,
-    serviceId,
-  );
+  let reply = sanitizeReplyText('');
+  let citations = [];
+  try {
+    const generated = await buildAssistantReply(
+      message,
+      context,
+      history,
+      instituteId,
+      serviceId,
+    );
+    reply = sanitizeReplyText(generated.reply);
+    citations = sanitizeCitations(generated.citations);
+  } catch (err) {
+    logger.warn({ err: err?.message }, 'Chat assistant generation failed; using fallback reply');
+  }
+
   streamTextChunks(reply, onStream);
 
-  const session = await getOrCreateSession(instituteId, serviceId, user.email.toLowerCase());
-  const assistantMessage = await ChatMessage.create({
-    instituteId,
-    sessionId: session._id,
-    role: 'assistant',
-    content: reply,
-    citations,
-  });
-
-  return formatMessage(assistantMessage);
+  try {
+    const email = studentEmailOf(user);
+    const session = await getOrCreateSession(instituteId, serviceId, email);
+    const assistantMessage = await ChatMessage.create({
+      instituteId,
+      sessionId: session._id,
+      role: 'assistant',
+      content: reply,
+      citations,
+    });
+    return formatMessage(assistantMessage);
+  } catch (err) {
+    logger.warn({ err: err?.message }, 'Chat could not persist assistant reply');
+    return {
+      id: `assistant-${Date.now()}`,
+      role: 'assistant',
+      content: reply,
+      citations,
+      confidence: citations.length >= 2 ? 'high' : citations.length === 1 ? 'medium' : 'low',
+      createdAt: new Date(),
+    };
+  }
 }
 
 /**
@@ -559,7 +638,7 @@ export async function getChatHistory(instituteId, serviceId, user) {
   const session = await ChatSession.findOne({
     instituteId,
     serviceId,
-    studentEmail: user.email.toLowerCase(),
+    studentEmail: studentEmailOf(user),
   });
 
   if (!session) {
@@ -587,22 +666,58 @@ export async function getChatHistory(instituteId, serviceId, user) {
  */
 /** @deprecated Prefer WebSocket chat:send. Kept for backward compatibility. */
 export async function sendStudentChatMessage(instituteId, serviceId, user, message, offeringId) {
-  const session = await prepareChatSession(instituteId, serviceId, user, offeringId);
-  const userMessage = await persistUserMessage(instituteId, session.sessionId, message);
-  const assistantMessage = await generateAssistantReply(
-    instituteId,
-    serviceId,
-    user,
-    message,
-    offeringId,
-    session.context,
-    session.history,
-    null,
-  );
+  try {
+    const session = await prepareChatSession(instituteId, serviceId, user, offeringId);
+    const userMessage = await persistUserMessage(instituteId, session.sessionId, message);
+    const assistantMessage = await generateAssistantReply(
+      instituteId,
+      serviceId,
+      user,
+      message,
+      offeringId,
+      session.context,
+      session.history,
+      null,
+    );
 
-  return {
-    sessionId: session.sessionId,
-    messages: [userMessage, assistantMessage],
-    reply: assistantMessage,
-  };
+    return {
+      sessionId: session.sessionId,
+      messages: [userMessage, assistantMessage],
+      reply: assistantMessage,
+    };
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    logger.error({ err: err?.message, serviceId }, 'Student chat failed');
+    const fallback = sanitizeReplyText('');
+    const now = new Date();
+    return {
+      sessionId: null,
+      messages: [
+        {
+          id: `user-${now.getTime()}`,
+          role: 'user',
+          content: message,
+          citations: [],
+          confidence: 'low',
+          createdAt: now,
+        },
+        {
+          id: `assistant-${now.getTime()}`,
+          role: 'assistant',
+          content: fallback,
+          citations: [],
+          confidence: 'low',
+          createdAt: now,
+        },
+      ],
+      reply: {
+        id: `assistant-${now.getTime()}`,
+        role: 'assistant',
+        content: fallback,
+        citations: [],
+        confidence: 'low',
+        createdAt: now,
+      },
+    };
+  }
 }

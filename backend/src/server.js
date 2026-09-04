@@ -52,6 +52,10 @@ process.on('uncaughtException', (err) => {
 
 async function shutdown() {
   console.log(JSON.stringify({ msg: 'Shutting down server...' }));
+  const forceExit = setTimeout(() => {
+    console.log(JSON.stringify({ msg: 'Shutdown timed out; exiting' }));
+    process.exit(0);
+  }, 4000);
   try {
     const { stopEmailWorker } = await import('./core/workers/email.worker.js');
     const { stopSlaWorker } = await import('./core/workers/sla.worker.js');
@@ -85,6 +89,7 @@ async function shutdown() {
   } catch (err) {
     logError('shutdown error', err);
   }
+  clearTimeout(forceExit);
   process.exit(0);
 }
 

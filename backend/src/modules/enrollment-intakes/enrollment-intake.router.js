@@ -22,6 +22,7 @@ adminRouter.get('/:id', enrollmentIntakeController.getById);
 adminRouter.get('/:id/documents/:documentId/file', enrollmentIntakeController.streamDocument);
 adminRouter.post('/:id/approve', enrollmentIntakeController.approve);
 adminRouter.post('/:id/reject', enrollmentIntakeController.reject);
+adminRouter.delete('/:id', enrollmentIntakeController.remove);
 
 staffRouter.use(requireAuth, requireRole(ROLES.STAFF));
 

@@ -10,6 +10,7 @@ export const applicationsApi = {
   reviewDocument: (id, documentId, data) =>
     apiClient.patch(`/applications/${id}/documents/${documentId}/review`, data),
   reverifyAi: (id) => apiClient.patch(`/applications/${id}/ai-reverify`),
+  remove: (id) => apiClient.delete(`/applications/${id}`),
   getDocumentFilePath: (applicationId, documentId, download = false) => {
     const base = `/applications/${applicationId}/documents/${documentId}/file`;
     return download ? `${base}?download=1` : base;

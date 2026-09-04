@@ -151,3 +151,16 @@ export async function withdraw(req, res, next) {
     next(err);
   }
 }
+
+export async function remove(req, res, next) {
+  try {
+    const result = await lifecycleService.deleteApplication(
+      req.user.instituteId,
+      req.params.id,
+      req.user,
+    );
+    sendSuccess(res, 200, 'Service request deleted', result);
+  } catch (err) {
+    next(err);
+  }
+}

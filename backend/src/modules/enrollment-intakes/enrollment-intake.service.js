@@ -26,6 +26,7 @@ import { formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import { streamDocumentFile } from '../applications/application.service.js';
 import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
 import { logger } from '../../core/logger/index.js';
+import { purgeApplicationRecord } from '../applications/application.purge.helper.js';
 
 const SALT_ROUNDS = 10;
 
@@ -381,4 +382,25 @@ export async function streamIntakeDocument(instituteId, intakeId, documentId, re
   }
 
   await streamDocumentFile(document, res, options);
+}
+
+/**
+ * Permanently delete a pending or rejected enrollment intake.
+ * Authorized intakes live on as service requests and must be deleted there.
+ */
+export async function deleteEnrollmentIntake(instituteId, intakeId) {
+  const { application } = await findEnrollmentIntake(instituteId, intakeId);
+
+  const isPending = application.status === APPLICATION_STATUS.PENDING_AUTHORIZATION;
+  const isRejectedIntake =
+    application.status === APPLICATION_STATUS.REJECTED && !application.workflowSnapshot;
+
+  if (!isPending && !isRejectedIntake) {
+    throw new AppError(
+      'This intake has already been authorized. Delete it from Service requests instead.',
+      400,
+    );
+  }
+
+  return purgeApplicationRecord(application);
 }

@@ -13,6 +13,7 @@ import {
 } from '../../shared/templates/applicationEmails.js';
 import { getWorkflowSteps, getCurrentWorkflowStep } from '../../shared/helpers/workflowExecution.helper.js';
 import { loadApplicationContext } from './application.service.js';
+import { purgeApplicationRecord } from './application.purge.helper.js';
 const TERMINAL_STATUSES = new Set([
   APPLICATION_STATUS.ADMITTED,
   APPLICATION_STATUS.REJECTED,
@@ -484,4 +485,25 @@ export async function listUnassignedApplications(instituteId, query = {}) {
       totalPages: Math.ceil(total / limit) || 1,
     },
   };
+}
+
+/**
+ * Permanently delete a service request. Enrollment intakes still awaiting
+ * authorization must be deleted from the enrollment intakes dashboard.
+ */
+export async function deleteApplication(instituteId, applicationId, actor) {
+  if (actor.role !== ROLES.ADMIN) {
+    throw new AppError('Only an administrator can delete a service request', 403);
+  }
+
+  const application = await getApplication(instituteId, applicationId);
+
+  if (application.status === APPLICATION_STATUS.PENDING_AUTHORIZATION) {
+    throw new AppError(
+      'Delete pending enrollment intakes from the Enrollment intakes dashboard.',
+      400,
+    );
+  }
+
+  return purgeApplicationRecord(application);
 }

@@ -25,6 +25,7 @@ adminRouter.patch('/:id/reopen', lifecycleController.reopen);
 adminRouter.patch('/:id/transfer', lifecycleController.transfer);
 adminRouter.patch('/:id/escalate', lifecycleController.escalate);
 adminRouter.patch('/:id/rollback', lifecycleController.rollback);
+adminRouter.delete('/:id', lifecycleController.remove);
 adminRouter.get('/:id', applicationController.getById);
 adminRouter.patch('/:id/workflow-action', applicationController.workflowAction);
 adminRouter.patch('/:id/status', applicationController.updateStatus);

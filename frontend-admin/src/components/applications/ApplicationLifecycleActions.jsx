@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowUpRight, RotateCcw, UserPlus, XCircle } from 'lucide-react';
+import { ArrowUpRight, RotateCcw, Trash2, UserPlus, XCircle } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import { useConfirm } from '@/components/ui/confirm-context';
 import { applicationLifecycleApi } from '@/api/applications.lifecycle.api';
+import { applicationsApi } from '@/api/applications.api';
 import { userApi } from '@/api/user.api';
 
 const actionBtn =
@@ -19,12 +20,14 @@ const primaryBtn =
  * @param {string} props.status
  * @param {'admin' | 'staff'} props.role
  * @param {() => void} props.onUpdated
+ * @param {() => void} [props.onDeleted]
  */
 export function ApplicationLifecycleActions({
   applicationId,
   status,
   role,
   onUpdated,
+  onDeleted,
   embedded = false,
   showEscalate = true,
 }) {
@@ -71,6 +74,29 @@ export function ApplicationLifecycleActions({
   const terminal = ['admitted', 'rejected', 'withdrawn', 'cancelled'].includes(status);
   const canCancel = ['submitted', 'in_review', 'needs_correction'].includes(status);
   const canReopen = ['rejected', 'cancelled', 'withdrawn'].includes(status);
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Delete this request?',
+      description:
+        'This permanently removes the service request, uploaded documents, and related visit or payment records. This cannot be undone.',
+      confirmLabel: 'Delete request',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      await applicationsApi.remove(applicationId);
+      toast.success('Service request deleted');
+      if (onDeleted) onDeleted();
+      else onUpdated?.();
+    } catch (err) {
+      toast.error(err.message || 'Could not delete service request');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className={embedded ? 'space-y-4' : 'mt-8 space-y-4 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm'}>
@@ -132,6 +158,12 @@ export function ApplicationLifecycleActions({
           <button type="button" className={actionBtn} onClick={loadStaff}>
             <UserPlus className="h-3.5 w-3.5" />
             Transfer
+          </button>
+        )}
+        {role === 'admin' && (
+          <button type="button" disabled={loading} className={actionBtnDanger} onClick={handleDelete}>
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
           </button>
         )}
       </div>

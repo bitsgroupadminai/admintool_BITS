@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { ApplicationReviewContent } from '@/components/applications/ApplicationReviewContent';
@@ -8,6 +8,7 @@ import { ApplicationLifecycleActions } from '@/components/applications/Applicati
 import { ApplicationPaymentsPanel } from '@/components/payments/ApplicationPaymentsPanel';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { ApplicationReviewSkeleton } from '@/components/skeletons';
 import { applicationsApi, downloadApplicationDocument } from '@/api/applications.api';
 import { userApi } from '@/api/user.api';
@@ -28,6 +29,8 @@ export function ApplicationDetailPage() {
   const [slaActionLoading, setSlaActionLoading] = useState(false);
   const [reviewingDocumentId, setReviewingDocumentId] = useState(null);
   const [reverifyLoading, setReverifyLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const confirm = useConfirm();
 
   const assigneeOptions = useMemo(() => {
     const options = [];
@@ -169,6 +172,28 @@ export function ApplicationDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: `Delete request from ${application?.applicantName}?`,
+      description:
+        'This permanently removes the service request, uploaded documents, and related visit or payment records. This cannot be undone.',
+      confirmLabel: 'Delete request',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await applicationsApi.remove(id);
+      toast.success('Service request deleted');
+      navigate('/admin/applications');
+    } catch (err) {
+      toast.error(err.message || 'Could not delete service request');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleDocumentReview = async (document, payload) => {
     if (payload.status === 'needs_correction' && !payload.note?.trim()) {
       toast.error('Add a note explaining what the student should fix');
@@ -193,13 +218,21 @@ export function ApplicationDetailPage() {
   return (
     <AdminLayout>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-        <Link
-          to="/admin/applications"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A6640]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to requests
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/admin/applications"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A6640]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to requests
+          </Link>
+          {!loading && application ? (
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleting}>
+              <Trash2 className="h-4 w-4" />
+              {deleting ? 'Deleting...' : 'Delete request'}
+            </Button>
+          ) : null}
+        </div>
 
         {loading ? (
           <ApplicationReviewSkeleton showAssignSection />
@@ -226,6 +259,7 @@ export function ApplicationDetailPage() {
                   status={application.status}
                   role="admin"
                   onUpdated={loadApplication}
+                  onDeleted={() => navigate('/admin/applications')}
                   embedded
                   showEscalate={false}
                 />

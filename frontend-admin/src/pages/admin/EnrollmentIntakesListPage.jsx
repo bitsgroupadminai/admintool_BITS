@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { AdminListBuilder } from '@/components/ui/AdminListBuilder';
 import { Badge } from '@/components/ui/badge';
 import { enrollmentIntakesApi } from '@/api/enrollmentIntakes.api';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { useSocketEvent } from '@/contexts/SocketContext';
 import { WS_EVENTS } from '@/lib/socket';
 import { APPLICATION_PAGE_SIZE_OPTIONS } from '@/constants/applicationManagement.constants';
@@ -21,9 +22,11 @@ const DEFAULT_PAGINATION = {
 
 export function EnrollmentIntakesListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const [intakes, setIntakes] = useState([]);
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   const query = useMemo(() => {
     const page = Number.parseInt(searchParams.get('page') || '1', 10);
@@ -83,6 +86,28 @@ export function EnrollmentIntakesListPage() {
     });
   };
 
+  const handleDelete = async (intake) => {
+    const ok = await confirm({
+      title: `Delete intake for ${intake.applicantName}?`,
+      description:
+        'This permanently removes the enrollment intake and uploaded documents. This cannot be undone.',
+      confirmLabel: 'Delete intake',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setDeletingId(intake.id);
+    try {
+      await enrollmentIntakesApi.remove(intake.id);
+      toast.success('Enrollment intake deleted');
+      await loadIntakes();
+    } catch (err) {
+      toast.error(err.message || 'Could not delete enrollment intake');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const columns = [
     {
       key: 'applicantName',
@@ -114,13 +139,24 @@ export function EnrollmentIntakesListPage() {
       label: '',
       cellClassName: 'text-right',
       render: (row) => (
-        <Link
-          to={`/admin/enrollment-intakes/${row.id}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
-        >
-          <Eye className="h-4 w-4" />
-          Review
-        </Link>
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            to={`/admin/enrollment-intakes/${row.id}`}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
+          >
+            <Eye className="h-4 w-4" />
+            Review
+          </Link>
+          <button
+            type="button"
+            onClick={() => handleDelete(row)}
+            disabled={deletingId === row.id}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+            title="Delete intake"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];

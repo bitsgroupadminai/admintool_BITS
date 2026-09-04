@@ -33,6 +33,7 @@ export const enrollmentIntakesApi = {
   get: (id) => apiClient.get(`/enrollment-intakes/${id}`),
   approve: (id, payload = {}) => apiClient.post(`/enrollment-intakes/${id}/approve`, payload),
   reject: (id, payload) => apiClient.post(`/enrollment-intakes/${id}/reject`, payload),
+  remove: (id) => apiClient.delete(`/enrollment-intakes/${id}`),
   fetchDocumentBlob: (intakeId, documentId) =>
     fetchIntakeDocumentBlob(intakeId, documentId, '/enrollment-intakes'),
   downloadDocument: (intakeId, document) =>

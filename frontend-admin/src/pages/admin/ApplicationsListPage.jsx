@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { AdminListBuilder } from '@/components/ui/AdminListBuilder';
 import { Badge } from '@/components/ui/badge';
 import { applicationsApi } from '@/api/applications.api';
 import { exportsApi } from '@/api/exports.api';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { useSocketEvent } from '@/contexts/SocketContext';
 import { WS_EVENTS } from '@/lib/socket';
 import { servicesApi } from '@/api/services.api';
@@ -30,11 +31,13 @@ const DEFAULT_PAGINATION = {
 
 export function ApplicationsListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const [applications, setApplications] = useState([]);
   const [services, setServices] = useState([]);
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const query = useMemo(() => {
     const page = Number.parseInt(searchParams.get('page') || '1', 10);
@@ -129,6 +132,28 @@ export function ApplicationsListPage() {
     }
   };
 
+  const handleDelete = async (application) => {
+    const ok = await confirm({
+      title: `Delete request from ${application.applicantName}?`,
+      description:
+        'This permanently removes the service request, uploaded documents, and related visit or payment records. This cannot be undone.',
+      confirmLabel: 'Delete request',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setDeletingId(application.id);
+    try {
+      await applicationsApi.remove(application.id);
+      toast.success('Service request deleted');
+      await loadApplications();
+    } catch (err) {
+      toast.error(err.message || 'Could not delete service request');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const columns = [
     {
       key: 'applicantName',
@@ -183,13 +208,24 @@ export function ApplicationsListPage() {
       label: '',
       cellClassName: 'text-right',
       render: (row) => (
-        <Link
-          to={`/admin/applications/${row.id}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
-        >
-          <Eye className="h-4 w-4" />
-          Review
-        </Link>
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            to={`/admin/applications/${row.id}`}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
+          >
+            <Eye className="h-4 w-4" />
+            Review
+          </Link>
+          <button
+            type="button"
+            onClick={() => handleDelete(row)}
+            disabled={deletingId === row.id}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+            title="Delete request"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];

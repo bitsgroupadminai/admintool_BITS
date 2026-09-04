@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Sparkles, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,28 @@ export function EnrollmentIntakeDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: `Delete intake for ${intake?.applicantName}?`,
+      description:
+        'This permanently removes the enrollment intake and uploaded documents. This cannot be undone.',
+      confirmLabel: 'Delete intake',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setActing(true);
+    try {
+      await enrollmentIntakesApi.remove(id);
+      toast.success('Enrollment intake deleted');
+      navigate('/admin/enrollment-intakes');
+    } catch (err) {
+      toast.error(err.message || 'Could not delete enrollment intake');
+    } finally {
+      setActing(false);
+    }
+  };
+
   const handleReject = async (event) => {
     event.preventDefault();
     if (!rejectReason.trim()) {
@@ -86,6 +108,7 @@ export function EnrollmentIntakeDetailPage() {
   };
 
   const isPending = intake?.status === 'pending_authorization';
+  const canDelete = isPending || intake?.status === 'rejected';
 
   return (
     <AdminLayout>
@@ -114,9 +137,17 @@ export function EnrollmentIntakeDetailPage() {
                     <p className="mt-1 text-sm text-[#4B6358]">{intake.applicantMobile}</p>
                   ) : null}
                 </div>
-                <Badge variant={isPending ? 'incomplete' : intake.status === 'rejected' ? 'disabled' : 'active'}>
-                  {isPending ? 'Awaiting authorization' : intake.status === 'rejected' ? 'Rejected' : 'Authorized'}
-                </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={isPending ? 'incomplete' : intake.status === 'rejected' ? 'disabled' : 'active'}>
+                    {isPending ? 'Awaiting authorization' : intake.status === 'rejected' ? 'Rejected' : 'Authorized'}
+                  </Badge>
+                  {canDelete ? (
+                    <Button type="button" variant="destructive" onClick={handleDelete} disabled={acting}>
+                      <Trash2 className="h-4 w-4" />
+                      Delete intake
+                    </Button>
+                  ) : null}
+                </div>
               </div>
 
               <dl className="mt-6 grid gap-4 sm:grid-cols-2">

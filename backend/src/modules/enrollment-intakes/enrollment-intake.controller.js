@@ -78,3 +78,15 @@ export async function streamDocument(req, res, next) {
     }
   }
 }
+
+export async function remove(req, res, next) {
+  try {
+    const result = await enrollmentIntakeService.deleteEnrollmentIntake(
+      req.user.instituteId,
+      req.params.id,
+    );
+    sendSuccess(res, 200, 'Enrollment intake deleted', result);
+  } catch (err) {
+    next(err);
+  }
+}

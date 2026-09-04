@@ -3,6 +3,24 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
+const localApiProxy = {
+  '/api': {
+    target: 'http://localhost:5001',
+    changeOrigin: true,
+    timeout: 180_000,
+    proxyTimeout: 180_000,
+  },
+  '/uploads': {
+    target: 'http://localhost:5001',
+    changeOrigin: true,
+  },
+  '/socket.io': {
+    target: 'http://localhost:5001',
+    changeOrigin: true,
+    ws: true,
+  },
+};
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -12,22 +30,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-        timeout: 180_000,
-        proxyTimeout: 180_000,
-      },
-      '/uploads': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-      },
-      '/socket.io': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-        ws: true,
-      },
-    },
+    proxy: localApiProxy,
+  },
+  preview: {
+    proxy: localApiProxy,
   },
 });

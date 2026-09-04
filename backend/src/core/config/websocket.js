@@ -54,9 +54,15 @@ export function initWebSocket(httpServer) {
 
     try {
 
+      const fromAuth = typeof socket.handshake.auth?.token === 'string'
+
+        ? socket.handshake.auth.token.trim()
+
+        : '';
+
       const rawCookie = socket.handshake.headers.cookie ?? '';
 
-      const sessionId = rawCookie
+      const fromCookie = rawCookie
 
         .split(';')
 
@@ -65,6 +71,8 @@ export function initWebSocket(httpServer) {
         .find((part) => part.startsWith('sid='))
 
         ?.slice(4);
+
+      const sessionId = fromAuth || fromCookie;
 
 
 

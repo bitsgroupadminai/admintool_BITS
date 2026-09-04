@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { io } from 'socket.io-client';
 import { SOCKET_URL, WS_CLIENT_EVENTS } from '@/lib/socket';
 import { useAuthStore } from '@/store/auth.store';
+import { readSessionToken } from '@/utils/sessionToken';
 
 const SocketContext = createContext(null);
 
@@ -37,6 +38,7 @@ export function SocketProvider({ children }) {
 
     const socket = io(SOCKET_URL, {
       withCredentials: true,
+      auth: { token: readSessionToken() || undefined },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,

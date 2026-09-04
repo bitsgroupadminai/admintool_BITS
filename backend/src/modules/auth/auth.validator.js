@@ -60,6 +60,11 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+  instituteName: z.string().min(2, 'Type your institute name to confirm'),
+});
+
 export const createStaffSchema = z.object({
   name: z.string().min(2).max(120),
   email: z.string().email(),

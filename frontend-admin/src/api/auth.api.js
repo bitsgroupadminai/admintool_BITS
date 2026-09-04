@@ -21,4 +21,5 @@ export const authApi = {
     });
   },
   removeAvatar: () => apiClient.delete('/auth/profile/avatar'),
+  deleteAccount: (data) => apiClient.delete('/auth/account', { data }),
 };

@@ -1,5 +1,8 @@
 import axios from 'axios';
 import { normalizeApiError } from '@/utils/apiError';
+import { persistSessionToken, readSessionToken } from '@/utils/sessionToken';
+
+const KNOWN_PRODUCTION_API = 'https://api.bits.bhupeshb7.me/api/v1';
 
 /**
  * Normalize Vercel/Railway env values.
@@ -16,19 +19,38 @@ function normalizeAbsoluteUrl(value) {
   return url.replace(/\/$/, '');
 }
 
+function withApiV1(url) {
+  if (/\/api\/v1$/i.test(url)) return url;
+  return `${url}/api/v1`;
+}
+
+function isLocalHostname(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+function shouldUseSameOriginProxy() {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return isLocalHostname(host) || host.endsWith('.vercel.app');
+}
+
 /**
- * In local Vite, `/api/v1` is proxied to the backend.
- * On Vercel, set `VITE_API_BASE_URL` to https://api.bits.bhupeshb7.me/api/v1
+ * Local Vite and Vercel both proxy `/api` to the Railway API.
+ * Same-origin calls keep the session cookie first-party.
  */
 export function getApiBaseUrl() {
+  if (shouldUseSameOriginProxy()) return '/api/v1';
+
   const fromEnv = normalizeAbsoluteUrl(import.meta.env.VITE_API_BASE_URL);
-  if (!fromEnv) return '/api/v1';
-  if (/\/api\/v1$/i.test(fromEnv)) return fromEnv;
-  return `${fromEnv}/api/v1`;
+  if (fromEnv) return withApiV1(fromEnv);
+  return KNOWN_PRODUCTION_API;
 }
 
 /** Origin of the API host (no `/api/v1`), used for `/uploads` and sockets. */
 export function getApiOrigin() {
+  if (shouldUseSameOriginProxy() && typeof window !== 'undefined') {
+    return window.location.origin;
+  }
   const socket = normalizeAbsoluteUrl(import.meta.env.VITE_SOCKET_URL);
   if (socket) return socket.replace(/\/api\/v1$/i, '');
   const base = getApiBaseUrl();
@@ -44,8 +66,19 @@ export const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = readSessionToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    persistSessionToken(response.data?.data?.sessionToken);
+    return response;
+  },
   async (error) => {
     const data = error.response?.data;
     if (typeof Blob !== 'undefined' && data instanceof Blob) {

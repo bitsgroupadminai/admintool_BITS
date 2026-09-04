@@ -9,6 +9,7 @@ import { toAuthUserDto } from './auth.dto.js';
 import { deleteAvatarFile } from '../../shared/helpers/avatar.helper.js';
 import { Application } from '../applications/application.model.js';
 import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import { purgeInstitute } from '../institutes/institute.purge.helper.js';
 
 const INVALID_CREDENTIALS_MSG = 'Invalid email or password';
 const SALT_ROUNDS = 12;
@@ -155,6 +156,43 @@ export async function logoutUser(sessionId) {
   if (sessionId) {
     await destroySession(sessionId);
   }
+}
+
+function normalizeInstituteName(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
+ * Permanently delete the signed-in admin, their institute, staff, students,
+ * and all tenant data so the email can be used to sign up again.
+ * @param {string} userId
+ * @param {{ password: string, instituteName: string }} payload
+ * @param {string} [sessionId]
+ */
+export async function deleteAdminAccount(userId, payload, sessionId) {
+  const admin = await User.findById(userId).select('+passwordHash');
+  if (!admin || !admin.isActive) {
+    throw new AppError('User not found', 404);
+  }
+  if (admin.role !== ROLES.ADMIN) {
+    throw new AppError('Only an institute admin can delete this account', 403);
+  }
+
+  const passwordOk = await verifyPassword(payload.password, admin.passwordHash);
+  if (!passwordOk) {
+    throw new AppError('Password is incorrect', 400);
+  }
+
+  const institute = await Institute.findById(admin.instituteId);
+  if (!institute) {
+    throw new AppError('Institute not found', 404);
+  }
+  if (normalizeInstituteName(payload.instituteName) !== normalizeInstituteName(institute.name)) {
+    throw new AppError('Institute name does not match', 400);
+  }
+
+  await purgeInstitute(institute._id);
+  await destroySession(sessionId);
 }
 
 /**

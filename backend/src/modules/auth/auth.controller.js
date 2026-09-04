@@ -1,4 +1,4 @@
-import { signupSchema, loginSchema, updateProfileSchema, forgotPasswordSchema, resetPasswordSchema } from './auth.validator.js';
+import { signupSchema, loginSchema, updateProfileSchema, forgotPasswordSchema, resetPasswordSchema, deleteAccountSchema } from './auth.validator.js';
 
 import * as passwordResetService from '../../core/services/passwordReset.service.js';
 
@@ -22,7 +22,10 @@ export async function signup(req, res, next) {
 
     setSessionCookie(res, session.sessionId);
 
-    sendSuccess(res, 201, 'Account created successfully', { user });
+    sendSuccess(res, 201, 'Account created successfully', {
+      user,
+      sessionToken: session.sessionId,
+    });
 
   } catch (err) {
 
@@ -44,7 +47,10 @@ export async function login(req, res, next) {
 
     setSessionCookie(res, session.sessionId);
 
-    sendSuccess(res, 200, 'Logged in successfully', { user });
+    sendSuccess(res, 200, 'Logged in successfully', {
+      user,
+      sessionToken: session.sessionId,
+    });
 
   } catch (err) {
 
@@ -83,6 +89,28 @@ export async function me(req, res, next) {
     const user = await authService.getCurrentUser(req.user.userId);
 
     sendSuccess(res, 200, 'Current user', { user });
+
+  } catch (err) {
+
+    next(err);
+
+  }
+
+}
+
+
+
+export async function deleteAccount(req, res, next) {
+
+  try {
+
+    const payload = deleteAccountSchema.parse(req.body);
+
+    await authService.deleteAdminAccount(req.user.userId, payload, req.sessionId);
+
+    clearSessionCookie(res);
+
+    sendSuccess(res, 200, 'Account deleted');
 
   } catch (err) {
 

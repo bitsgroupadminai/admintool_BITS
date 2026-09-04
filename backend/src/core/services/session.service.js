@@ -50,7 +50,35 @@ export async function touchSession(sessionId, payload) {
  * @returns {Promise<void>}
  */
 export async function destroySession(sessionId) {
+  if (!sessionId) return;
   await redisClient.del(sessionKey(sessionId));
+}
+
+/**
+ * Drop every Redis session belonging to an institute (admin, staff, students).
+ * @param {string} instituteId
+ */
+export async function destroySessionsForInstitute(instituteId) {
+  const target = String(instituteId);
+  try {
+    for await (const key of redisClient.scanIterator({
+      MATCH: `${SESSION_PREFIX}*`,
+      COUNT: 200,
+    })) {
+      const raw = await redisClient.get(key);
+      if (!raw) continue;
+      try {
+        const payload = JSON.parse(raw);
+        if (payload?.instituteId === target) {
+          await redisClient.del(key);
+        }
+      } catch {
+        // Skip malformed session payloads.
+      }
+    }
+  } catch {
+    // Managed Redis may restrict SCAN; the caller's own session is still destroyed.
+  }
 }
 
 /**

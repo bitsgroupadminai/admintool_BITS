@@ -16,7 +16,7 @@ VITE_API_BASE_URL=https://api.bits.bhupeshb7.me/api/v1
 VITE_SOCKET_URL=https://api.bits.bhupeshb7.me
 ```
 
-Must include `https://`.
+Must include `https://`. The admin app on `*.vercel.app` calls `/api/v1` on the same origin; `vercel.json` proxies that to Railway so the session cookie is first-party. Login/signup also return a `sessionToken` used as a Bearer fallback when the browser blocks the cross-site cookie.
 
 ## After changing env
 

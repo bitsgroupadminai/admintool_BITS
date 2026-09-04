@@ -1,6 +1,6 @@
 import { AppError } from '../utils/AppError.js';
 import { getSession, touchSession } from '../services/session.service.js';
-import { SESSION_COOKIE, setSessionCookie } from './sessionCookie.js';
+import { readSessionId, setSessionCookie } from './sessionCookie.js';
 
 /**
  * @param {import('express').Request} req
@@ -9,7 +9,7 @@ import { SESSION_COOKIE, setSessionCookie } from './sessionCookie.js';
  */
 export async function requireAuth(req, res, next) {
   try {
-    const sessionId = req.cookies?.[SESSION_COOKIE];
+    const sessionId = readSessionId(req);
     if (!sessionId) {
       throw new AppError('Authentication required', 401);
     }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { softCardClassName, softFooterClassName, softHeroClassName } from '@/components/ui/back-link';
 import { ProfileFormSkeleton } from '@/components/skeletons';
 import { ProfileAvatarUpload } from '@/components/profile/ProfileAvatarUpload';
+import { DeleteAccountSection } from '@/components/profile/DeleteAccountSection';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
@@ -244,6 +245,8 @@ export function ProfileForm() {
           </div>
         </div>
       </form>
+
+      {user.role === 'admin' ? <DeleteAccountSection user={user} /> : null}
     </div>
   );
 }

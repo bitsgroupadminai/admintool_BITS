@@ -35,18 +35,27 @@ export function InstituteSetupPage() {
 
   useEffect(() => {
     async function load() {
-      if (!user?.instituteId) return;
+      const fallbackName = user?.institute?.name || '';
+      if (fallbackName) {
+        reset({ name: fallbackName });
+      }
+      if (!user?.instituteId) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data } = await instituteApi.get(user.instituteId);
         reset({ name: data.data.institute.name });
       } catch (err) {
-        toast.error(err.message || 'Failed to load institute');
+        if (!fallbackName) {
+          toast.error(err.message || 'Failed to load institute');
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [user?.instituteId, reset]);
+  }, [user?.instituteId, user?.institute?.name, reset]);
 
   const onSubmit = async (values) => {
     setSubmitting(true);

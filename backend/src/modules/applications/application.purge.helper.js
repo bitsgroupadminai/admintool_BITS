@@ -12,8 +12,11 @@ import { logger } from '../../core/logger/index.js';
  * Permanently remove an application and related files, AI decisions,
  * payments, appointments, and queue tickets.
  * @param {import('./application.model.js').Application} application
+ * @param {{ emitRealtime?: boolean, flushCache?: boolean }} [options]
  */
-export async function purgeApplicationRecord(application) {
+export async function purgeApplicationRecord(application, options = {}) {
+  const emitRealtime = options.emitRealtime !== false;
+  const flushCache = options.flushCache !== false;
   const applicationId = application._id;
   const instituteId = application.instituteId.toString();
 
@@ -37,21 +40,25 @@ export async function purgeApplicationRecord(application) {
 
   await Application.deleteOne({ _id: applicationId, instituteId: application.instituteId });
 
-  emitApplicationUpdated({
-    instituteId,
-    applicationId: applicationId.toString(),
-    studentUserId: null,
-    assigneeUserId: application.assignedTo?.toString() ?? null,
-    summary: {
-      status: 'deleted',
-      serviceId: application.serviceId?.toString(),
-      offeringId: application.offeringId?.toString(),
-      applicantName: application.applicantName,
-      updatedAt: new Date(),
-    },
-  });
-  emitDashboardUpdated(instituteId);
-  await flushInstituteReadCache(instituteId);
+  if (emitRealtime) {
+    emitApplicationUpdated({
+      instituteId,
+      applicationId: applicationId.toString(),
+      studentUserId: null,
+      assigneeUserId: application.assignedTo?.toString() ?? null,
+      summary: {
+        status: 'deleted',
+        serviceId: application.serviceId?.toString(),
+        offeringId: application.offeringId?.toString(),
+        applicantName: application.applicantName,
+        updatedAt: new Date(),
+      },
+    });
+    emitDashboardUpdated(instituteId);
+  }
+  if (flushCache) {
+    await flushInstituteReadCache(instituteId);
+  }
 
   return { id: applicationId.toString() };
 }

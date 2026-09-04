@@ -3,6 +3,7 @@ const STATUS_MESSAGES = {
   401: 'Your session has expired. Please sign in again.',
   403: 'You do not have permission to perform this action.',
   404: 'The requested item was not found. It may have been removed or you may not have access.',
+  405: 'The request hit the website instead of the account API. Refresh and try again. If it keeps failing, the app is calling the frontend host rather than https://api.bits.bhupeshb7.me.',
   408: 'The request took too long. Please try again.',
   409: 'This action could not be completed because of a conflict. Refresh the page and try again.',
   413: 'The file is too large to upload.',

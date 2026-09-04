@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import * as authController from './auth.controller.js';
 import { requireAuth } from '../../core/middlewares/requireAuth.middleware.js';
+import { requireRole } from '../../core/middlewares/authorize.middleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import { avatarUpload } from '../../core/config/upload.js';
 
 const router = Router();
@@ -12,6 +14,7 @@ router.post('/reset-password', authController.resetPassword);
 router.post('/logout', requireAuth, authController.logout);
 router.get('/me', requireAuth, authController.me);
 router.patch('/profile', requireAuth, authController.updateProfile);
+router.delete('/account', requireAuth, requireRole(ROLES.ADMIN), authController.deleteAccount);
 router.post(
   '/profile/avatar',
   requireAuth,

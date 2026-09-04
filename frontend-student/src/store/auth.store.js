@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authApi } from '@/api/student.api';
 import { bootstrapSession } from '@/utils/authBootstrap';
+import { clearSessionToken } from '@/utils/sessionToken';
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -58,6 +59,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       await authApi.logout();
     } finally {
+      clearSessionToken();
       set({
         user: null,
         isAuthenticated: false,

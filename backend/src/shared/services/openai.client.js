@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import { env } from '../../core/config/env.js';
 import { logger } from '../../core/logger/index.js';
 
@@ -23,10 +24,12 @@ function usesFixedSampling(model) {
   return /^(gpt-5|o1|o3|o4)/i.test(model);
 }
 
-function buildChatCompletionParams({ model, temperature, messages }) {
+function buildChatCompletionParams({ model, temperature, messages, structuredSchema, schemaName }) {
   const params = {
     model,
-    response_format: { type: 'json_object' },
+    response_format: structuredSchema
+      ? zodResponseFormat(structuredSchema, schemaName || 'response')
+      : { type: 'json_object' },
     messages,
   };
   if (!usesFixedSampling(model)) {
@@ -40,12 +43,23 @@ function buildChatCompletionParams({ model, temperature, messages }) {
  *   system: string,
  *   user: string,
  *   schema: z.ZodType,
+ *   structuredSchema?: z.ZodType,
+ *   schemaName?: string,
  *   normalize?: (raw: unknown) => unknown,
  *   timeoutMs?: number,
  *   model?: string,
  * }} params
  */
-export async function chatJson({ system, user, schema, normalize, timeoutMs, model }) {
+export async function chatJson({
+  system,
+  user,
+  schema,
+  structuredSchema,
+  schemaName,
+  normalize,
+  timeoutMs,
+  model,
+}) {
   const openai = getClient();
   if (!openai) {
     throw new Error('OpenAI API key is not configured');
@@ -54,21 +68,20 @@ export async function chatJson({ system, user, schema, normalize, timeoutMs, mod
   const waitMs = timeoutMs ?? env.OPENAI_TIMEOUT_MS;
   const selectedModel = model ?? env.OPENAI_MODEL;
 
-  const response = await Promise.race([
-    openai.chat.completions.create(
-      buildChatCompletionParams({
-        model: selectedModel,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
-    ),
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI request timed out')), waitMs);
+  const response = await createChatCompletion(
+    openai,
+    buildChatCompletionParams({
+      model: selectedModel,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      structuredSchema,
+      schemaName,
     }),
-  ]);
+    waitMs,
+  );
 
   const raw = response.choices[0]?.message?.content;
   return parseAndValidate(raw, normalize, schema);
@@ -83,12 +96,24 @@ export async function chatJson({ system, user, schema, normalize, timeoutMs, mod
  *   user: string,
  *   images?: Array<{ dataUrl: string, detail?: 'auto' | 'low' | 'high' }>,
  *   schema: z.ZodType,
+ *   structuredSchema?: z.ZodType,
+ *   schemaName?: string,
  *   normalize?: (raw: unknown) => unknown,
  *   timeoutMs?: number,
  *   model?: string,
  * }} params
  */
-export async function chatVisionJson({ system, user, images = [], schema, normalize, timeoutMs, model }) {
+export async function chatVisionJson({
+  system,
+  user,
+  images = [],
+  schema,
+  structuredSchema,
+  schemaName,
+  normalize,
+  timeoutMs,
+  model,
+}) {
   const openai = getClient();
   if (!openai) {
     throw new Error('OpenAI API key is not configured');
@@ -106,24 +131,49 @@ export async function chatVisionJson({ system, user, images = [], schema, normal
     });
   }
 
-  const response = await Promise.race([
-    openai.chat.completions.create(
-      buildChatCompletionParams({
-        model: selectedModel,
-        temperature: 0.1,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: userContent },
-        ],
-      }),
-    ),
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI vision request timed out')), waitMs);
+  const response = await createChatCompletion(
+    openai,
+    buildChatCompletionParams({
+      model: selectedModel,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ],
+      structuredSchema,
+      schemaName,
     }),
-  ]);
+    waitMs,
+  );
 
   const raw = response.choices[0]?.message?.content;
   return parseAndValidate(raw, normalize, schema);
+}
+
+async function createChatCompletion(openai, params, waitMs) {
+  try {
+    return await Promise.race([
+      openai.chat.completions.create(params),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('OpenAI request timed out')), waitMs);
+      }),
+    ]);
+  } catch (err) {
+    const canFallback =
+      params.response_format?.type === 'json_schema' &&
+      /response_format|json_schema|structured/i.test(String(err?.message ?? ''));
+    if (!canFallback) throw err;
+    logger.warn({ err: err.message, model: params.model }, 'Strict JSON schema unsupported; retrying as json_object');
+    return Promise.race([
+      openai.chat.completions.create({
+        ...params,
+        response_format: { type: 'json_object' },
+      }),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('OpenAI request timed out')), waitMs);
+      }),
+    ]);
+  }
 }
 
 /**

@@ -33,8 +33,11 @@ import {
 } from '../../shared/prompts/index.js';
 import {
   documentVerificationResponseSchema,
+  documentVerificationStructuredSchema,
   eligibilityVerificationResponseSchema,
+  eligibilityVerificationStructuredSchema,
   intakeVerificationResponseSchema,
+  intakeVerificationStructuredSchema,
 } from '../../shared/schemas/verification.schemas.js';
 import { AiDecision, AI_DECISION_HANDLER, AI_DECISION_ACTION } from './aiDecision.model.js';
 import { AI_VERIFICATION_MODEL, AI_VERIFY_THRESHOLDS, SAMPLE_DOCUMENT_TESTING_THRESHOLDS, isAiVerificationEnabled } from './ai-verification.config.js';
@@ -222,6 +225,8 @@ async function evaluateDocumentStep({
     user,
     images,
     schema: documentVerificationResponseSchema,
+    structuredSchema: documentVerificationStructuredSchema,
+    schemaName: 'document_verification',
   });
 
   logger.info(
@@ -377,6 +382,8 @@ async function evaluateEligibilityStep({
     user,
     images,
     schema: eligibilityVerificationResponseSchema,
+    structuredSchema: eligibilityVerificationStructuredSchema,
+    schemaName: 'eligibility_extraction',
   });
 
   const extractedFields = mergeExtractedFields(raw.perDocument ?? [], raw.extractedFields ?? []);
@@ -575,6 +582,8 @@ export async function runIntakeAiPrescreen({ instituteId, applicationId }) {
       user,
       images,
       schema: intakeVerificationResponseSchema,
+      structuredSchema: intakeVerificationStructuredSchema,
+      schemaName: 'intake_verification',
     });
 
     await persistDecision({
@@ -680,11 +689,19 @@ async function emitAiVerificationUpdate(instituteId, application) {
   }
 }
 
-async function callModel({ system, user, images, schema }) {
+async function callModel({ system, user, images, schema, structuredSchema, schemaName }) {
+  const payload = {
+    system,
+    user,
+    schema,
+    structuredSchema,
+    schemaName,
+    model: AI_VERIFICATION_MODEL,
+  };
   if (images?.length) {
-    return chatVisionJson({ system, user, images, schema, model: AI_VERIFICATION_MODEL });
+    return chatVisionJson({ ...payload, images });
   }
-  return chatJson({ system, user, schema, timeoutMs: undefined, model: AI_VERIFICATION_MODEL });
+  return chatJson({ ...payload, timeoutMs: undefined });
 }
 
 async function gatherApplicationDocuments(application) {

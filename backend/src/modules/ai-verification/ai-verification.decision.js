@@ -297,7 +297,27 @@ export function buildProfileFromExtractedFields(fields = []) {
 
 function sourceDocuments(decision = {}) {
   const primary = asArray(decision.perDocument);
-  return primary.length ? primary : asArray(decision.raw?.perDocument);
+  const fromRaw = asArray(decision.raw?.perDocument);
+  if (!primary.length) return fromRaw;
+  if (!fromRaw.length) return primary;
+
+  const rawByName = new Map(
+    fromRaw.map((doc) => [findingNameKey(doc.requirementName), doc]),
+  );
+  return primary.map((doc) => {
+    const rawDoc = rawByName.get(findingNameKey(doc.requirementName));
+    if (!rawDoc) return doc;
+    return {
+      ...doc,
+      aggregate: doc.aggregate ?? rawDoc.aggregate,
+      examScore: doc.examScore ?? rawDoc.examScore,
+      qualification: doc.qualification || rawDoc.qualification,
+      observedContent: doc.observedContent || rawDoc.observedContent,
+      documentExcerpt: doc.documentExcerpt || rawDoc.documentExcerpt,
+      subjects: preferScoredSubjects(doc.subjects, rawDoc.subjects),
+      extractedFields: [...asArray(doc.extractedFields), ...asArray(rawDoc.extractedFields)],
+    };
+  });
 }
 
 function collectDecisionFields(decision = {}) {
@@ -405,7 +425,13 @@ function fillDocumentExtraction(doc, decision, fields) {
     .flatMap((field) => [field.value, field.documentExcerpt])
     .filter((value) => value != null && value !== '')
     .join('; ');
-  let subjects = ownSubjects.length ? ownSubjects : uniqueSubjects(parseSubjectEntries(localSubjectField));
+  const quotedScores = parseSubjectEntries(
+    [doc.observedContent, doc.documentExcerpt, doc.issue, localEvidence].filter(Boolean).join('; '),
+  ).filter((subject) => subject.score != null);
+  let subjects = preferScoredSubjects(
+    ownSubjects,
+    uniqueSubjects([...parseSubjectEntries(localSubjectField), ...quotedScores]),
+  );
   if (!subjects.length && !isBitsatDocumentName(doc.requirementName)) {
     subjects = uniqueSubjects(
       subjectsForDocument(allSubjectEntries(decision, fields), doc.requirementName),

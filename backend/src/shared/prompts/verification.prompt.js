@@ -15,9 +15,10 @@ const SHARED_VERIFICATION_RULES = `GENERAL RULES:
 - Never fabricate values, names, marks, or statements not present in the material.
 - If a document is missing, illegible, ambiguous, or you are not confident, use verdict "uncertain" and explain why.
 - "confidence" (0-1) must reflect how certain you are: use >=0.85 only when the evidence is clear and unambiguous.
-- Quote short verbatim evidence in documentExcerpt (<=300 chars) whenever you make a claim about a document.
+- Quote short verbatim evidence in documentExcerpt whenever you make a claim about a document.
 - Write reviewer-facing text in plain language. Name the requirement, say what was uploaded, and say why it does or does not meet the requirement.
-- Respond with a single JSON object only. No markdown, no commentary outside the JSON.`;
+- The API enforces a strict JSON schema. Fill every required field. Use null for unknown numbers, "" for unused text, and [] for empty lists.
+- subjects[].score must be a number when marks are visible. Do not put scores only in prose.`;
 
 const IDENTITY_MATCHING_RULES = `IDENTITY MATCHING (required on every government ID, certificate, marksheet, or named document):
 - The APPLICANT RECORD is the student you are verifying. Use their full name, age, date of birth, email, mobile, and every other listed field.
@@ -119,7 +120,7 @@ ${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
-Reply with JSON:
+Reply using the enforced JSON schema. For every academic marksheet, perDocument[].subjects MUST list each printed subject with a numeric score. Example shape:
 {
   "verdict": "pass" | "fail" | "uncertain",
   "confidence": 0.0-1.0,
@@ -198,7 +199,7 @@ ${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
-Reply with JSON:
+Reply using the enforced JSON schema. For every academic marksheet, perDocument[].subjects MUST list each printed subject with a numeric score. Example shape:
 {
   "verdict": "pass" | "fail" | "uncertain",
   "confidence": 0.0-1.0,
@@ -239,7 +240,7 @@ ${identityRules(allowSampleDocuments)}
 
 ${SHARED_VERIFICATION_RULES}
 
-Reply with JSON:
+Reply using the enforced JSON schema. Example shape:
 {
   "verdict": "pass" | "fail" | "uncertain",
   "confidence": 0.0-1.0,

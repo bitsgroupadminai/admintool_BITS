@@ -17,8 +17,10 @@ import {
 import { evaluateEligibilityRules, uniqueSubjects, preferScoredSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
   documentVerificationResponseSchema,
+  documentVerificationStructuredSchema,
   eligibilityVerificationResponseSchema,
 } from '../src/shared/schemas/verification.schemas.js';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import {
   buildDocumentVerificationUserPrompt,
   formatApplicantRecord,
@@ -183,6 +185,16 @@ test('canUserActOnWorkflowStep: nobody acts on student step via helper', () => {
   );
 });
 
+test('document verification uses a strict OpenAI JSON schema that requires subject scores', () => {
+  const format = zodResponseFormat(documentVerificationStructuredSchema, 'document_verification');
+  assert.equal(format.type, 'json_schema');
+  assert.equal(format.json_schema.strict, true);
+  const schemaJson = JSON.stringify(format.json_schema.schema);
+  assert.match(schemaJson, /"subjects"/);
+  assert.match(schemaJson, /"score"/);
+  assert.match(schemaJson, /"requirementName"/);
+});
+
 test('documentVerificationResponseSchema: valid payload parses and applies defaults', () => {
   const parsed = documentVerificationResponseSchema.parse({
     verdict: 'pass',
@@ -211,8 +223,30 @@ test('documentVerificationResponseSchema: keeps scores when the model writes lon
     ],
   });
   assert.equal(parsed.summary.length, 2500);
-  assert.equal(parsed.perDocument[0].observedContent.length, 400);
+  assert.equal(parsed.perDocument[0].observedContent.length, 800);
   assert.equal(parsed.perDocument[0].subjects.length, 3);
+  assert.equal(parsed.perDocument[0].subjects[0].score, 84);
+});
+
+test('documentVerificationResponseSchema: accepts messy model JSON instead of dropping the extraction', () => {
+  const parsed = documentVerificationResponseSchema.parse({
+    verdict: 'eligible',
+    confidence: 92,
+    summary: 'Read the marksheet.',
+    perDocument: [
+      {
+        requirementName: 'Class 12 marksheet',
+        present: 'true',
+        matchesRequirement: 'true',
+        subjects: [{ subject: 'Physics', marks: 84, grade: 'A2' }],
+      },
+    ],
+  });
+  assert.equal(parsed.verdict, 'pass');
+  assert.equal(parsed.confidence, 0.92);
+  assert.equal(parsed.perDocument[0].verdict, 'uncertain');
+  assert.equal(parsed.perDocument[0].present, true);
+  assert.equal(parsed.perDocument[0].subjects[0].name, 'Physics');
   assert.equal(parsed.perDocument[0].subjects[0].score, 84);
 });
 
@@ -888,4 +922,70 @@ test('hydrateDocumentVerificationDecision uses eligible/ineligible verdicts', ()
   assert.equal(class12.eligibilityVerdict, 'eligible');
   assert.equal(photo.verdict, 'eligible');
   assert.equal(hydrated.verdict, 'eligible');
+});
+
+test('hydrateDocumentVerificationDecision recovers scores quoted in observedContent', () => {
+  const hydrated = hydrateDocumentVerificationDecision(
+    {
+      handler: 'document_verification',
+      verdict: 'pass',
+      perDocument: [
+        {
+          requirementName: 'Class 12 marksheet',
+          present: true,
+          matchesRequirement: true,
+          verdict: 'pass',
+          observedContent: 'Physics 84, Chemistry 82, Mathematics 90, English Core 88',
+          subjects: [],
+        },
+      ],
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [{ requirementName: 'Class 12 marksheet' }],
+      documentRequirements: [
+        {
+          name: 'Class 12 marksheet',
+          eligibility: {
+            enabled: true,
+            aggregateMin: 75,
+            subjectThreshold: 60,
+            requiredSubjects: [{ name: 'Physics' }, { name: 'Chemistry' }, { name: 'Mathematics' }],
+          },
+        },
+      ],
+    },
+  );
+  const class12 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  assert.equal(class12.subjects.length, 4);
+  assert.equal(class12.subjects.find((item) => item.name === 'Physics').score, 84);
+});
+
+test('hydrateDocumentVerificationDecision keeps scores from raw when stored rows are empty', () => {
+  const hydrated = hydrateDocumentVerificationDecision(
+    {
+      handler: 'document_verification',
+      verdict: 'pass',
+      perDocument: [{ requirementName: 'Class 12 marksheet', subjects: [] }],
+      raw: {
+        perDocument: [
+          {
+            requirementName: 'Class 12 marksheet',
+            subjects: [
+              { name: 'Physics', score: 84 },
+              { name: 'Chemistry', score: 82 },
+              { name: 'Mathematics', score: 90 },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [{ requirementName: 'Class 12 marksheet' }],
+    },
+  );
+  const class12 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  assert.equal(class12.subjects.length, 3);
+  assert.equal(class12.subjects[0].score, 84);
 });

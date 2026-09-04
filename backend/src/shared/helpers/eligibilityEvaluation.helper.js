@@ -381,12 +381,9 @@ function buildScoreChecks(rule, profile) {
       : parseNumericValue(rule.value);
   if (!profile.subjects?.length) return [];
 
-  const needed = parseList(profile.requiredSubjects);
-  const candidates = needed.length
-    ? profile.subjects.filter((subject) => needed.some((item) => listIncludesSubject(subject.name, item)))
-    : profile.subjects;
-
-  return candidates
+  // Required subjects are a presence check elsewhere. The threshold applies to every
+  // scored subject on the document, including ones that are not mandatory.
+  return profile.subjects
     .map((subject) => {
       const score = parseNumericValue(subject.score);
       if (score == null) return null;

@@ -151,7 +151,7 @@ export function describeDocumentEligibility(eligibility) {
   for (const rule of rules) {
     if (rule.field === 'Subjects') notes.push(`Required subjects: ${rule.value}`);
     else if (rule.field === 'Aggregate Requirement') notes.push(`Minimum overall score: ${rule.value}`);
-    else if (rule.field === 'Subject Threshold') notes.push(`Minimum score in each required subject: ${rule.value}`);
+    else if (rule.field === 'Subject Threshold') notes.push(`Minimum score in each subject: ${rule.value}`);
   }
   for (const subject of normalized.requiredSubjects) {
     if (subject.minScore != null) {

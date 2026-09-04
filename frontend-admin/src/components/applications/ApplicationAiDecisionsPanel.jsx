@@ -115,7 +115,7 @@ function overallEligibilityMeta(decision) {
   };
 }
 
-function uniqueSubjectRows(subjects = [], scoreChecks = []) {
+function uniqueSubjectRows(subjects = [], scoreChecks = [], defaultRequired = null) {
   const checksByName = new Map(
     scoreChecks.map((item) => [String(item.name ?? '').trim().toLowerCase(), item]),
   );
@@ -131,12 +131,18 @@ function uniqueSubjectRows(subjects = [], scoreChecks = []) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
     const check = checksByName.get(key);
+    const score = subject.score ?? check?.score;
+    const required = check?.required ?? defaultRequired;
+    let status = check?.status;
+    if (!status && score != null && required != null) {
+      status = Number(score) >= Number(required) ? 'passed' : 'failed';
+    }
     rows.push({
       name: subject.name,
-      score: subject.score ?? check?.score,
+      score,
       grade: subject.grade ?? check?.grade,
-      required: check?.required,
-      status: check?.status,
+      required,
+      status,
     });
   }
   return rows;
@@ -155,8 +161,8 @@ function documentLevelFacts(doc) {
   };
 }
 
-function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
-  const rows = uniqueSubjectRows(subjects, scoreChecks);
+function SubjectScoreTable({ subjects = [], scoreChecks = [], defaultRequired = null }) {
+  const rows = uniqueSubjectRows(subjects, scoreChecks, defaultRequired);
   if (!rows.length) {
     return (
       <p className="text-xs text-[#92400E]">No subject scores were extracted from this document.</p>
@@ -176,11 +182,7 @@ function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
         </thead>
         <tbody>
           {rows.map((row) => {
-            const status = row.status ? criterionStatusMeta(row.status) : criterionStatusMeta('unchecked');
-            const resultLabel =
-              row.score == null && !row.status
-                ? 'Could not confirm'
-                : status.label;
+            const status = criterionStatusMeta(row.status);
             return (
               <tr key={row.name} className="border-t border-[#E2EEE8]">
                 <td className="px-3 py-2 font-medium text-[#052E1C]">{row.name}</td>
@@ -191,7 +193,7 @@ function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
                 <td className="px-3 py-2 text-[#334155]">{formatValue(row.grade)}</td>
                 <td className="px-3 py-2">
                   <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
-                    {resultLabel}
+                    {status.label}
                   </span>
                 </td>
               </tr>
@@ -241,9 +243,10 @@ function EligibilityScreeningView({ decision }) {
       {documents.map((doc, index) => {
         const verdict = documentVerdictMeta(doc);
         const facts = documentLevelFacts(doc);
-        const checks = (doc.eligibilityResult?.results ?? []).flatMap(
-          (result) => result.scoreChecks ?? [],
-        );
+        const results = doc.eligibilityResult?.results ?? [];
+        const checks = results.flatMap((result) => result.scoreChecks ?? []);
+        const thresholdResult = results.find((result) => /threshold/i.test(result.field ?? ''));
+        const defaultRequired = thresholdResult?.expected ?? thresholdResult?.value ?? null;
         return (
           <div
             key={`${doc.requirementName}-detail-${index}`}
@@ -269,7 +272,11 @@ function EligibilityScreeningView({ decision }) {
               </span>
             </div>
             <div className="mt-3">
-              <SubjectScoreTable subjects={doc.subjects ?? []} scoreChecks={checks} />
+              <SubjectScoreTable
+                subjects={doc.subjects ?? []}
+                scoreChecks={checks}
+                defaultRequired={defaultRequired}
+              />
             </div>
           </div>
         );

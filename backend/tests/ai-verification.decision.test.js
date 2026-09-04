@@ -362,10 +362,97 @@ test('evaluateEligibilityRules: qualification and PCM match from structured fiel
   assert.equal(evaluation.eligible, true);
   assert.equal(evaluation.results.find((result) => result.field === 'Subjects').status, 'passed');
   assert.equal(evaluation.results.find((result) => result.field === 'Subject Threshold').status, 'passed');
-  assert.equal(
-    evaluation.results.find((result) => result.field === 'Subject Threshold').scoreChecks.length,
-    3,
+  const scoreChecks = evaluation.results.find((result) => result.field === 'Subject Threshold').scoreChecks;
+  assert.equal(scoreChecks.length, 4);
+  const english = scoreChecks.find((item) => item.name === 'English');
+  assert.equal(english.required, 60);
+  assert.equal(english.status, 'passed');
+});
+
+test('subject threshold applies to every extracted subject, not only required ones', () => {
+  const evaluation = evaluateEligibilityRules(bitsRules, {
+    qualification: 'Class XII / Senior Secondary',
+    aggregate: 86.8,
+    subjects: [
+      { name: 'Physics', score: 84 },
+      { name: 'Chemistry', score: 82 },
+      { name: 'Mathematics', score: 90 },
+      { name: 'English Core', score: 88 },
+      { name: 'Computer Science', score: 86 },
+      { name: 'Physical Education', score: 91 },
+    ],
+  });
+  const scoreChecks = evaluation.results.find((result) => result.field === 'Subject Threshold').scoreChecks;
+  assert.equal(evaluation.eligible, true);
+  assert.equal(scoreChecks.length, 6);
+  for (const check of scoreChecks) {
+    assert.equal(check.required, 60);
+    assert.equal(check.status, 'passed');
+  }
+});
+
+test('a non-mandatory subject below the threshold fails eligibility', () => {
+  const evaluation = evaluateEligibilityRules(bitsRules, {
+    qualification: 'Class XII / Senior Secondary',
+    aggregate: 81,
+    subjects: [
+      { name: 'Physics', score: 78 },
+      { name: 'Chemistry', score: 72 },
+      { name: 'Mathematics', score: 88 },
+      { name: 'English Core', score: 55 },
+    ],
+  });
+  assert.equal(evaluation.eligible, false);
+  const english = evaluation.results
+    .find((result) => result.field === 'Subject Threshold')
+    .scoreChecks.find((item) => item.name === 'English Core');
+  assert.equal(english.required, 60);
+  assert.equal(english.status, 'failed');
+});
+
+test('evaluateEligibilityByDocument: Class 12 threshold includes non-mandatory subjects', () => {
+  const docs = evaluateEligibilityByDocument(
+    [
+      {
+        requirementName: 'Class 12 marksheet',
+        qualification: 'Class XII',
+        aggregate: 86.8,
+        subjects: [
+          { name: 'Physics', score: 84 },
+          { name: 'Chemistry', score: 82 },
+          { name: 'Mathematics', score: 90 },
+          { name: 'English Core', score: 88 },
+          { name: 'Computer Science', score: 86 },
+          { name: 'Physical Education', score: 91 },
+        ],
+      },
+    ],
+    [],
+    [
+      {
+        name: 'Class 12 marksheet',
+        eligibility: {
+          enabled: true,
+          aggregateMin: 75,
+          subjectThreshold: 60,
+          requiredSubjects: [{ name: 'Physics' }, { name: 'Chemistry' }, { name: 'Mathematics' }],
+        },
+      },
+    ],
   );
+  const scoreChecks = docs[0].eligibilityResult.results.find(
+    (result) => result.field === 'Subject Threshold',
+  ).scoreChecks;
+  assert.equal(docs[0].eligibilityResult.eligible, true);
+  assert.equal(scoreChecks.length, 6);
+  const extras = scoreChecks.filter((item) =>
+    /english|computer|physical/i.test(item.name),
+  );
+  assert.equal(extras.length, 3);
+  for (const check of extras) {
+    assert.equal(check.required, 60);
+    assert.equal(check.status, 'passed');
+  }
 });
 
 test('evaluateEligibilityByDocument: Class 10 skips 10+2 qualification; photos are ignored', () => {

@@ -77,11 +77,7 @@ function notesFromDocumentEligibility(eligibility) {
   }
   if (subjects.length) notes.push(`Required subjects: ${subjects.join(', ')}`);
   if (eligibility.subjectThreshold != null && eligibility.subjectThreshold !== '') {
-    notes.push(
-      subjects.length
-        ? `Minimum score in each required subject: at least ${eligibility.subjectThreshold}`
-        : `Minimum score in each subject: at least ${eligibility.subjectThreshold}`,
-    );
+    notes.push(`Minimum score in each subject: at least ${eligibility.subjectThreshold}`);
   }
   for (const subject of eligibility.requiredSubjects ?? []) {
     if (subject?.name && subject.minScore != null && subject.minScore !== '') {

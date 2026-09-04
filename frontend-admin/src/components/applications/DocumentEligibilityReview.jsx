@@ -64,7 +64,7 @@ function formatValue(value) {
   return String(value);
 }
 
-function uniqueSubjectRows(subjects = [], scoreChecks = []) {
+function uniqueSubjectRows(subjects = [], scoreChecks = [], defaultRequired = null) {
   const checksByName = new Map(
     scoreChecks.map((item) => [String(item.name ?? '').trim().toLowerCase(), item]),
   );
@@ -80,19 +80,25 @@ function uniqueSubjectRows(subjects = [], scoreChecks = []) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
     const check = checksByName.get(key);
+    const score = subject.score ?? check?.score;
+    const required = check?.required ?? defaultRequired;
+    let status = check?.status;
+    if (!status && score != null && required != null) {
+      status = Number(score) >= Number(required) ? 'passed' : 'failed';
+    }
     rows.push({
       name: subject.name,
-      score: subject.score ?? check?.score,
+      score,
       grade: subject.grade ?? check?.grade,
-      required: check?.required,
-      status: check?.status,
+      required,
+      status,
     });
   }
   return rows;
 }
 
-function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
-  const rows = uniqueSubjectRows(subjects, scoreChecks);
+function SubjectScoreTable({ subjects = [], scoreChecks = [], defaultRequired = null }) {
+  const rows = uniqueSubjectRows(subjects, scoreChecks, defaultRequired);
   if (!rows.length) {
     return (
       <p className="text-xs text-[#92400E]">No subject scores were extracted from this document.</p>
@@ -123,7 +129,7 @@ function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
                 <td className="px-3 py-2 text-[#334155]">{formatValue(row.grade)}</td>
                 <td className="px-3 py-2">
                   <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
-                    {row.score == null && !row.status ? 'Could not confirm' : status.label}
+                    {status.label}
                   </span>
                 </td>
               </tr>
@@ -145,6 +151,14 @@ export function DocumentEligibilityDetails({ requirement, finding, eligibilityRu
   const results = finding?.eligibilityResult?.results ?? [];
   const applicableResults = results.filter((result) => result.status !== 'not_applicable');
   const scoreChecks = results.flatMap((result) => result.scoreChecks ?? []);
+  const thresholdRule =
+    applicableResults.find((result) => /threshold/i.test(result.field ?? '')) ||
+    configuredRules.find((rule) => /threshold/i.test(rule.field ?? ''));
+  const defaultRequired =
+    thresholdRule?.expected ??
+    thresholdRule?.value ??
+    requirement?.eligibility?.subjectThreshold ??
+    null;
   const facts = [
     finding?.qualification || null,
     finding?.aggregate != null ? `Aggregate ${finding.aggregate}` : null,
@@ -198,7 +212,11 @@ export function DocumentEligibilityDetails({ requirement, finding, eligibilityRu
       {facts.length ? <p className="text-xs text-[#4B6358]">{facts.join(' · ')}</p> : null}
 
       {usesEligibility ? (
-        <SubjectScoreTable subjects={finding?.subjects ?? []} scoreChecks={scoreChecks} />
+        <SubjectScoreTable
+          subjects={finding?.subjects ?? []}
+          scoreChecks={scoreChecks}
+          defaultRequired={defaultRequired}
+        />
       ) : null}
     </div>
   );

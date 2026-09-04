@@ -13,7 +13,6 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
   };
   const academic = isAcademicDocumentName(document.name);
   const subjects = eligibility.requiredSubjects ?? [];
-  const hasRequiredSubjects = subjects.some((subject) => String(subject?.name ?? '').trim());
 
   const patch = (nextEligibility) => {
     onChange(index, { ...document, eligibility: { ...eligibility, ...nextEligibility } });
@@ -110,11 +109,7 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>
-              {hasRequiredSubjects
-                ? 'Minimum score in each required subject'
-                : 'Minimum score in each subject on this file'}
-            </Label>
+            <Label>Minimum score in each subject on this file</Label>
             <Input
               type="number"
               min={0}
@@ -123,9 +118,8 @@ export function DocumentEligibilityCard({ document, index, onChange }) {
               onChange={(event) => patch({ subjectThreshold: event.target.value })}
             />
             <p className="text-[11px] text-muted">
-              {hasRequiredSubjects
-                ? 'Applies to every required subject unless that subject has its own minimum above.'
-                : 'Optional. Used when this file has subject scores but no required-subject list.'}
+              Applies to every subject on the marksheet, including subjects that are not required.
+              A required subject can still have its own higher minimum above.
             </p>
           </div>
         </div>

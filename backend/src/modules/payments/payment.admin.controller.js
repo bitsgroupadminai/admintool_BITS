@@ -32,3 +32,15 @@ export async function getById(req, res, next) {
     next(error);
   }
 }
+
+export async function remove(req, res, next) {
+  try {
+    const result = await paymentAdminService.deleteAdminPayment(
+      req.user.instituteId,
+      req.params.id,
+    );
+    sendSuccess(res, 200, 'Payment deleted', result);
+  } catch (error) {
+    next(error);
+  }
+}

@@ -19,5 +19,6 @@ adminRouter.use(
 adminRouter.get('/overview', paymentAdminController.getOverview);
 adminRouter.get('/', paymentAdminController.list);
 adminRouter.get('/:id', paymentAdminController.getById);
+adminRouter.delete('/:id', paymentAdminController.remove);
 
 export default adminRouter;

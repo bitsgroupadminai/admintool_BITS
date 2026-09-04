@@ -6,6 +6,8 @@ import { Application } from '../applications/application.model.js';
 import { AppError } from '../../core/utils/AppError.js';
 import { PAYMENT_STATUS, PAYMENT_PURPOSE } from '../../shared/enums/payment.enums.js';
 import { formatPaymentConfig } from './payment.service.js';
+import { flushInstituteReadCache } from '../../shared/helpers/cacheInvalidation.helper.js';
+import { emitDashboardUpdated } from '../../shared/helpers/realtime.helper.js';
 
 function formatAmountFromPaise(amountPaise, currency = 'INR') {
   const amount = amountPaise / 100;
@@ -187,6 +189,25 @@ export async function getAdminPaymentDetail(instituteId, paymentId) {
         : null,
     },
   };
+}
+
+/**
+ * Permanently remove a payment record from this institute.
+ * Does not refund or delete the charge in Razorpay.
+ * @param {string} instituteId
+ * @param {string} paymentId
+ */
+export async function deleteAdminPayment(instituteId, paymentId) {
+  const payment = await Payment.findOne({ _id: paymentId, instituteId });
+  if (!payment) {
+    throw new AppError('Payment not found', 404);
+  }
+
+  await Payment.deleteOne({ _id: payment._id, instituteId });
+  await flushInstituteReadCache(instituteId);
+  emitDashboardUpdated(instituteId);
+
+  return { id: payment._id.toString() };
 }
 
 /**

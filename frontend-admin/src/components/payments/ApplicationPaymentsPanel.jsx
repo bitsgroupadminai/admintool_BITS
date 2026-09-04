@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { paymentsApi } from '@/api/payments.api';
 
 const PAYMENT_STATUS_BADGE = {
@@ -18,8 +20,10 @@ function formatDateTime(value) {
 export function ApplicationPaymentsPanel({ applicationId }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const confirm = useConfirm();
 
-  useEffect(() => {
+  const loadPayments = () => {
     if (!applicationId) return;
     setLoading(true);
     paymentsApi
@@ -27,7 +31,33 @@ export function ApplicationPaymentsPanel({ applicationId }) {
       .then(({ data }) => setPayments(data.data.payments ?? []))
       .catch(() => setPayments([]))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadPayments();
   }, [applicationId]);
+
+  const handleDelete = async (payment) => {
+    const ok = await confirm({
+      title: `Delete ${payment.label || 'this payment'}?`,
+      description:
+        'This permanently removes the payment record from CampusFlow. The student can pay again. This does not refund the charge in Razorpay.',
+      confirmLabel: 'Delete payment',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setDeletingId(payment.id);
+    try {
+      await paymentsApi.remove(payment.id);
+      toast.success('Payment deleted');
+      setPayments((current) => current.filter((item) => item.id !== payment.id));
+    } catch (err) {
+      toast.error(err.message || 'Could not delete payment');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -67,6 +97,15 @@ export function ApplicationPaymentsPanel({ applicationId }) {
                 {payment.statusLabel}
               </Badge>
               <span className="font-bold text-[#052E1C]">{payment.amountDisplay}</span>
+              <button
+                type="button"
+                onClick={() => handleDelete(payment)}
+                disabled={deletingId === payment.id}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                title="Delete payment"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         ))}

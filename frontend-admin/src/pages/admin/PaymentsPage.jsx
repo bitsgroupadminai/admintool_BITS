@@ -6,12 +6,14 @@ import {
   IndianRupee,
   Layers,
   Receipt,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { AdminListBuilder } from '@/components/ui/AdminListBuilder';
 import { Badge } from '@/components/ui/badge';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { paymentsApi } from '@/api/payments.api';
 import { servicesApi } from '@/api/services.api';
 
@@ -58,6 +60,8 @@ export function PaymentsPage() {
   const [selectedPaymentId, setSelectedPaymentId] = useState(null);
   const [paymentDetail, setPaymentDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const confirm = useConfirm();
 
   const query = useMemo(() => {
     const page = Number.parseInt(searchParams.get('page') || '1', 10);
@@ -161,6 +165,29 @@ export function PaymentsPage() {
     setPaymentDetail(null);
   };
 
+  const handleDeletePayment = async (payment) => {
+    const ok = await confirm({
+      title: `Delete ${payment.label || 'this payment'}?`,
+      description:
+        'This permanently removes the payment record from CampusFlow. The student can pay again. This does not refund the charge in Razorpay.',
+      confirmLabel: 'Delete payment',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setDeletingId(payment.id);
+    try {
+      await paymentsApi.remove(payment.id);
+      toast.success('Payment deleted');
+      if (selectedPaymentId === payment.id) closePaymentDetail();
+      await Promise.all([loadPayments(), loadOverview()]);
+    } catch (err) {
+      toast.error(err.message || 'Could not delete payment');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const summary = overview?.summary;
 
   const columns = [
@@ -201,14 +228,25 @@ export function PaymentsPage() {
       label: '',
       cellClassName: 'text-right',
       render: (row) => (
-        <button
-          type="button"
-          onClick={() => openPaymentDetail(row.id)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
-        >
-          <Eye className="h-4 w-4" />
-          Details
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => openPaymentDetail(row.id)}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0A6640] hover:text-[#084F31]"
+          >
+            <Eye className="h-4 w-4" />
+            Details
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeletePayment(row)}
+            disabled={deletingId === row.id}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+            title="Delete payment"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];
@@ -358,6 +396,8 @@ export function PaymentsPage() {
         <PaymentDetailModal
           loading={detailLoading}
           payment={paymentDetail}
+          deleting={deletingId === paymentDetail?.id}
+          onDelete={() => paymentDetail && handleDeletePayment(paymentDetail)}
           onClose={closePaymentDetail}
         />
       ) : null}
@@ -381,7 +421,7 @@ function SummaryCard({ icon: Icon, label, value, loading }) {
   );
 }
 
-function PaymentDetailModal({ payment, loading, onClose }) {
+function PaymentDetailModal({ payment, loading, deleting, onDelete, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#052E1C]/40 p-4 sm:items-center">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#E2EEE8] bg-white shadow-xl">
@@ -454,6 +494,15 @@ function PaymentDetailModal({ payment, loading, onClose }) {
                   Open service
                 </Link>
               ) : null}
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={deleting}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#FECACA] bg-white px-4 text-sm font-semibold text-[#B91C1C] hover:bg-[#FEF2F2] disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Deleting...' : 'Delete payment'}
+              </button>
             </div>
           </div>
         )}

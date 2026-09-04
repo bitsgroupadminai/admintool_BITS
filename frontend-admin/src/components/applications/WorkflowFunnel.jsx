@@ -176,7 +176,12 @@ export function WorkflowFunnel({
         {steps.map((step, index) => {
           const isCurrent = step.state === 'current';
           const isComplete = step.state === 'complete';
-          const canSendBack = Boolean(onRollbackToStep) && isComplete;
+          const hasCurrent = steps.some((item) => item.state === 'current');
+          const maxOrder = Math.max(...steps.map((item) => Number(item.order) || 0), 0);
+          const canSendBack =
+            Boolean(onRollbackToStep) &&
+            isComplete &&
+            (hasCurrent || Number(step.order) < maxOrder);
           const canSendBackCurrent = Boolean(onSendBackCurrent) && isCurrent;
           const guidance = isCurrent
             ? currentStepAction?.guidance

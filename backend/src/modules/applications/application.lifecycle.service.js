@@ -334,6 +334,11 @@ const ROLLBACK_ALLOWED_STATUSES = new Set([
   APPLICATION_STATUS.PENDING_AI_REVIEW,
 ]);
 
+function canRollbackApplication(application, actor) {
+  if (ROLLBACK_ALLOWED_STATUSES.has(application.status)) return true;
+  return actor.role === ROLES.ADMIN && application.status === APPLICATION_STATUS.ADMITTED;
+}
+
 /**
  * Roll a student's application back to an earlier workflow step.
  * The student is notified by email and sees the reason on their dashboard.
@@ -357,12 +362,18 @@ export async function rollbackToStep(
 ) {
   const application = await getApplicationForActor(instituteId, applicationId, actor);
 
-  if (!ROLLBACK_ALLOWED_STATUSES.has(application.status)) {
+  if (!canRollbackApplication(application, actor)) {
     throw new AppError('This request cannot be rolled back in its current state', 400);
   }
 
   const steps = getWorkflowSteps(application);
-  const currentStep = getCurrentWorkflowStep(application);
+  let currentStep = getCurrentWorkflowStep(application);
+  if (application.status === APPLICATION_STATUS.ADMITTED && steps.length) {
+    const lastStep = steps[steps.length - 1];
+    if (!currentStep || currentStep.order < lastStep.order) {
+      currentStep = lastStep;
+    }
+  }
   const targetStep = steps.find((step) => step.stepId === targetStepId);
 
   if (!targetStep) {

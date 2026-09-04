@@ -288,8 +288,13 @@ export function ApplicationReviewContent({
   const showManualReview =
     Boolean(onDocumentReview) &&
     (!usesAiVerification || pendingAi || workflowActions.length > 0);
+  const lastStep = steps.length
+    ? [...steps].sort((a, b) => Number(a.order) - Number(b.order)).at(-1)
+    : null;
   const currentStep =
-    steps.find((step) => step.state === 'current') ?? workflow?.currentStep ?? null;
+    steps.find((step) => step.state === 'current') ??
+    workflow?.currentStep ??
+    (application?.status === 'admitted' ? lastStep : null);
   const currentStepIndex = steps.findIndex((step) => step.stepId === currentStep?.stepId);
   const nextStep = currentStepIndex >= 0 ? steps[currentStepIndex + 1] : null;
   const approveAction = workflowActions.find((action) => action.outcome === 'approved');
@@ -297,6 +302,7 @@ export function ApplicationReviewContent({
   const correctionAction = workflowActions.find((action) => action.outcome === 'needs_correction');
   const earlierSteps = steps
     .filter((step) => {
+      if (step.stepId === currentStep?.stepId) return false;
       if (step.state === 'complete') return true;
       const currentOrder = Number(currentStep?.order);
       const stepOrder = Number(step.order);
@@ -310,7 +316,8 @@ export function ApplicationReviewContent({
   const canRollback =
     showRollbackUi &&
     earlierSteps.length > 0 &&
-    ROLLBACK_STATUSES.includes(application.status);
+    (ROLLBACK_STATUSES.includes(application.status) ||
+      (lifecycleRole === 'admin' && application.status === 'admitted'));
 
   const canEscalate =
     Boolean(lifecycleRole && onLifecycleUpdated) &&
@@ -628,6 +635,9 @@ export function ApplicationReviewContent({
             ? ` · SLA due ${new Date(application.currentStepDueAt).toLocaleString()}`
             : ''}
           {application.slaBreached || application.slaOverdue ? ' · overdue' : ''}
+          {canRollback && application.status === 'admitted'
+            ? ' · Send back here on an earlier step to reopen this delivered request'
+            : ''}
         </p>
         {onSlaAction ? (
           <SlaBreachActions

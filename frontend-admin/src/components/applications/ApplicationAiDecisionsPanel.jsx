@@ -32,18 +32,6 @@ function formatValue(value) {
   return String(value);
 }
 
-function formatRequirement(result) {
-  if (result?.requirement) return result.requirement;
-  const expected = formatValue(result?.expected);
-  const operator = result?.operator;
-  if (operator === 'gte') return `at least ${expected}`;
-  if (operator === 'lte') return `at most ${expected}`;
-  if (operator === 'gt') return `more than ${expected}`;
-  if (operator === 'lt') return `less than ${expected}`;
-  if (operator === 'neq') return `other than ${expected}`;
-  return expected;
-}
-
 function criterionStatusMeta(status) {
   if (status === 'failed') {
     return {
@@ -127,100 +115,84 @@ function overallEligibilityMeta(decision) {
   };
 }
 
-function EligibilityCriteriaTable({ results = [] }) {
-  const rows = results.filter((result) => result.status !== 'not_applicable');
-  if (!rows.length) return null;
+function uniqueSubjectRows(subjects = [], scoreChecks = []) {
+  const checksByName = new Map(
+    scoreChecks.map((item) => [String(item.name ?? '').trim().toLowerCase(), item]),
+  );
+  const seen = new Set();
+  const source = subjects.length
+    ? subjects
+    : scoreChecks.map((item) => ({ name: item.name, score: item.score, grade: item.grade }));
+  const rows = [];
+  for (const subject of source) {
+    const key = String(subject.name ?? '')
+      .trim()
+      .toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const check = checksByName.get(key);
+    rows.push({
+      name: subject.name,
+      score: subject.score ?? check?.score,
+      grade: subject.grade ?? check?.grade,
+      required: check?.required,
+      status: check?.status,
+    });
+  }
+  return rows;
+}
+
+function documentLevelFacts(doc) {
+  const results = doc.eligibilityResult?.results ?? [];
+  const byField = (name) =>
+    results.find((result) => String(result.field ?? '').toLowerCase().includes(name));
+  return {
+    qualification: doc.qualification || byField('qualification')?.actual || '',
+    aggregate: doc.aggregate ?? byField('aggregate')?.actual ?? null,
+    examScore: doc.examScore ?? byField('bitsat')?.actual ?? byField('exam')?.actual ?? null,
+    qualificationStatus: byField('qualification')?.status,
+    aggregateStatus: byField('aggregate')?.status,
+  };
+}
+
+function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
+  const rows = uniqueSubjectRows(subjects, scoreChecks);
+  if (!rows.length) {
+    return (
+      <p className="text-xs text-[#92400E]">No subject scores were extracted from this document.</p>
+    );
+  }
   return (
     <div className="overflow-hidden rounded-lg border border-[#E2EEE8] bg-white">
       <table className="w-full text-left text-xs">
         <thead className="bg-[#F1F5F4] text-[11px] uppercase tracking-wide text-[#4B6358]">
           <tr>
-            <th className="px-3 py-2 font-semibold">Criterion</th>
+            <th className="px-3 py-2 font-semibold">Subject</th>
             <th className="px-3 py-2 font-semibold">Required</th>
-            <th className="px-3 py-2 font-semibold">Extracted</th>
+            <th className="px-3 py-2 font-semibold">Score</th>
+            <th className="px-3 py-2 font-semibold">Grade</th>
             <th className="px-3 py-2 font-semibold">Result</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((result, index) => {
-            const status = criterionStatusMeta(result.status);
+          {rows.map((row) => {
+            const status = row.status ? criterionStatusMeta(row.status) : criterionStatusMeta('unchecked');
+            const resultLabel =
+              row.score == null && !row.status
+                ? 'Could not confirm'
+                : status.label;
             return (
-              <tr key={`${result.field}-${index}`} className="border-t border-[#E2EEE8]">
-                <td className="px-3 py-2 font-medium text-[#052E1C]">{result.field}</td>
-                <td className="px-3 py-2 text-[#334155]">{formatRequirement(result)}</td>
-                <td className="px-3 py-2 text-[#334155]">{formatValue(result.actual)}</td>
-                <td className="px-3 py-2">
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
-                    {status.label}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
-  const checksByName = new Map(
-    scoreChecks.map((item) => [String(item.name ?? '').trim().toLowerCase(), item]),
-  );
-  const rows =
-    subjects.length > 0
-      ? subjects.map((subject) => {
-          const check = checksByName.get(String(subject.name ?? '').trim().toLowerCase());
-          return {
-            name: subject.name,
-            score: subject.score ?? check?.score,
-            grade: subject.grade ?? check?.grade,
-            required: check?.required,
-            status: check?.status,
-          };
-        })
-      : scoreChecks.map((item) => ({
-          name: item.name,
-          score: item.score,
-          grade: item.grade,
-          required: item.required,
-          status: item.status,
-        }));
-  if (!rows.length) return null;
-  return (
-    <div className="overflow-hidden rounded-lg border border-[#E2EEE8] bg-white">
-      <p className="bg-[#F1F5F4] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[#4B6358]">
-        Subject scores
-      </p>
-      <table className="w-full text-left text-xs">
-        <thead className="text-[11px] uppercase tracking-wide text-[#6B7280]">
-          <tr>
-            <th className="px-3 py-1.5 font-semibold">Subject</th>
-            <th className="px-3 py-1.5 font-semibold">Score</th>
-            <th className="px-3 py-1.5 font-semibold">Grade</th>
-            <th className="px-3 py-1.5 font-semibold">Required</th>
-            <th className="px-3 py-1.5 font-semibold">Result</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => {
-            const status = row.status ? criterionStatusMeta(row.status) : null;
-            return (
-              <tr key={`${row.name}-${index}`} className="border-t border-[#E2EEE8]">
-                <td className="px-3 py-1.5 font-medium text-[#052E1C]">{row.name}</td>
-                <td className="px-3 py-1.5 text-[#334155]">{formatValue(row.score)}</td>
-                <td className="px-3 py-1.5 text-[#334155]">{formatValue(row.grade)}</td>
-                <td className="px-3 py-1.5 text-[#334155]">
+              <tr key={row.name} className="border-t border-[#E2EEE8]">
+                <td className="px-3 py-2 font-medium text-[#052E1C]">{row.name}</td>
+                <td className="px-3 py-2 text-[#334155]">
                   {row.required != null ? `at least ${row.required}` : '—'}
                 </td>
-                <td className="px-3 py-1.5">
-                  {status ? (
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
-                      {status.label}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
+                <td className="px-3 py-2 text-[#334155]">{formatValue(row.score)}</td>
+                <td className="px-3 py-2 text-[#334155]">{formatValue(row.grade)}</td>
+                <td className="px-3 py-2">
+                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
+                    {resultLabel}
+                  </span>
                 </td>
               </tr>
             );
@@ -234,68 +206,74 @@ function SubjectScoreTable({ subjects = [], scoreChecks = [] }) {
 function EligibilityScreeningView({ decision }) {
   const documents = academicEligibilityDocuments(decision.perDocument);
   const overall = overallEligibilityMeta(decision);
-  const overallResults = decision.eligibilityResult?.results ?? [];
-  const scoreChecks = documents.flatMap((doc) =>
-    (doc.eligibilityResult?.results ?? []).flatMap((result) => result.scoreChecks ?? []),
-  );
 
   return (
     <div className="mt-4 space-y-4">
       <div className={`rounded-xl border px-4 py-3 ${overall.className}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide">Overall eligibility</p>
         <p className="mt-1 text-sm font-semibold">{overall.label}</p>
-        {decision.summary && decision.summary.length < 240 ? (
-          <p className="mt-1 text-xs leading-relaxed">{decision.summary}</p>
+        {documents.length ? (
+          <ul className="mt-3 space-y-1.5">
+            {documents.map((doc, index) => {
+              const verdict = documentVerdictMeta(doc);
+              const facts = documentLevelFacts(doc);
+              return (
+                <li
+                  key={`${doc.requirementName}-${index}`}
+                  className="flex flex-wrap items-center justify-between gap-2 text-xs"
+                >
+                  <span className="font-medium">{doc.requirementName || `Document ${index + 1}`}</span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {facts.qualification ? <span className="opacity-80">{facts.qualification}</span> : null}
+                    {facts.aggregate != null ? <span className="opacity-80">Aggregate {facts.aggregate}</span> : null}
+                    {facts.examScore != null ? <span className="opacity-80">Score {facts.examScore}</span> : null}
+                    <span className={`rounded-full border px-2 py-0.5 font-semibold ${verdict.className}`}>
+                      {verdict.label}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         ) : null}
       </div>
 
-      {documents.length > 0 ? (
-        <div>
-          <p className="text-xs font-bold text-[#052E1C]">Documents checked</p>
-          <div className="mt-2 space-y-3">
-            {documents.map((doc, index) => {
-              const verdict = documentVerdictMeta(doc);
-              const results = doc.eligibilityResult?.results ?? [];
-              const checks = results.flatMap((result) => result.scoreChecks ?? []);
-              return (
-                <div
-                  key={`${doc.requirementName}-${index}`}
-                  className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-[#052E1C]">
-                      {doc.requirementName || `Document ${index + 1}`}
-                    </p>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${verdict.className}`}>
-                      {verdict.label}
-                    </span>
-                  </div>
-                  {doc.qualification || doc.aggregate != null || doc.examScore != null ? (
-                    <p className="mt-2 text-xs text-[#4B6358]">
-                      {[
-                        doc.qualification ? `Qualification: ${doc.qualification}` : null,
-                        doc.aggregate != null ? `Aggregate: ${doc.aggregate}` : null,
-                        doc.examScore != null ? `Exam score: ${doc.examScore}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  ) : null}
-                  <div className="mt-3 space-y-3">
-                    <EligibilityCriteriaTable results={results} />
-                    <SubjectScoreTable subjects={doc.subjects ?? []} scoreChecks={checks} />
-                  </div>
-                </div>
-              );
-            })}
+      {documents.map((doc, index) => {
+        const verdict = documentVerdictMeta(doc);
+        const facts = documentLevelFacts(doc);
+        const checks = (doc.eligibilityResult?.results ?? []).flatMap(
+          (result) => result.scoreChecks ?? [],
+        );
+        return (
+          <div
+            key={`${doc.requirementName}-detail-${index}`}
+            className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-4"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-[#052E1C]">
+                  {doc.requirementName || `Document ${index + 1}`}
+                </p>
+                <p className="mt-1 text-xs text-[#4B6358]">
+                  {[
+                    facts.qualification || null,
+                    facts.aggregate != null ? `Aggregate ${facts.aggregate}` : null,
+                    facts.examScore != null ? `Exam score ${facts.examScore}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || 'Subject-wise breakdown'}
+                </p>
+              </div>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${verdict.className}`}>
+                {verdict.label}
+              </span>
+            </div>
+            <div className="mt-3">
+              <SubjectScoreTable subjects={doc.subjects ?? []} scoreChecks={checks} />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <EligibilityCriteriaTable results={overallResults} />
-          <SubjectScoreTable scoreChecks={scoreChecks} />
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 }

@@ -428,7 +428,19 @@ export function ApplicationDocumentUpload({
                 ))}
               </ul>
             ) : null}
-            {eligibilityDocuments.map((doc, index) => (
+            {eligibilityDocuments.map((doc, index) => {
+              const seen = new Set();
+              const subjects = (doc.subjects ?? []).filter((subject) => {
+                const key = String(subject.name ?? '').trim().toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+              const threshold = (doc.eligibilityResult?.results ?? []).find((result) =>
+                /threshold/i.test(String(result.field ?? '')),
+              );
+              const required = threshold?.expected;
+              return (
               <div key={`${doc.requirementName}-${index}`} className="mt-3">
                 <p className="text-xs font-semibold text-[#052E1C]">
                   {doc.requirementName || `Document ${index + 1}`}
@@ -436,41 +448,24 @@ export function ApplicationDocumentUpload({
                     ? ' · Not eligible'
                     : doc.verdict === 'passed'
                       ? ' · Eligible'
-                      : doc.verdict === 'unchecked'
-                        ? ' · Incomplete'
-                        : ''}
+                      : ' · Incomplete'}
                 </p>
                 <ul className="mt-1 space-y-1">
-                  {(doc.eligibilityResult?.results ?? [])
-                    .filter((result) => result.status !== 'not_applicable')
-                    .map((result, resultIndex) => (
-                      <li
-                        key={`${result.field}-${resultIndex}`}
-                        className={
-                          result.status === 'failed'
-                            ? 'text-xs leading-relaxed text-[#991B1B]'
-                            : result.status === 'passed'
-                              ? 'text-xs leading-relaxed text-[#065F46]'
-                              : 'text-xs leading-relaxed text-[#92400E]'
-                        }
-                      >
-                        {result.field}: {result.actual ?? '—'} (needs {result.requirement ?? result.expected ?? '—'})
-                        {result.status === 'failed'
-                          ? ' · not met'
-                          : result.status === 'passed'
-                            ? ' · met'
-                            : ' · could not confirm'}
+                  {subjects.length ? (
+                    subjects.map((subject) => (
+                      <li key={subject.name} className="text-xs text-[#334155]">
+                        {subject.name}: {subject.score ?? '—'}
+                        {subject.grade ? ` (${subject.grade})` : ''}
+                        {required != null ? ` · needs at least ${required}` : ''}
                       </li>
-                    ))}
-                  {(doc.subjects ?? []).map((subject, subjectIndex) => (
-                    <li key={`${subject.name}-${subjectIndex}`} className="text-xs text-[#334155]">
-                      {subject.name}: {subject.score ?? '—'}
-                      {subject.grade ? ` (${subject.grade})` : ''}
-                    </li>
-                  ))}
+                    ))
+                  ) : (
+                    <li className="text-xs text-[#92400E]">No subject scores extracted from this document.</li>
+                  )}
                 </ul>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : null}
       </div>

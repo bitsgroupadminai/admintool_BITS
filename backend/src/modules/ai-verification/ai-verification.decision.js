@@ -9,6 +9,7 @@ import {
   subjectsForDocument,
   parseNumericValue,
   normalizeFieldKey,
+  uniqueSubjects,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
 
 /**
@@ -155,7 +156,7 @@ export function evaluateEligibilityByDocument(perDocument = [], eligibilityRules
         qualification: doc.qualification ?? '',
         aggregate: doc.aggregate ?? null,
         examScore: doc.examScore ?? null,
-        subjects: doc.subjects ?? [],
+        subjects: uniqueSubjects(doc.subjects ?? []),
         extractedFields,
         eligibilityResult,
         verdict: summarizeDocumentEvaluation(eligibilityResult),
@@ -193,12 +194,20 @@ export function buildProfileFromExtractedFields(fields = []) {
   };
 }
 
+function sourceDocuments(decision = {}) {
+  const primary = asArray(decision.perDocument);
+  return primary.length ? primary : asArray(decision.raw?.perDocument);
+}
+
 function collectDecisionFields(decision = {}) {
+  const docs = sourceDocuments(decision);
+  const primaryFields = asArray(decision.extractedFields);
+  if (primaryFields.length) {
+    return [...primaryFields, ...docs.flatMap((doc) => asArray(doc.extractedFields))];
+  }
   return [
-    ...asArray(decision.extractedFields),
-    ...asArray(decision.perDocument).flatMap((doc) => asArray(doc.extractedFields)),
     ...asArray(decision.raw?.extractedFields),
-    ...asArray(decision.raw?.perDocument).flatMap((doc) => asArray(doc.extractedFields)),
+    ...docs.flatMap((doc) => asArray(doc.extractedFields)),
   ];
 }
 
@@ -224,11 +233,8 @@ function parseNumericFromFields(fields, matcher) {
 }
 
 function allSubjectEntries(decision, fields) {
-  const fromDocs = [
-    ...asArray(decision.perDocument),
-    ...asArray(decision.raw?.perDocument),
-  ].flatMap((doc) => asArray(doc.subjects));
-  if (fromDocs.length) return parseSubjectEntries(fromDocs);
+  const fromDocs = sourceDocuments(decision).flatMap((doc) => asArray(doc.subjects));
+  if (fromDocs.length) return uniqueSubjects(fromDocs);
   const subjectValues = fields
     .filter((field) => {
       const key = normalizeFieldKey(field.field);
@@ -236,7 +242,7 @@ function allSubjectEntries(decision, fields) {
     })
     .map((field) => field.value)
     .filter((value) => value != null && value !== '');
-  return parseSubjectEntries(subjectValues.join('; '));
+  return uniqueSubjects(parseSubjectEntries(subjectValues.join('; ')));
 }
 
 function seedAcademicDocuments(decision = {}, uploadedDocuments = [], fields = []) {
@@ -256,11 +262,13 @@ function seedAcademicDocuments(decision = {}, uploadedDocuments = [], fields = [
       ...extra,
       requirementName: current.requirementName || name,
       extractedFields: [...asArray(current.extractedFields), ...asArray(extra.extractedFields)],
-      subjects: (current.subjects?.length ? current.subjects : extra.subjects) ?? [],
+      subjects: uniqueSubjects(
+        current.subjects?.length ? current.subjects : extra.subjects,
+      ),
     });
   };
 
-  for (const doc of [...asArray(decision.perDocument), ...asArray(decision.raw?.perDocument)]) {
+  for (const doc of sourceDocuments(decision)) {
     remember(doc.requirementName, doc);
   }
   for (const uploaded of uploadedDocuments) {
@@ -292,12 +300,18 @@ function fillDocumentExtraction(doc, decision, fields) {
     (isClass12DocumentName(doc.requirementName) ? 'Class XII (10+2)' : '') ||
     (isClass10DocumentName(doc.requirementName) ? 'Class X' : '');
 
-  const ownSubjects = doc.subjects?.length ? parseSubjectEntries(doc.subjects) : [];
-  const subjects = ownSubjects.length
-    ? ownSubjects
-    : isBitsatDocumentName(doc.requirementName)
-      ? []
-      : subjectsForDocument(allSubjectEntries(decision, fields), doc.requirementName);
+  const ownSubjects = uniqueSubjects(doc.subjects);
+  const localSubjectField = asArray(doc.extractedFields)
+    .filter((field) => /subject/.test(normalizeFieldKey(field.field)) && !/threshold/.test(normalizeFieldKey(field.field)))
+    .map((field) => field.value)
+    .filter((value) => value != null && value !== '')
+    .join('; ');
+  let subjects = ownSubjects.length ? ownSubjects : uniqueSubjects(parseSubjectEntries(localSubjectField));
+  if (!subjects.length && !isBitsatDocumentName(doc.requirementName)) {
+    subjects = uniqueSubjects(
+      subjectsForDocument(allSubjectEntries(decision, fields), doc.requirementName),
+    );
+  }
 
   const aggregate =
     doc.aggregate ??

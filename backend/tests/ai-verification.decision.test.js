@@ -11,7 +11,7 @@ import {
   mergeEligibilityProfile,
   hydrateEligibilityDecision,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
-import { evaluateEligibilityRules } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
+import { evaluateEligibilityRules, uniqueSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
   documentVerificationResponseSchema,
   eligibilityVerificationResponseSchema,
@@ -489,6 +489,60 @@ test('hydrateEligibilityDecision ignores malformed stored payloads', () => {
     hydrated.eligibilityResult.results.find((result) => result.field === 'Qualification').status,
     'passed',
   );
+});
+
+test('uniqueSubjects drops repeated names and keeps scored rows', () => {
+  const unique = uniqueSubjects([
+    { name: 'Physics' },
+    { name: 'Physics', score: 85, grade: 'A2' },
+    { name: 'Chemistry', score: 80 },
+    { name: 'Physics' },
+  ]);
+  assert.equal(unique.length, 2);
+  assert.equal(unique[0].score, 85);
+});
+
+test('hydrateEligibilityDecision does not duplicate subjects from raw', () => {
+  const subjects = [
+    { name: 'Physics', score: 85, grade: 'A2' },
+    { name: 'Chemistry', score: 80, grade: 'B1' },
+    { name: 'Mathematics', score: 90, grade: 'A1' },
+  ];
+  const hydrated = hydrateEligibilityDecision(
+    {
+      handler: 'eligibility_screening',
+      perDocument: [
+        { requirementName: 'Class 12 marksheet', qualification: 'Class XII', subjects },
+        {
+          requirementName: 'BITSAT scorecard',
+          examScore: 312,
+          subjects: [
+            { name: 'Physics', score: 96 },
+            { name: 'Chemistry', score: 88 },
+            { name: 'Mathematics', score: 128 },
+          ],
+        },
+      ],
+      raw: {
+        perDocument: [
+          { requirementName: 'Class 12 marksheet', qualification: 'Class XII', subjects },
+        ],
+      },
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [
+        { requirementName: 'Class 12 marksheet' },
+        { requirementName: 'BITSAT scorecard' },
+      ],
+    },
+  );
+  const class12 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  const bitsat = hydrated.perDocument.find((doc) => doc.requirementName === 'BITSAT scorecard');
+  assert.equal(class12.subjects.length, 3);
+  assert.equal(class12.subjects[0].score, 85);
+  assert.equal(bitsat.subjects.length, 3);
+  assert.equal(bitsat.examScore, 312);
 });
 
 test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {

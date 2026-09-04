@@ -137,27 +137,37 @@ Your ONLY job is to EXTRACT the factual values needed to check eligibility from 
 If a supporting document is clearly for a different person than the APPLICANT RECORD, say so in issues and do not treat its marks or fields as the applicant's.
 Do NOT decide final eligibility yourself with respect to thresholds — the system compares your extracted values against the rules deterministically.
 ${allowSampleDocuments ? 'Extract values from unofficial and AI-generated sample documents the same way you would from real ones. Do not refuse extraction because a document looks synthetic or unofficial.\n' : ''}
-Extract from EACH uploaded document on its own. Never mix Class 10, Class 12, and entrance-test values.
+Extract from EACH uploaded document on its own. Never mix Class 10, Class 12, and BITSAT values.
 
 Class 12 / Senior Secondary / XII is 10+2. If this file is a Class 12 marksheet, set qualification to "Class XII (10+2)" and never leave it empty.
 
+You MUST read the marks table on the document. For every subject row, copy:
+- name (as printed)
+- score: the numeric marks obtained (e.g. 85). Never leave score null if a number is visible.
+- maxScore: the paper total if printed (often 100)
+- grade: the letter grade if printed (A1, A2, B1, …)
+
+For a BITSAT / entrance scorecard, extract examScore as the total and list each section (Physics, Chemistry, Mathematics, English, Logical Reasoning, etc.) in subjects[] with that section's numeric score.
+
+A marksheet extraction without numeric scores is incomplete. Look at the image attached for that file, not at another file's subjects.
+
 For marksheets and scorecards:
-- qualification: "Class X", "Class XII (10+2)", or the exam title printed on that file.
-- aggregate: the overall percentage or total on THAT file, as a number (e.g. 89). Not the words "Aggregate Requirement".
-- examScore: entrance-test total (e.g. BITSAT) as a number, only if this file is that scorecard.
-- subjects: every subject printed on THAT file, each with name, numeric score, and grade if shown. Never omit the marks.
-- relevantToEligibility: true for marksheets / scorecards / BITSAT; false for photos, signatures, and ID cards.
+- qualification: "Class X", "Class XII (10+2)", or "BITSAT"
+- aggregate: overall percentage or total on THAT file, as a number (e.g. 89)
+- examScore: BITSAT/entrance total only
+- subjects: every subject/section on THAT file with name, score, maxScore, grade
+- relevantToEligibility: true for marksheets / scorecards / BITSAT; false for photos, signatures, and ID cards
 
 Also fill extractedFields using the exact admin rule names:
-- "Qualification" → the qualification string from this file.
-- "Subjects" → the subject names from this file only, comma-separated.
-- "Aggregate Requirement" → the numeric aggregate/percentage from this file.
-- "Subject Threshold" → null. Put per-subject scores in subjects[] instead.
+- "Qualification" → "Class XII (10+2)" or "Class X" or "BITSAT"
+- "Subjects" → subject names from this file only
+- "Aggregate Requirement" → the numeric aggregate from this file
+- "Subject Threshold" → null; put per-subject scores in subjects[]
 
 Set the overall verdict to reflect extraction quality (not the pass/fail decision):
-- "pass": you confidently extracted the academic values those documents can provide.
-- "uncertain": some academic values are missing or unreadable.
-- "fail": rare; prefer "uncertain" when unsure.
+- "pass": you extracted subject names AND numeric scores from the academic documents
+- "uncertain": some scores are unreadable
+- "fail": rare; prefer "uncertain" when unsure
 
 summary must be one short sentence naming which academic documents were read.
 
@@ -290,7 +300,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
       })
       .join('\n') || '- (none configured)',
     '',
-    'UPLOADED DOCUMENTS (for marksheets and BITSAT, list every subject with numeric score and grade; photos/ID are not eligibility evidence):',
+    'UPLOADED DOCUMENTS (transcribe every subject/section with numeric score and grade; do not mix files):',
     formatUploadedDocuments(ctx.documents),
     '',
     formatPolicy(ctx.policyExcerpts, ctx.allowSampleDocuments),

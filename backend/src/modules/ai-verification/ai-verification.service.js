@@ -308,7 +308,6 @@ async function evaluateEligibilityStep({
       verdict: raw.verdict,
       perDocument: raw.perDocument ?? [],
       extractedFields,
-      raw,
     },
     {
       eligibilityRules,
@@ -610,7 +609,7 @@ async function gatherApplicationDocuments(application) {
     if (prep.kind === 'image') {
       imageCount += 1;
       entry.imageNumber = imageCount;
-      images.push({ dataUrl: prep.dataUrl });
+      images.push({ dataUrl: prep.dataUrl, detail: 'high' });
     } else if (prep.kind === 'text') {
       entry.text = prep.text;
     } else {

@@ -83,6 +83,19 @@ export function isBitsatDocumentName(requirementName) {
   return /bitsat|entrance/.test(String(requirementName ?? '').toLowerCase());
 }
 
+export function uniqueSubjects(subjects = []) {
+  const byKey = new Map();
+  for (const subject of parseSubjectEntries(subjects)) {
+    const key = normalizeFieldKey(subject.name);
+    if (!key) continue;
+    const current = byKey.get(key);
+    if (!current || (subject.score != null && current.score == null)) {
+      byKey.set(key, subject);
+    }
+  }
+  return [...byKey.values()];
+}
+
 export function subjectsForDocument(subjects = [], requirementName) {
   if (!subjects.length) return [];
   if (isBitsatDocumentName(requirementName)) {
@@ -309,6 +322,10 @@ export function ruleAppliesToDocument(rule, requirementName) {
 
   if (looksLikeSubjectsField(field) && !looksLikeThresholdField(field)) {
     return /12|xii|\+2|senior|graduation|degree/.test(name);
+  }
+
+  if (looksLikeThresholdField(field)) {
+    return !isBitsatDocumentName(name) && isAcademicEligibilityDocument(name);
   }
 
   return isAcademicEligibilityDocument(name);

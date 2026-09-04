@@ -107,7 +107,7 @@ async function extractDocxText(filePath) {
   }
 }
 
-const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png']);
+const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 /** Cap text sent to the verification model per document (keeps prompts small). */
 const MAX_VERIFY_TEXT_CHARS = 12_000;

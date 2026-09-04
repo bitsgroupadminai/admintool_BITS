@@ -1,9 +1,39 @@
+import { useEffect, useRef } from 'react';
 import { Check, Circle, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildStudentServiceSteps, isDocumentPrerequisiteStep } from '@/utils/studentJourney';
 import { isFeePaymentStep } from '@/utils/payment';
 import { StepDocumentsAccordion } from '@/components/services/StepDocumentsAccordion';
 import { PaymentPanel } from '@/components/services/PaymentPanel';
+
+function getScrollParent(node) {
+  let parent = node?.parentElement;
+  while (parent) {
+    const { overflowY } = window.getComputedStyle(parent);
+    if (
+      (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+      parent.scrollHeight > parent.clientHeight + 1
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return document.scrollingElement;
+}
+
+function scrollElementToTop(element, { behavior = 'smooth' } = {}) {
+  const scroller = getScrollParent(element);
+  const margin = Number.parseFloat(window.getComputedStyle(element).scrollMarginTop) || 0;
+  if (!scroller) {
+    element.scrollIntoView({ block: 'start', behavior });
+    return;
+  }
+  const nextTop =
+    scroller.scrollTop +
+    (element.getBoundingClientRect().top - scroller.getBoundingClientRect().top) -
+    margin;
+  scroller.scrollTo({ top: Math.max(0, nextTop), behavior });
+}
 
 const stateStyles = {
   complete: {
@@ -34,6 +64,20 @@ export function StudentServiceJourney({
     application?.workflow?.steps?.length || offering?.workflowSteps?.length,
   );
   const steps = buildStudentServiceSteps(offering, application);
+  const currentIndex = steps.findIndex((step) => step.state === 'current');
+  const currentStepId = currentIndex >= 0 ? steps[currentIndex]?.id : null;
+  const currentStepRef = useRef(null);
+
+  useEffect(() => {
+    if (currentIndex < 1) return undefined;
+
+    const timer = window.setTimeout(() => {
+      if (currentStepRef.current) {
+        scrollElementToTop(currentStepRef.current, { behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [currentIndex, currentStepId, application?.id]);
 
   return (
     <ol className="space-y-4">
@@ -41,11 +85,20 @@ export function StudentServiceJourney({
         const styles = stateStyles[step.state] ?? stateStyles.upcoming;
         const showDocuments = isDocumentPrerequisiteStep(step, index, hasReviewWorkflow);
         const showPayment = isFeePaymentStep(step, offering, application);
+        const isCurrent = step.state === 'current';
 
         return (
           <li
             key={step.id}
-            className="relative overflow-hidden rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm"
+            ref={isCurrent ? currentStepRef : undefined}
+            id={`student-step-${step.id}`}
+            aria-current={isCurrent ? 'step' : undefined}
+            className={cn(
+              'relative scroll-mt-4 overflow-hidden rounded-2xl border bg-white p-5 shadow-sm',
+              isCurrent
+                ? 'border-[#6EE7B7] bg-[#F0FAF5] shadow-[0_0_0_3px_rgba(110,231,183,0.18)]'
+                : 'border-[#E2EEE8]',
+            )}
           >
             <span
               aria-hidden
@@ -71,9 +124,16 @@ export function StudentServiceJourney({
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#10B981]">
-                  Your step {index + 1}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#10B981]">
+                    Your step {index + 1}
+                  </p>
+                  {isCurrent ? (
+                    <span className="rounded-full bg-[#0A6640] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+                      You are here
+                    </span>
+                  ) : null}
+                </div>
                 <h4 className={cn('mt-1 text-base font-bold', styles.title)}>{step.title}</h4>
                 {step.waitingOn ? (
                   <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-[#0A6640]">

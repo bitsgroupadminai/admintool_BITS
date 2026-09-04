@@ -76,8 +76,19 @@ export function createStep(order, nextStepId) {
     },
     slaValue: order === 1 ? 4 : 48,
     slaUnit: 'hours',
+    staffInstructions: '',
+    adminInstructions: '',
+    studentInstructions: '',
     outcomes: defaultOutcomes(nextStepId),
   };
+}
+
+export function hasAudienceInstructions(step) {
+  return Boolean(
+    String(step?.staffInstructions ?? '').trim() &&
+      String(step?.adminInstructions ?? '').trim() &&
+      String(step?.studentInstructions ?? '').trim(),
+  );
 }
 
 const OUTCOME_TYPES = new Set(['approved', 'rejected', 'needs_correction']);

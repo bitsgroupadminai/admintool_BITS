@@ -5,6 +5,7 @@ export const OFFERING_MISSING_LABELS = {
   sla: 'Workflow SLA on every step',
   workflow_handlers: 'Who handles each workflow step',
   workflow_outcomes: 'Outcomes on every workflow step',
+  workflow_instructions: 'Staff, admin, and student instructions on every workflow step',
   queue_mode: 'Queue mode',
   queue_config: 'Queue capacity',
   appointment_config: 'Appointment settings',
@@ -15,7 +16,7 @@ export function formatOfferingMissing(missing = []) {
   return missing.map((key) => OFFERING_MISSING_LABELS[key] ?? key.replace(/_/g, ' '));
 }
 
-const WORKFLOW_MISSING = ['workflow', 'sla', 'workflow_handlers', 'workflow_outcomes'];
+const WORKFLOW_MISSING = ['workflow', 'sla', 'workflow_handlers', 'workflow_outcomes', 'workflow_instructions'];
 const QUEUE_MISSING = ['queue_mode', 'queue_config', 'appointment_config', 'hybrid_config'];
 
 export function isOfferingSectionComplete(sectionId, missing = []) {

@@ -16,7 +16,12 @@ When the knowledge document has programme details, eligibility rules, required d
 | 5 | Fee Payment | student + student | Student pays admission fee |
 | 6 | Admission Confirmation | staff + approver | Finalize admission |
 
-Ground each step's description and documentExcerpt in the document (eligibility table, mandatory documents list, common applicant errors, escalation conditions, operational notes).
+Ground each step's description, audience instructions, and documentExcerpt in the document (eligibility table, mandatory documents list, common applicant errors, escalation conditions, operational notes).
+
+For every step you MUST also write:
+- staffInstructions — what staff do on this step
+- adminInstructions — what an admin does or oversees on this step
+- studentInstructions — what the student does or waits for
 
 PHASE 2 outcome mapping (three UI types per step — put extra labels in step description):
 

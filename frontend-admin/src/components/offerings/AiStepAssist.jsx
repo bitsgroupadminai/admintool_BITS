@@ -24,8 +24,9 @@ export function AiStepAssist({
             </p>
           </div>
           <p className="text-xs leading-relaxed text-[#6B7C69] max-w-sm">
-            Extracts eligibility, documents, workflow, and queue settings from
-            your knowledge documents into the fields below.
+            {section === "workflow"
+              ? "Extracts workflow steps plus staff, admin, and student instructions from your knowledge documents."
+              : "Extracts eligibility, documents, workflow, and queue settings from your knowledge documents into the fields below."}
           </p>
         </div>
         <button

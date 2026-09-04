@@ -100,6 +100,9 @@ function buildAdmissionWorkflow(documentNames) {
       },
       slaValue: sk.slaValue,
       slaUnit: sk.slaUnit,
+      staffInstructions: sk.staffInstructions,
+      adminInstructions: sk.adminInstructions,
+      studentInstructions: sk.studentInstructions,
       outcomes,
     };
   });

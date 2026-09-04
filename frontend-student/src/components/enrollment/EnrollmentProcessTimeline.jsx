@@ -1,6 +1,7 @@
 import { Clock3, UserRoundCheck } from 'lucide-react';
 import { formatStepTiming } from '@/utils/offering';
 import { getHandlerLabel } from '@/utils/workflow';
+import { getStudentStepActor } from '@/utils/workflowStepGuidance';
 
 export function EnrollmentProcessTimeline({ steps }) {
   if (!steps?.length) {
@@ -24,9 +25,12 @@ export function EnrollmentProcessTimeline({ steps }) {
           </div>
           <div className="min-w-0 pt-0.5">
             <h3 className="text-sm font-semibold text-[#052E1C]">{step.name}</h3>
-            {step.description && (
-              <p className="mt-1 text-sm leading-relaxed text-[#4B6358]">{step.description}</p>
-            )}
+          <p className="mt-1 text-xs font-semibold text-[#0A6640]">
+            {step.studentInstructions ? 'What you do on this step' : getStudentStepActor(step)}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-[#4B6358]">
+            {step.studentInstructions || step.description || getStudentStepActor(step)}
+          </p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[#4B6358]">
               <span className="inline-flex items-center gap-1 rounded-full bg-[#F0FAF5] px-2.5 py-1 font-medium">
                 <UserRoundCheck className="h-3 w-3 text-[#0A6640]" />

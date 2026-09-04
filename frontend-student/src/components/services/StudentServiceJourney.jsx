@@ -75,6 +75,11 @@ export function StudentServiceJourney({
                   Your step {index + 1}
                 </p>
                 <h4 className={cn('mt-1 text-base font-bold', styles.title)}>{step.title}</h4>
+                {step.waitingOn ? (
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-[#0A6640]">
+                    {step.waitingOn}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm leading-relaxed text-[#4B6358]">{step.description}</p>
                 {showDocuments ? (
                   <StepDocumentsAccordion

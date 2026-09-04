@@ -342,8 +342,16 @@ const ROLLBACK_ALLOWED_STATUSES = new Set([
  * @param {string} targetStepId — the stepId to roll back to
  * @param {Object} actor — { userId, name, role }
  * @param {string} [note] — optional reason shown to student
+ * @param {string[]} [correctionRequiredDocuments]
  */
-export async function rollbackToStep(instituteId, applicationId, targetStepId, actor, note = '') {
+export async function rollbackToStep(
+  instituteId,
+  applicationId,
+  targetStepId,
+  actor,
+  note = '',
+  correctionRequiredDocuments = [],
+) {
   const application = await getApplicationForActor(instituteId, applicationId, actor);
 
   if (!ROLLBACK_ALLOWED_STATUSES.has(application.status)) {
@@ -378,7 +386,9 @@ export async function rollbackToStep(instituteId, applicationId, targetStepId, a
   application.currentStepId = targetStepId;
   application.status = APPLICATION_STATUS.NEEDS_CORRECTION;
   application.correctionNote = note?.trim() || undefined;
-  application.correctionRequiredDocuments = [];
+  application.correctionRequiredDocuments = Array.isArray(correctionRequiredDocuments)
+    ? correctionRequiredDocuments.filter((name) => String(name).trim())
+    : [];
 
   // Store rollback metadata so the student sees a banner
   application.rollbackNote = note?.trim() || '';

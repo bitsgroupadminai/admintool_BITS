@@ -45,6 +45,14 @@ export function getOfferingCompleteness(offering) {
       (step) => !step.outcomes?.length,
     );
     if (invalidOutcomes) missing.push('workflow_outcomes');
+
+    const invalidInstructions = workflowSteps.some(
+      (step) =>
+        !String(step.staffInstructions ?? '').trim() ||
+        !String(step.adminInstructions ?? '').trim() ||
+        !String(step.studentInstructions ?? '').trim(),
+    );
+    if (invalidInstructions) missing.push('workflow_instructions');
   }
 
   if (!offering.queueMode) {
@@ -90,6 +98,7 @@ export const OFFERING_MISSING_LABELS = {
   sla: 'Workflow SLA on every step',
   workflow_handlers: 'Who handles each workflow step',
   workflow_outcomes: 'Outcomes on every workflow step',
+  workflow_instructions: 'Staff, admin, and student instructions on every workflow step',
   queue_mode: 'Queue mode',
   queue_config: 'Queue capacity',
   appointment_config: 'Appointment settings',

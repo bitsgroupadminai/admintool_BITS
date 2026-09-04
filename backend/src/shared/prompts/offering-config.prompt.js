@@ -119,6 +119,8 @@ ${WORKFLOW_SKELETON_JSON_EXAMPLE}
 
 Extract every process stage for "${offeringName}" as a separate step.
 
+For every step you MUST fill staffInstructions, adminInstructions, and studentInstructions from the knowledge document. These appear on staff, admin, and student portals. Never leave them empty.
+
 If this is an admission/programme offering (eligibility + mandatory documents in the doc), return the full multi-step admissions workflow (typically 6 steps: document verification through admission confirmation) even when the document does not number steps explicitly.
 
 Return empty workflowSteps array only when the document has no programme/process content at all.`;

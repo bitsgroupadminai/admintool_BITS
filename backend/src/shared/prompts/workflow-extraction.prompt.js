@@ -22,6 +22,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "document_verification",
       "slaValue": 4,
       "slaUnit": "hours",
+      "staffInstructions": "AI checks each upload is the right document, readable, and belongs to the student. Act only if AI escalates.",
+      "adminInstructions": "Same check as staff. You can re-run AI or send the request back if uploads are wrong.",
+      "studentInstructions": "The institute checks that your uploads are the correct documents and belong to you. Wait unless asked to fix a file.",
       "documentExcerpt": "Required Documents / Common Applicant Errors section"
     },
     {
@@ -32,6 +35,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "eligibility_screening",
       "slaValue": 24,
       "slaUnit": "hours",
+      "staffInstructions": "AI compares extracted marks with programme rules. Act only if eligibility cannot be confirmed automatically.",
+      "adminInstructions": "Review an escalated eligibility result. Completing this step means the student meets the published academic rules.",
+      "studentInstructions": "The institute checks your marks and subjects against the programme rules. You do not need to do anything here.",
       "documentExcerpt": "Eligibility Rules section"
     },
     {
@@ -42,6 +48,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "approver",
       "slaValue": 48,
       "slaUnit": "hours",
+      "staffInstructions": "Decide if a seat can be offered from rank, preferences, and remaining capacity. Allocate a seat or reject if none is available.",
+      "adminInstructions": "This is the seat decision. Completing it moves the student to offer release. Reject if there is no seat.",
+      "studentInstructions": "Admissions staff decide whether a seat can be offered. Wait here — there is nothing for you to submit.",
       "documentExcerpt": "Operational Notes / counselling"
     },
     {
@@ -52,6 +61,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "approver",
       "slaValue": 48,
       "slaUnit": "hours",
+      "staffInstructions": "Generate and release the admission offer for the allocated seat.",
+      "adminInstructions": "Confirm the offer is ready, then complete this step so the student can pay.",
+      "studentInstructions": "The institute is preparing your admission offer. You continue once it is released.",
       "documentExcerpt": "quote if offer release is described"
     },
     {
@@ -62,6 +74,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "student",
       "slaValue": 72,
       "slaUnit": "hours",
+      "staffInstructions": "The student pays the admission fee. Wait until payment is recorded.",
+      "adminInstructions": "Monitor payment. Complete this step only after the fee is received.",
+      "studentInstructions": "Pay the admission fee to complete this step.",
       "documentExcerpt": "quote if fees/payment mentioned"
     },
     {
@@ -72,6 +87,9 @@ export const WORKFLOW_SKELETON_JSON_EXAMPLE = `{
       "handledByAssignee": "approver",
       "slaValue": 24,
       "slaUnit": "hours",
+      "staffInstructions": "Do a final check after fee payment, then confirm admission.",
+      "adminInstructions": "Confirm admission after payment. Completing this step admits the student.",
+      "studentInstructions": "The institute is doing a final check after your payment. Wait unless staff asks for a correction.",
       "documentExcerpt": "quote if final confirmation described"
     }
   ]
@@ -166,7 +184,11 @@ Step handlers (pick one primary per step):
 Rules:
 - One workflowSteps entry per distinct stage; preserve logical order (verify docs → eligibility → seat → offer → fee → confirm).
 - Do NOT merge stages. Do NOT include outcomes in this phase.
-- Each step: order, name, description (include purpose + document-specific notes), handledByType, handledByAssignee, slaValue, slaUnit, documentExcerpt.
+- Each step: order, name, description, handledByType, handledByAssignee, slaValue, slaUnit, staffInstructions, adminInstructions, studentInstructions, documentExcerpt.
+- staffInstructions: what the assigned staff member must do on this step, in plain language. Include how they move the request forward.
+- adminInstructions: what an institute admin should know or do on this step, including oversight (re-run, send back, assign).
+- studentInstructions: what the applicant should do or wait for. Say clearly if they have no action.
+- Write instructions from the knowledge document (counselling, seats, fees, eligibility). Do not leave these three fields empty.
 
 ${ADMISSION_WORKFLOW_REFERENCE}`;
 

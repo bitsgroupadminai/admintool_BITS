@@ -368,6 +368,12 @@ function buildWorkflowSuggestions(ctx, offering) {
       handledBy: { type: HANDLER_TYPE.AI, assignee: AI_HANDLER.DOCUMENT_VERIFICATION },
       slaValue: 2,
       slaUnit: 'hours',
+      staffInstructions:
+        'AI reviews uploads for completeness and authenticity. Act only if a file is flagged for human review.',
+      adminInstructions:
+        'AI handles this check. You can re-run verification or send the request back if a file is wrong.',
+      studentInstructions:
+        'The institute is checking your uploaded documents. You wait unless you are asked to fix a file.',
       outcomes: [
         {
           type: 'approved',
@@ -396,6 +402,12 @@ function buildWorkflowSuggestions(ctx, offering) {
       handledBy: { type: HANDLER_TYPE.AI, assignee: AI_HANDLER.ELIGIBILITY_SCREENING },
       slaValue: 4,
       slaUnit: 'hours',
+      staffInstructions:
+        'AI checks the application against eligibility rules. Review only unclear or escalated cases.',
+      adminInstructions:
+        'Confirm the AI eligibility result if it is escalated. Completing this step means the student meets the published rules.',
+      studentInstructions:
+        'The institute is checking whether you meet the programme eligibility rules. You do not need to do anything on this step.',
       outcomes: [
         {
           type: 'approved',
@@ -423,6 +435,12 @@ function buildWorkflowSuggestions(ctx, offering) {
       handledBy: { type: HANDLER_TYPE.STAFF, assignee: 'approver' },
       slaValue: 48,
       slaUnit: 'hours',
+      staffInstructions:
+        'Make the final decision after AI checks. Approve to complete the request, or reject if it cannot continue.',
+      adminInstructions:
+        'This is the staff decision after automatic checks. Complete the step to finish, or send it back if something must be fixed.',
+      studentInstructions:
+        'Admissions staff are making the final decision on your request. You wait unless they ask you to update something.',
       outcomes: [
         {
           type: 'approved',

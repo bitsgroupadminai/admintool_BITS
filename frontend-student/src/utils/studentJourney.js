@@ -2,6 +2,10 @@ import { formatQueueMode } from '@/utils/offering';
 import { areAllRequiredDocumentsUploaded } from '@/utils/applicationDocuments';
 import { areApplicantDetailsComplete, applicantDetailsToMap } from '@/utils/applicantDetails';
 import { isFeePaymentStep, isPaymentPaid, isPaymentPending } from '@/utils/payment';
+import {
+  getStudentStepDescription,
+  getStudentWaitingOn,
+} from '@/utils/workflowStepGuidance';
 
 const STATUS_LABELS = {
   draft: 'Draft saved',
@@ -28,36 +32,13 @@ export function isDocumentPrerequisiteStep(step, index, hasReviewWorkflow) {
 }
 
 function describeReviewStep(step, index, { documentsComplete, status, isFeeStep, paymentPaid }) {
-  if (isFeeStep) {
-    if (paymentPaid || step.state === 'complete') {
-      return 'Fee received. You can continue with your request.';
-    }
-    if (step.state === 'current') {
-      return 'Pay the course fee below to complete this step.';
-    }
-    return 'The course fee is collected at this step after earlier steps finish.';
-  }
-
-  if (index === 0) {
-    if (status === 'needs_correction') {
-      return 'Update the requested documents below, then complete your details and resubmit so verification can continue.';
-    }
-    if (!status || status === 'draft') {
-      return documentsComplete
-        ? 'Documents are ready. Complete your details below and submit this step to start institute verification.'
-        : 'Upload the required documents below, then complete your details and submit this step.';
-    }
-    if (step.state === 'current') {
-      return 'The institute is working on this step now.';
-    }
-    if (step.state === 'complete') {
-      return 'This step is complete.';
-    }
-  }
-
-  if (step.state === 'current') return 'The institute is working on this step now.';
-  if (step.state === 'complete') return 'This step is complete.';
-  return 'This step will happen after earlier steps finish.';
+  return getStudentStepDescription(step, {
+    isFeeStep,
+    paymentPaid,
+    status,
+    documentsComplete,
+    index,
+  });
 }
 
 /**
@@ -75,16 +56,18 @@ export function buildStudentServiceSteps(offering, application) {
     return application.workflow.steps.map((step, index) => ({
       id: step.stepId,
       title: step.name,
-      description: describeReviewStep(
-        { state: step.state, id: step.stepId },
-        index,
-        {
-          documentsComplete,
-          status,
-          isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
-          paymentPaid,
-        },
-      ),
+      description: describeReviewStep(step, index, {
+        documentsComplete,
+        status,
+        isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
+        paymentPaid,
+      }),
+      waitingOn:
+        step.state === 'current'
+          ? getStudentWaitingOn(step, {
+              isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
+            })
+          : null,
       state: step.state,
     }));
   }
@@ -98,19 +81,17 @@ export function buildStudentServiceSteps(offering, application) {
         index === 0 && (!status || status === 'draft' || status === 'needs_correction')
           ? 'current'
           : 'upcoming';
+      const feeStep = isFeePaymentStep({ id: step.stepId }, offering, application);
       return {
         id: step.stepId,
         title: step.name,
-        description: describeReviewStep(
-          { state, id: step.stepId },
-          index,
-          {
-            documentsComplete,
-            status,
-            isFeeStep: isFeePaymentStep({ id: step.stepId }, offering, application),
-            paymentPaid,
-          },
-        ),
+        description: describeReviewStep(step, index, {
+          documentsComplete,
+          status,
+          isFeeStep: feeStep,
+          paymentPaid,
+        }),
+        waitingOn: state === 'current' ? getStudentWaitingOn(step, { isFeeStep: feeStep }) : null,
         state,
       };
     });

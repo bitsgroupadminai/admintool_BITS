@@ -20,6 +20,9 @@ export function snapshotOfferingWorkflow(offering) {
       order: step.order,
       name: step.name,
       description: step.description ?? '',
+      staffInstructions: step.staffInstructions ?? '',
+      adminInstructions: step.adminInstructions ?? '',
+      studentInstructions: step.studentInstructions ?? '',
       handledBy: step.handledBy,
       slaValue: step.slaValue,
       slaUnit: step.slaUnit,
@@ -215,6 +218,9 @@ export function formatWorkflowForClient(application, user) {
           order: currentStep.order,
           name: currentStep.name,
           description: currentStep.description,
+          staffInstructions: currentStep.staffInstructions ?? '',
+          adminInstructions: currentStep.adminInstructions ?? '',
+          studentInstructions: currentStep.studentInstructions ?? '',
           handledBy: currentStep.handledBy,
         }
       : null,
@@ -223,6 +229,9 @@ export function formatWorkflowForClient(application, user) {
       order: step.order,
       name: step.name,
       description: step.description,
+      staffInstructions: step.staffInstructions ?? '',
+      adminInstructions: step.adminInstructions ?? '',
+      studentInstructions: step.studentInstructions ?? '',
       handledBy: step.handledBy,
       state:
         application.status === APPLICATION_STATUS.ADMITTED ||

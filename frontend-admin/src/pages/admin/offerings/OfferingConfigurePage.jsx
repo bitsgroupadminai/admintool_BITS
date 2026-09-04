@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { offeringsApi } from '@/api/offerings.api';
 import { servicesApi } from '@/api/services.api';
 import { userApi } from '@/api/user.api';
-import { createStep, normalizeSteps, relinkStepOutcomes } from '@/utils/workflow';
+import { createStep, hasAudienceInstructions, normalizeSteps, relinkStepOutcomes } from '@/utils/workflow';
 import { formatOfferingMissing } from '@/constants/offeringCompleteness.constants';
 import {
   normalizeOperatingHoursTime,
@@ -441,6 +441,14 @@ export function OfferingConfigurePage() {
   };
 
   const saveWorkflow = async ({ advance = false } = {}) => {
+    const missing = steps.find((step) => !hasAudienceInstructions(step));
+    if (missing) {
+      toast.error(
+        `“${missing.name || 'Untitled step'}” needs staff, admin, and student instructions. Extract from documents or enter them on the step.`,
+      );
+      return false;
+    }
+
     setSaving(true);
     try {
       const { data } = await offeringsApi.updateWorkflow(id, steps);
@@ -959,7 +967,8 @@ export function OfferingConfigurePage() {
             <CardHeader>
               <CardTitle>Workflow timeline</CardTitle>
               <CardDescription>
-                Build a vertical timeline with staff, student, or AI handlers and outcome-based routing.
+                Extract the journey from knowledge documents, or add steps by hand. Every step
+                needs staff, admin, and student instructions so each portal knows what to do.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

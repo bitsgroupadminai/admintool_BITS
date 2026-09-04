@@ -22,6 +22,12 @@ import {
   getApplicationStatusActions,
   WORKFLOW_OUTCOME_LABELS,
 } from '@/constants/applicationManagement.constants';
+import {
+  getStaffApproveConfirm,
+  getStaffApproveLabel,
+  getStaffRejectLabel,
+  getReviewerStepGuidance,
+} from '@/utils/workflowStepGuidance';
 
 function formatFileSize(bytes) {
   if (!bytes) return '';
@@ -114,6 +120,11 @@ function DocumentVerificationPanel({
   const eligibilityRules = application.eligibilityRules ?? [];
   const documentRules = rulesFromDocumentEligibility(requirement?.eligibility);
   const hasEligibility = documentRules.length > 0 || eligibilityRules.length > 0;
+  const staffOverrodeNegative =
+    uploaded?.reviewStatus === 'rejected' || uploaded?.reviewStatus === 'needs_correction';
+  const showMarkEligible =
+    staffOverrodeNegative ||
+    !(usesAiVerification && !pendingAi && eligibilityVerdict === 'eligible');
 
   return (
     <div className="flex h-full flex-col space-y-3">
@@ -201,13 +212,15 @@ function DocumentVerificationPanel({
             className="mt-3 w-full rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:bg-white focus:ring-2 focus:ring-[#6EE7B7]/20"
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              disabled={reviewing}
-              onClick={() => onReview({ status: 'approved', note })}
-            >
-              Mark eligible
-            </Button>
+            {showMarkEligible ? (
+              <Button
+                type="button"
+                disabled={reviewing}
+                onClick={() => onReview({ status: 'approved', note })}
+              >
+                Mark eligible
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -271,7 +284,13 @@ export function ApplicationReviewContent({
   const showManualReview =
     Boolean(onDocumentReview) &&
     (!usesAiVerification || pendingAi || workflowActions.length > 0);
-  const currentStep = workflow?.currentStep;
+  const currentStep =
+    steps.find((step) => step.state === 'current') ?? workflow?.currentStep ?? null;
+  const currentStepIndex = steps.findIndex((step) => step.stepId === currentStep?.stepId);
+  const nextStep = currentStepIndex >= 0 ? steps[currentStepIndex + 1] : null;
+  const approveAction = workflowActions.find((action) => action.outcome === 'approved');
+  const rejectAction = workflowActions.find((action) => action.outcome === 'rejected');
+  const correctionAction = workflowActions.find((action) => action.outcome === 'needs_correction');
   const earlierSteps = steps
     .filter((step) => {
       if (step.state === 'complete') return true;
@@ -301,10 +320,14 @@ export function ApplicationReviewContent({
   const commitRollback = async (targetStepId) => {
     const step = steps.find((item) => item.stepId === targetStepId);
     if (!step) return;
+    if (!note.trim()) {
+      toast.error('Explain what the student should fix before sending the request back.');
+      return;
+    }
     const ok = await confirm({
       title: `Send back to “${step.name}”?`,
       description:
-        'The student will be notified and asked to complete this step again. This is recorded in the activity log.',
+        'The student will be notified, asked to fix the items you listed, and must complete that step again. This is recorded in the activity log.',
       confirmLabel: 'Send back',
     });
     if (!ok) return;
@@ -313,11 +336,19 @@ export function ApplicationReviewContent({
     try {
       await applicationLifecycleApi.rollback(
         application.id,
-        { targetStepId },
+        {
+          targetStepId,
+          note: note.trim(),
+          ...(selectedCorrectionDocs.length
+            ? { correctionRequiredDocuments: selectedCorrectionDocs }
+            : {}),
+        },
         lifecycleRole,
       );
       toast.success(`Request sent back to ${step.name}`);
       setRollbackStepId('');
+      setNote('');
+      setSelectedCorrectionDocs([]);
       onLifecycleUpdated?.();
     } catch (err) {
       toast.error(err.message || 'Could not send this request back');
@@ -326,9 +357,32 @@ export function ApplicationReviewContent({
     }
   };
 
-  const handleWorkflowClick = (outcome) => {
+  const selectRollbackTarget = (targetStepId) => {
+    setRollbackStepId(targetStepId);
+    document.getElementById('send-back-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleWorkflowClick = async (outcome) => {
     if (outcome === 'needs_correction' && !note.trim()) {
+      toast.error('Explain what the student should fix.');
       return;
+    }
+    if (outcome === 'approved') {
+      const ok = await confirm({
+        title: getStaffApproveLabel(currentStep, nextStep?.name),
+        description: getStaffApproveConfirm(currentStep, nextStep?.name),
+        confirmLabel: 'Continue',
+      });
+      if (!ok) return;
+    }
+    if (outcome === 'rejected') {
+      const ok = await confirm({
+        title: getStaffRejectLabel(currentStep),
+        description: 'This closes the request. The student will be notified.',
+        confirmLabel: 'Reject request',
+        variant: 'danger',
+      });
+      if (!ok) return;
     }
     onWorkflowAction?.({
       outcome,
@@ -359,14 +413,66 @@ export function ApplicationReviewContent({
     (decision) => decision.handler === 'document_verification' || decision.eligibilityResult,
   );
 
+  const showCorrectionOnCurrentStep = Boolean(correctionAction) && !canRollback;
+  const documentFixFields = (
+    <>
+      <textarea
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+        rows={3}
+        placeholder="Explain what the student should fix"
+        className="w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
+      />
+      {(application.documentRequirements ?? []).length > 0 ? (
+        <div className="rounded-xl border border-[#E2EEE8] bg-white p-3">
+          <p className="text-xs font-bold text-[#052E1C]">Which documents need fixing?</p>
+          <div className="mt-2 space-y-2">
+            {(application.documentRequirements ?? []).map((requirement) => (
+              <label
+                key={requirement.id}
+                className="flex items-center gap-2 text-xs text-[#4B6358]"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCorrectionDocs.includes(requirement.name)}
+                  onChange={() => toggleCorrectionDoc(requirement.name)}
+                  className="rounded border-[#C4E8D4]"
+                />
+                {requirement.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+
+  const reviewerGuidance = getReviewerStepGuidance(currentStep, lifecycleRole);
+  const currentStepAction =
+    currentStep && (approveAction || rejectAction || reviewerGuidance)
+      ? {
+          guidance: pendingAi
+            ? 'AI is reviewing this step. Staff actions appear here if it needs a human decision.'
+            : reviewerGuidance,
+          approveLabel: approveAction
+            ? getStaffApproveLabel(currentStep, nextStep?.name)
+            : null,
+          rejectLabel: rejectAction ? getStaffRejectLabel(currentStep) : null,
+          updating,
+          onApprove: () => handleWorkflowClick('approved'),
+          onReject: () => handleWorkflowClick('rejected'),
+        }
+      : null;
+
   const rollbackPanel = showRollbackUi ? (
-    <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
+    <div id="send-back-panel" className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F9FCFB] p-4">
       <p className="text-sm font-semibold text-[#052E1C]">Send back to an earlier step</p>
       <p className="mt-1 text-xs text-[#4B6358]">
         {canRollback
-          ? 'Reopen a completed stage. The student will be notified and asked to complete that step again.'
+          ? 'Use this when the student must fix documents or repeat an earlier stage. Tell them what to change, then send the request back. They will be notified and must complete that step again.'
           : rollbackDisabledReason}
       </p>
+      {canRollback ? <div className="mt-3 space-y-3">{documentFixFields}</div> : null}
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <Select
@@ -437,18 +543,40 @@ export function ApplicationReviewContent({
       <div className="mt-6">
         <WorkflowFunnel
           steps={steps}
-          currentStepName={workflow?.currentStep?.name}
+          currentStepName={currentStep?.name}
           statusLabel={APPLICATION_STATUS_LABELS[application.status]}
-          onRollbackToStep={canRollback ? commitRollback : undefined}
+          onRollbackToStep={canRollback ? selectRollbackTarget : undefined}
           rollbackLoading={rollbackLoading}
-        />
+          currentStepAction={currentStepAction}
+        >
+          {showCorrectionOnCurrentStep ? (
+            <div className="mt-4 space-y-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
+              <p className="text-sm font-semibold text-[#92400E]">Ask the student to fix documents</p>
+              <p className="text-xs text-[#92400E]">
+                This request is still on the first step, so send a correction instead of rolling
+                back. Tell the student what to change.
+              </p>
+              {documentFixFields}
+              <Button
+                type="button"
+                disabled={updating}
+                onClick={() => handleWorkflowClick('needs_correction')}
+              >
+                {correctionAction.label ??
+                  WORKFLOW_OUTCOME_LABELS.needs_correction ??
+                  'Request correction'}
+              </Button>
+            </div>
+          ) : null}
+        </WorkflowFunnel>
       </div>
 
       <section className="mt-6 rounded-2xl border border-[#E2EEE8] bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-[#052E1C]">Request actions</h2>
+        <h2 className="text-sm font-bold text-[#052E1C]">Other request actions</h2>
         <p className="mt-1 text-sm text-[#4B6358]">
-          Move this request through its current step, or use lifecycle actions. Notes are saved to
-          the activity log.
+          Complete the current step from the workflow map above. Use this section to send the
+          request back, change SLA, or apply a lifecycle action. Notes are saved to the activity
+          log.
         </p>
         <p className="mt-3 text-xs text-[#4B6358]">
           Updated {new Date(application.updatedAt).toLocaleString()}
@@ -467,55 +595,7 @@ export function ApplicationReviewContent({
           />
         ) : null}
 
-        {workflowActions.length > 0 ? (
-          <div className="mt-4 space-y-3">
-            {workflowActions.some((action) => action.outcome === 'needs_correction') ? (
-              <>
-                <textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  rows={3}
-                  placeholder="Explain what the student should fix (required for correction requests)"
-                  className="w-full rounded-xl border border-[#C4E8D4] bg-white px-3 py-2 text-xs text-[#052E1C] outline-none focus:border-[#6EE7B7] focus:ring-2 focus:ring-[#6EE7B7]/20"
-                />
-                {(application.documentRequirements ?? []).length > 0 ? (
-                  <div className="rounded-xl border border-[#E2EEE8] bg-[#F9FCFB] p-3">
-                    <p className="text-xs font-bold text-[#052E1C]">Which documents need fixing?</p>
-                    <div className="mt-2 space-y-2">
-                      {(application.documentRequirements ?? []).map((requirement) => (
-                        <label
-                          key={requirement.id}
-                          className="flex items-center gap-2 text-xs text-[#4B6358]"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedCorrectionDocs.includes(requirement.name)}
-                            onChange={() => toggleCorrectionDoc(requirement.name)}
-                            className="rounded border-[#C4E8D4]"
-                          />
-                          {requirement.name}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              {workflowActions.map((action) => (
-                <Button
-                  key={action.outcome}
-                  type="button"
-                  variant={action.outcome === 'rejected' ? 'outline' : 'default'}
-                  disabled={updating}
-                  onClick={() => handleWorkflowClick(action.outcome)}
-                >
-                  {action.label ?? WORKFLOW_OUTCOME_LABELS[action.outcome] ?? action.outcome}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : legacyActions.length > 0 ? (
+        {workflowActions.length === 0 && legacyActions.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {legacyActions.map((action) => (
               <Button
@@ -543,8 +623,9 @@ export function ApplicationReviewContent({
           <div>
             <h2 className="text-lg font-bold text-[#052E1C]">Student documents</h2>
             <p className="mt-1 text-sm text-[#4B6358]">
-              Review each upload against the eligibility requirement, then mark it eligible or
-              ineligible.
+              {usesAiVerification
+                ? 'Documents for this request. AI has already judged eligibility. Override a file only if it should not continue.'
+                : 'Review each upload against the eligibility requirement, then mark it eligible or ineligible.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

@@ -26,6 +26,31 @@ export function toPlainObject(value) {
   return value;
 }
 
+export const AUDIENCE_INSTRUCTION_MAX = 1000;
+
+/**
+ * @param {Object} [step]
+ */
+export function normalizeAudienceInstructions(step = {}) {
+  return {
+    staffInstructions: String(step.staffInstructions ?? '').trim(),
+    adminInstructions: String(step.adminInstructions ?? '').trim(),
+    studentInstructions: String(step.studentInstructions ?? '').trim(),
+  };
+}
+
+/**
+ * @param {Object} [step]
+ */
+export function hasAudienceInstructions(step) {
+  const instructions = normalizeAudienceInstructions(step);
+  return Boolean(
+    instructions.staffInstructions &&
+      instructions.adminInstructions &&
+      instructions.studentInstructions,
+  );
+}
+
 /**
  * @param {string} name
  * @param {number} order
@@ -74,6 +99,9 @@ export function createWorkflowStep(order, nextStepId) {
     },
     slaValue: 24,
     slaUnit: 'hours',
+    staffInstructions: '',
+    adminInstructions: '',
+    studentInstructions: '',
     outcomes: defaultOutcomes(order === 1 ? 'Document Verification' : 'Final Approval', order, nextStepId),
   };
 }
@@ -251,6 +279,12 @@ export function validateWorkflowSteps(steps) {
     }
     if (!step.outcomes?.length) {
       throw new AppError(`"${step.name}" must define at least one outcome`, 400);
+    }
+    if (!hasAudienceInstructions(step)) {
+      throw new AppError(
+        `"${step.name}" needs staff, admin, and student instructions. Extract them from knowledge documents, or enter them when you add a step.`,
+        400,
+      );
     }
 
     for (const outcome of step.outcomes) {
@@ -459,6 +493,7 @@ export function mapExtractedWorkflowSteps(rawSteps, options = {}) {
       order,
       name: s.name,
       description: s.description ?? '',
+      ...normalizeAudienceInstructions(s),
       handledBy,
       slaValue: s.slaValue ?? 24,
       slaUnit: s.slaUnit ?? 'hours',

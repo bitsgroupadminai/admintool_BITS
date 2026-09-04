@@ -19,6 +19,7 @@ import {
   OUTCOME_META,
   ROUTE_ACTION,
   createStep,
+  hasAudienceInstructions,
   getHandlerLabel,
   getOutcomeSummary,
   normalizeSteps,
@@ -239,6 +240,11 @@ function StepCard({
             <p className="mt-0.5 text-xs text-[#6B7C69] line-clamp-1">
               {getOutcomeSummary(step)}
             </p>
+            {!hasAudienceInstructions(step) ? (
+              <p className="mt-1 text-[11px] font-semibold text-[#B45309]">
+                Staff, admin, and student instructions required
+              </p>
+            ) : null}
           </div>
           <div className="shrink-0 text-[#9BAE99]">
             {expanded ? (
@@ -276,6 +282,52 @@ function StepCard({
                   placeholder="What happens in this step?"
                 />
               </div>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-[#E8EDE6] bg-white p-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                  Audience instructions
+                </p>
+                <p className="mt-1 text-xs text-[#6B7C69]">
+                  Extracted from knowledge documents, or entered here if you add a step
+                  by hand. Required for every step. These texts appear on the staff,
+                  admin, and student portals.
+                </p>
+              </div>
+              {[
+                {
+                  key: "staffInstructions",
+                  label: "Staff instructions",
+                  placeholder:
+                    "What the assigned staff member must do, and how they move the request forward.",
+                },
+                {
+                  key: "adminInstructions",
+                  label: "Admin instructions",
+                  placeholder:
+                    "What an institute admin should do or oversee on this step.",
+                },
+                {
+                  key: "studentInstructions",
+                  label: "Student instructions",
+                  placeholder:
+                    "What the applicant should do, or that they should wait.",
+                },
+              ].map((field) => (
+                <div key={field.key} className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9BAE99]">
+                    {field.label}
+                  </p>
+                  <textarea
+                    rows={3}
+                    className="w-full rounded-lg border border-[#E8EDE6] bg-[#FAFBF9] px-3 py-2 text-sm text-[#1A2E16] placeholder-[#C4D4C2] focus:border-[#3D6B35] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B35]/10 transition-all"
+                    value={step[field.key] ?? ""}
+                    onChange={(e) => update({ [field.key]: e.target.value })}
+                    placeholder={field.placeholder}
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2.5">

@@ -80,6 +80,9 @@ const workflowStepSchema = z.object({
   order: z.number().int().min(1),
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional(),
+  staffInstructions: z.string().trim().min(1).max(1000),
+  adminInstructions: z.string().trim().min(1).max(1000),
+  studentInstructions: z.string().trim().min(1).max(1000),
   handledBy: z.object({
     type: z.enum(Object.values(HANDLER_TYPE)),
     assignee: z.string().min(1).max(80),

@@ -21,6 +21,7 @@ import {
 import { AppointmentSlotPicker } from './AppointmentSlotPicker';
 import { PaymentPanel } from './PaymentPanel';
 import { hasWorkflowFeeStep, isFeePaymentStep } from '@/utils/payment';
+import { getStudentStepDescription } from '@/utils/workflowStepGuidance';
 
 
 
@@ -93,11 +94,7 @@ function getWorkflowNextStep(application, offering) {
 
     return {
       title: current.name,
-      description: isFeeStep
-        ? 'Your visit is complete. Pay the fee below to continue your admission.'
-        : current.handledBy?.type === 'student'
-          ? 'This step needs your action on this page.'
-          : 'The institute is working on this step now.',
+      description: getStudentStepDescription(current, { isFeeStep }),
       isFeeStep,
     };
   }
@@ -105,10 +102,11 @@ function getWorkflowNextStep(application, offering) {
   const steps = application?.workflow?.steps ?? [];
   const currentStep = steps.find((step) => step.state === 'current');
   if (currentStep) {
+    const isFeeStep = isFeePaymentStep(currentStep, offering, application);
     return {
       title: currentStep.name,
-      description: 'The institute is working on this step now.',
-      isFeeStep: false,
+      description: getStudentStepDescription(currentStep, { isFeeStep }),
+      isFeeStep,
     };
   }
 
@@ -116,7 +114,9 @@ function getWorkflowNextStep(application, offering) {
   if (upcoming) {
     return {
       title: upcoming.name,
-      description: 'Your visit is done. The institute will move your request to the next step.',
+      description: getStudentStepDescription(upcoming, {
+        isFeeStep: isFeePaymentStep(upcoming, offering, application),
+      }),
       isFeeStep: false,
     };
   }

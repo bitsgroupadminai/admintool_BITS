@@ -1,5 +1,6 @@
 import { Check, Clock3, Sparkles, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 function formatHandlerLabel(handledBy) {
@@ -15,6 +16,7 @@ export function WorkflowFunnel({
   statusLabel,
   onRollbackToStep,
   rollbackLoading = false,
+  currentStepAction = null,
   children,
 }) {
   if (!steps.length) return null;
@@ -50,7 +52,8 @@ export function WorkflowFunnel({
               key={step.stepId}
               className={cn(
                 'relative min-w-[160px] flex-1 rounded-xl border px-4 py-3',
-                isCurrent && 'border-[#6EE7B7] bg-[#F0FAF5] shadow-[0_0_0_3px_rgba(110,231,183,0.18)]',
+                isCurrent &&
+                  'min-w-[280px] flex-[1.45] border-[#6EE7B7] bg-[#F0FAF5] shadow-[0_0_0_3px_rgba(110,231,183,0.18)]',
                 isComplete && 'border-[#C4E8D4] bg-[#F9FCFB]',
                 !isCurrent && !isComplete && 'border-[#E2EEE8] bg-white',
               )}
@@ -81,9 +84,37 @@ export function WorkflowFunnel({
               </p>
               <p className="mt-1 text-sm font-semibold text-[#052E1C]">{step.name}</p>
               <p className="mt-1 text-xs text-[#6B7280]">{formatHandlerLabel(step.handledBy)}</p>
+              {step.description ? (
+                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#4B6358]">{step.description}</p>
+              ) : null}
               <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[#4B6358]">
                 {isComplete ? 'Done' : isCurrent ? 'Current' : 'Upcoming'}
               </p>
+              {isCurrent && currentStepAction?.approveLabel ? (
+                <div className="mt-3 space-y-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-auto min-h-9 w-full whitespace-normal py-2 text-left"
+                    disabled={currentStepAction.updating}
+                    onClick={currentStepAction.onApprove}
+                  >
+                    {currentStepAction.approveLabel}
+                  </Button>
+                  {currentStepAction.rejectLabel ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-auto min-h-9 w-full whitespace-normal py-2"
+                      disabled={currentStepAction.updating}
+                      onClick={currentStepAction.onReject}
+                    >
+                      {currentStepAction.rejectLabel}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
               {canSendBack ? (
                 <button
                   type="button"
@@ -99,6 +130,16 @@ export function WorkflowFunnel({
           );
         })}
       </ol>
+
+      {currentStepAction?.guidance ? (
+        <div className="mt-4 rounded-xl border border-[#C4E8D4] bg-[#F6FAF5] px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0A6640]">
+            What you do on {currentStepName || 'this step'}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-[#334155]">{currentStepAction.guidance}</p>
+        </div>
+      ) : null}
+
       {children}
     </section>
   );

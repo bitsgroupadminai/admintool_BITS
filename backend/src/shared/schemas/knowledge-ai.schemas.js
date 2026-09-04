@@ -53,6 +53,9 @@ const workflowStepSkeletonSchema = z.object({
   handledByAssignee: z.string().min(1),
   slaValue: z.number().min(1).max(720),
   slaUnit: z.enum(['minutes', 'hours', 'days']),
+  staffInstructions: z.string().min(1).max(1000),
+  adminInstructions: z.string().min(1).max(1000),
+  studentInstructions: z.string().min(1).max(1000),
   documentExcerpt: z.string().min(1).max(500).optional(),
 });
 

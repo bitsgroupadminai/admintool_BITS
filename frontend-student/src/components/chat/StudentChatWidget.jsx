@@ -321,8 +321,18 @@ export function StudentChatWidget() {
   );
 }
 
+function isStudentFriendlyCitation(item) {
+  const source = String(item?.source ?? '');
+  if (!source.trim()) return false;
+  if (/studentContext|retrievedKnowledge|conversationHistory|focusOffering/i.test(source)) return false;
+  if (/\[[0-9]+\]/.test(source)) return false;
+  if (/\b(offerings|application|perDocument|extractedFields)\s*[.\[]/i.test(source)) return false;
+  return true;
+}
+
 function ChatBubble({ role, content, citations = [], confidence }) {
   const isUser = role === 'user';
+  const visibleCitations = citations.filter(isStudentFriendlyCitation);
   const confidenceLabel =
     confidence === 'high' ? 'High confidence' : confidence === 'medium' ? 'Medium confidence' : confidence === 'low' ? 'General guidance' : null;
   return (
@@ -343,11 +353,11 @@ function ChatBubble({ role, content, citations = [], confidence }) {
             </p>
           ) : null}
           <ChatMessageBody content={content} variant="assistant" />
-          {citations?.length > 0 ? (
+          {visibleCitations.length > 0 ? (
             <div className="mt-3 border-t border-[#E2EEE8] pt-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#10B981]">Sources</p>
               <ul className="mt-1 space-y-1">
-                {citations.map((item, index) => (
+                {visibleCitations.map((item, index) => (
                   <li key={`${item.source}-${index}`} className="text-[11px] text-[#4B6358]">
                     <span className="font-semibold">{item.source}</span>
                     {item.excerpt ? `: ${item.excerpt}` : ''}

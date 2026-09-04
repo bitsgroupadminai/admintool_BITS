@@ -9,6 +9,16 @@ import { retrieveRelevantChunks } from '../../shared/services/rag.service.js';
 import { logger } from '../../core/logger/index.js';
 import { OFFERING_STATUS } from '../../shared/enums/offering.enums.js';
 import { formatDocumentRequirements, getDocumentUploadProgress } from '../../shared/helpers/applicationDocument.helper.js';
+import { loadApplicationAiDecisions } from '../applications/application.service.js';
+import { getApplicationPaymentState } from '../payments/payment.service.js';
+import {
+  buildEligibilityAnswer,
+  buildFeedbackAnswer,
+  buildStudentChatFacts,
+  citationsFromStudentFacts,
+  humanEligibilityRule,
+  sanitizeStudentFacingCitations,
+} from './chatContext.helper.js';
 import { z } from 'zod';
 
 const chatReplySchema = z.object({
@@ -91,14 +101,51 @@ function sanitizeReplyText(text) {
   );
 }
 
-function sanitizeCitations(citations) {
-  if (!Array.isArray(citations)) return [];
-  return citations
-    .map((item) => ({
-      source: String(item?.source ?? '').trim().slice(0, 300),
-      excerpt: String(item?.excerpt ?? '').trim().slice(0, 500),
-    }))
-    .filter((item) => item.source);
+function sanitizeCitations(citations, facts = null) {
+  const cleaned = Array.isArray(citations)
+    ? citations
+        .map((item) => ({
+          source: String(item?.source ?? '').trim().slice(0, 300),
+          excerpt: String(item?.excerpt ?? '').trim().slice(0, 500),
+        }))
+        .filter((item) => item.source)
+    : [];
+  if (!facts) return cleaned.filter((item) => item.source);
+  return sanitizeStudentFacingCitations(cleaned, facts).map((item) => ({
+    source: item.source.slice(0, 300),
+    excerpt: String(item.excerpt ?? '').slice(0, 500),
+  }));
+}
+
+function shouldPreferStudentRecords(message, context) {
+  const text = String(message ?? '').toLowerCase();
+  if (!context?.yourRequest) return false;
+  return (
+    isEligibilityQuestion(text) ||
+    isStatusQuestion(text) ||
+    isProcessQuestion(text) ||
+    isFeedbackQuestion(text)
+  );
+}
+
+function finalizeCitations(citations, context, message) {
+  const text = String(message ?? '').toLowerCase();
+  if (
+    isEligibilityQuestion(text) ||
+    isDocumentQuestion(text) ||
+    isStatusQuestion(text) ||
+    isProcessQuestion(text) ||
+    isFeedbackQuestion(text)
+  ) {
+    const fromRecords = citationsFromStudentFacts(context, {
+      preferDocuments: isEligibilityQuestion(text) || isDocumentQuestion(text),
+      preferFeedback: isFeedbackQuestion(text) || isStatusQuestion(text),
+    });
+    if (fromRecords.length) return sanitizeCitations(fromRecords, context);
+  }
+  const cleaned = sanitizeCitations(citations, context);
+  if (cleaned.length) return cleaned;
+  return citationsFromStudentFacts(context);
 }
 
 function isGreeting(text) {
@@ -140,6 +187,12 @@ function isStatusQuestion(text) {
   return /\b(status|track|tracking|approved|rejected|pending|where is my)\b/.test(text);
 }
 
+function isFeedbackQuestion(text) {
+  return /\b(feedback|comment|sent back|send back|rolled back|rollback|correction|returned|why (was|did|were)|staff (said|note|comment)|ai (said|note|flag|comment))\b/.test(
+    text,
+  );
+}
+
 function isVisitQuestion(text) {
   return /\b(queue|appointment|visit|slot|book|walk[- ]?in)\b/.test(text);
 }
@@ -156,9 +209,8 @@ function buildFocusOfferingSummary(offering) {
     workflowSteps: steps.map((step) => ({
       order: step.order,
       name: step.name,
-      description: step.description ?? '',
-      handledBy: step.handledBy?.assignee ?? step.handledBy?.type ?? '',
-      sla: `${step.slaValue} ${step.slaUnit}`,
+      description: step.studentInstructions || step.description || '',
+      handledBy: step.handledBy?.type === 'student' ? 'you' : 'institute staff',
     })),
     queueMode: offering.queueMode ?? 'not configured',
     documentCount: offering.documentRequirements?.length ?? 0,
@@ -179,8 +231,9 @@ function buildServiceContext(service, offerings, options = {}) {
       name: offering.name,
       description: offering.description ?? '',
       eligibility: (offering.eligibilityRules ?? [])
-        .filter((rule) => rule && (rule.field || rule.operator || rule.value))
-        .map((rule) => `${rule.field} ${rule.operator} ${rule.value}`),
+        .filter((rule) => rule && (rule.field || rule.value))
+        .map(humanEligibilityRule)
+        .filter(Boolean),
       documents: docs.map((doc) => ({
         name: doc.name,
         required: doc.required !== false,
@@ -189,15 +242,15 @@ function buildServiceContext(service, offerings, options = {}) {
       workflowSteps: steps.map((step) => ({
         order: step.order,
         name: step.name,
-        description: step.description ?? '',
-        handledBy: step.handledBy?.assignee ?? step.handledBy?.type ?? '',
-        sla: `${step.slaValue} ${step.slaUnit}`,
+        description: step.studentInstructions || step.description || '',
+        handledBy: step.handledBy?.type === 'student' ? 'you' : 'institute staff',
       })),
       queueMode: offering.queueMode ?? 'not configured',
     };
   });
 
   const focusOfferingSummary = buildFocusOfferingSummary(focusOffering);
+  const facts = options.facts ?? null;
 
   let applicationSummary = null;
   if (application && focusOffering) {
@@ -219,9 +272,17 @@ function buildServiceContext(service, offerings, options = {}) {
   return {
     serviceName: service.name,
     serviceDescription: service.description ?? '',
+    programmeName: facts?.programmeName || focusOfferingSummary?.name || service.name,
+    programmeEligibilityRules: facts?.programmeEligibilityRules ?? offeringSummaries[0]?.eligibility ?? [],
+    documentsYouNeed: offeringSummaries[0]?.documents ?? [],
+    admissionProcessSteps: facts?.yourRequest?.workflow?.steps?.length
+      ? facts.yourRequest.workflow.steps
+      : (offeringSummaries[0]?.workflowSteps ?? []),
     focusOffering: focusOfferingSummary,
     offerings: offeringSummaries,
     application: applicationSummary,
+    yourRequest: facts?.yourRequest ?? null,
+    citationSourcesYouMayUse: facts?.citationSourcesYouMayUse ?? [],
     documentListText: formatDocumentList(orderedOfferings),
   };
 }
@@ -309,6 +370,9 @@ function buildHeuristicReply(message, context) {
   }
 
   if (isEligibilityQuestion(text)) {
+    if (context.yourRequest || context.programmeEligibilityRules?.length) {
+      return buildEligibilityAnswer(context);
+    }
     const rules = context.offerings.flatMap((offering) =>
       offering.eligibility.length
         ? offering.eligibility.map((rule) => `${offering.name}: ${rule}`)
@@ -320,7 +384,14 @@ function buildHeuristicReply(message, context) {
     return ['Before applying, confirm that you meet these checks:', ...rules.map((rule, index) => `${index + 1}. ${rule}`)].join('\n');
   }
 
+  if (isFeedbackQuestion(text) && context.yourRequest) {
+    return buildFeedbackAnswer(context);
+  }
+
   if (isStatusQuestion(text)) {
+    if (context.yourRequest?.feedbackAndReturns?.sentBackForCorrections || context.yourRequest?.feedbackAndReturns?.rolledBack) {
+      return buildFeedbackAnswer(context);
+    }
     if (context.application?.status) {
       return `Your current request status is "${context.application.status.replace(/_/g, ' ')}". Track progress on this page and check your email for updates from the institute.`;
     }
@@ -339,15 +410,17 @@ function buildHeuristicReply(message, context) {
 
 const INSTRUCTOR_SYSTEM_PROMPT = `You are an experienced institute help desk officer — like the friendly staff member at the college admissions counter who guides confused students every day.
 
-You deeply understand student worries: missing documents, not knowing what happens next, how to book visits, and whether their request was received.
+You deeply understand student worries: missing documents, not knowing what happens next, how to book visits, and whether they are eligible.
 
 YOUR ROLE:
 - Listen to the student's EXACT question and answer only that — never dump unrelated information.
-- If they ask what happens AFTER submitting documents → explain the workflow/process steps in order.
+- If they ask what happens AFTER submitting documents → explain admissionProcessSteps / yourRequest.workflow in order, including which steps are Done, In progress, or Upcoming.
 - If they ask HOW to book appointments or queue → explain visit planning steps and when booking opens.
-- If they ask WHAT documents they need → list documents clearly with required/optional labels.
-- If they ask about status → use their application data from studentContext when available.
-- Use retrievedKnowledge as your primary factual source. Use studentContext for their personal progress.
+- If they ask WHAT documents they need → list documentsYouNeed clearly with required/optional labels.
+- If they ask about status or progress → use yourRequest (status, workflow, payment) and mention any send-back or rollback in feedbackAndReturns.
+- If they ask about eligibility, marks, scores, or whether they qualify → use yourRequest.extractedFromDocuments. Quote the actual aggregate, exam score, and subject scores from each named document, plus that document's eligibility result. Compare them with programmeEligibilityRules. Do not say scores are missing when extractedFromDocuments contains them.
+- If they ask about comments, feedback, why they were sent back, or why they were moved to an earlier step → use yourRequest.feedbackAndReturns. Say who gave the comment (AI review, institute staff, or admin), which document or step it was about, and the reason.
+- Use retrievedKnowledge for institute policy. Use the student fields in this prompt for this student's personal records.
 
 TONE:
 - Warm, patient, professional — like a helpful college staff member.
@@ -355,14 +428,15 @@ TONE:
 - Reassure students when they seem worried.
 
 STRICT RULES:
-1. Never invent fees, dates, or policies not in retrievedKnowledge or studentContext.
+1. Never invent fees, dates, scores, or policies not in retrievedKnowledge or studentContext.
 2. Never list documents when the student asked about process or appointments.
 3. Never repeat the same generic answer for different questions.
 4. Do NOT use markdown (** or ##). Plain text only.
-5. If information is missing, honestly say what to check on the portal or with the institute office.
-6. Keep under 200 words unless listing documents or workflow steps.
+5. If a score or eligibility result is present in extractedFromDocuments, use it. Only say you cannot confirm when that document has no scores and no criteria results.
+6. Keep under 220 words unless listing documents, scores, or workflow steps.
+7. citations.source MUST be a human document or section name from citationSourcesYouMayUse (for example "Class 12 Marksheet" or "M.Sc. Economics eligibility rules"). NEVER cite JSON paths, object keys, array indexes, or names like studentContext.offerings[0].eligibility.
 
-Respond as JSON only: {"reply":"...","citations":[{"source":"source name","excerpt":"short quote"}]}`;
+Respond as JSON only: {"reply":"...","citations":[{"source":"Class 12 Marksheet","excerpt":"short student-friendly quote"}]}`;
 
 function buildRetrievalFallbackReply(message, context, retrieved) {
   const text = message.toLowerCase().trim();
@@ -375,8 +449,25 @@ function buildRetrievalFallbackReply(message, context, retrieved) {
   } else if (isDocumentQuestion(text)) {
     preferredTypes = ['DOCUMENTS', 'KNOWLEDGE', 'ELIGIBILITY'];
   } else if (isEligibilityQuestion(text)) {
+    if (context.yourRequest?.extractedFromDocuments?.length) {
+      return {
+        reply: buildEligibilityAnswer(context),
+        citations: citationsFromStudentFacts(context, { preferDocuments: true }),
+      };
+    }
     preferredTypes = ['ELIGIBILITY', 'DOCUMENTS', 'KNOWLEDGE'];
+  } else if (isFeedbackQuestion(text) && context.yourRequest) {
+    return {
+      reply: buildFeedbackAnswer(context),
+      citations: citationsFromStudentFacts(context, { preferFeedback: true }),
+    };
   } else if (isStatusQuestion(text)) {
+    if (context.yourRequest) {
+      return {
+        reply: buildFeedbackAnswer(context),
+        citations: citationsFromStudentFacts(context, { preferFeedback: true }),
+      };
+    }
     return {
       reply: context.application?.status
         ? `Your current request status is "${humanizeStatus(context.application.status)}". Track updates on this page and check your email from the institute.`
@@ -438,7 +529,12 @@ async function buildAssistantReply(message, context, history, instituteId, servi
       try {
         payload = JSON.stringify({
           retrievedKnowledge,
-          studentContext: context,
+          programmeName: context.programmeName,
+          programmeEligibilityRules: context.programmeEligibilityRules,
+          documentsYouNeed: context.documentsYouNeed,
+          admissionProcessSteps: context.admissionProcessSteps,
+          yourRequest: context.yourRequest,
+          citationSourcesYouMayUse: context.citationSourcesYouMayUse,
           conversationHistory: Array.isArray(history) ? history.slice(-6) : [],
           studentQuestion: message,
         });
@@ -463,7 +559,7 @@ async function buildAssistantReply(message, context, history, instituteId, servi
 
         return {
           reply: sanitizeReplyText(result.reply.replace(/\*\*/g, '')),
-          citations: sanitizeCitations(citations),
+          citations: finalizeCitations(citations, context, message),
         };
       }
     } catch (err) {
@@ -471,17 +567,17 @@ async function buildAssistantReply(message, context, history, instituteId, servi
     }
   }
 
-  if (retrieved.length) {
+  if (retrieved.length && !shouldPreferStudentRecords(message, context)) {
     const fallback = buildRetrievalFallbackReply(message, context, retrieved);
     return {
       reply: sanitizeReplyText(fallback.reply),
-      citations: sanitizeCitations(fallback.citations),
+      citations: finalizeCitations(fallback.citations, context, message),
     };
   }
 
   return {
     reply: sanitizeReplyText(buildHeuristicReply(message, context)),
-    citations: [],
+    citations: finalizeCitations([], context, message),
   };
 }
 
@@ -531,7 +627,44 @@ async function loadChatContext(instituteId, serviceId, user, offeringId) {
     });
   }
 
-  const context = buildServiceContext(service, offerings, { focusOffering, application });
+  let progress = null;
+  if (application && focusOffering) {
+    try {
+      progress = getDocumentUploadProgress(focusOffering, application);
+    } catch (err) {
+      logger.warn({ err: err?.message }, 'Chat could not summarize application documents');
+    }
+  }
+
+  let aiDecisions = [];
+  if (application) {
+    try {
+      aiDecisions = await loadApplicationAiDecisions(instituteId, application._id.toString());
+    } catch (err) {
+      logger.warn({ err: err?.message }, 'Chat could not load extracted document results');
+    }
+  }
+
+  let payment = null;
+  if (application && focusOffering) {
+    try {
+      payment = await getApplicationPaymentState(focusOffering, application);
+    } catch (err) {
+      logger.warn({ err: err?.message }, 'Chat could not load payment status');
+    }
+  }
+
+  const facts = buildStudentChatFacts({
+    application,
+    offering: focusOffering,
+    progress,
+    aiDecisions,
+    payment,
+  });
+  const context = {
+    ...buildServiceContext(service, offerings, { focusOffering, application, facts }),
+    ...facts,
+  };
   return { service, offerings, focusOffering, application, context };
 }
 
@@ -598,7 +731,7 @@ export async function generateAssistantReply(
       serviceId,
     );
     reply = sanitizeReplyText(generated.reply);
-    citations = sanitizeCitations(generated.citations);
+    citations = finalizeCitations(generated.citations, context, message);
   } catch (err) {
     logger.warn({ err: err?.message }, 'Chat assistant generation failed; using fallback reply');
   }

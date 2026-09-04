@@ -58,6 +58,7 @@ const WORKFLOW_ACTION_STATUSES = new Set([
   APPLICATION_STATUS.SUBMITTED,
   APPLICATION_STATUS.IN_REVIEW,
   APPLICATION_STATUS.PENDING_AI_REVIEW,
+  APPLICATION_STATUS.NEEDS_CORRECTION,
 ]);
 
 function formatAssignee(user) {
@@ -493,29 +494,23 @@ export async function getStaffAssignmentSummary(instituteId, staffUserId) {
  * @param {{ userId: string, name: string, role: string, staffRole?: string | null }} user
  */
 export async function getApplicationDetail(instituteId, applicationId, user = null) {
-  return cachedRead(
-    cacheNs.APPLICATION_DETAIL,
-    [instituteId, applicationId, user?.userId, user?.role, 'elig-v4'],
-    async () => {
-      const application = await getInstituteApplication(instituteId, applicationId);
-      const [context, assignee, aiDecisions] = await Promise.all([
-        loadApplicationContext(application, instituteId),
-        loadAssignee(application),
-        loadApplicationAiDecisions(instituteId, applicationId),
-      ]);
+  const application = await getInstituteApplication(instituteId, applicationId);
+  const [context, assignee, aiDecisions] = await Promise.all([
+    loadApplicationContext(application, instituteId),
+    loadAssignee(application),
+    loadApplicationAiDecisions(instituteId, applicationId),
+  ]);
 
-      return {
-        ...formatApplicationDetail(
-          application,
-          context.service,
-          context.offering,
-          assignee,
-          user,
-        ),
-        aiDecisions,
-      };
-    },
-  );
+  return {
+    ...formatApplicationDetail(
+      application,
+      context.service,
+      context.offering,
+      assignee,
+      user,
+    ),
+    aiDecisions,
+  };
 }
 
 /**
@@ -530,29 +525,23 @@ export async function getAssignedApplicationDetail(
   staffUserId,
   user = null,
 ) {
-  return cachedRead(
-    cacheNs.APPLICATION_ASSIGNED_DETAIL,
-    [instituteId, applicationId, staffUserId, user?.userId, 'elig-v4'],
-    async () => {
-      const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
-      const [context, assignee, aiDecisions] = await Promise.all([
-        loadApplicationContext(application, instituteId),
-        loadAssignee(application),
-        loadApplicationAiDecisions(instituteId, applicationId),
-      ]);
+  const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
+  const [context, assignee, aiDecisions] = await Promise.all([
+    loadApplicationContext(application, instituteId),
+    loadAssignee(application),
+    loadApplicationAiDecisions(instituteId, applicationId),
+  ]);
 
-      return {
-        ...formatApplicationDetail(
-          application,
-          context.service,
-          context.offering,
-          assignee,
-          user,
-        ),
-        aiDecisions,
-      };
-    },
-  );
+  return {
+    ...formatApplicationDetail(
+      application,
+      context.service,
+      context.offering,
+      assignee,
+      user,
+    ),
+    aiDecisions,
+  };
 }
 
 /**

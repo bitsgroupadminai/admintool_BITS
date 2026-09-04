@@ -398,19 +398,22 @@ export async function rollbackToStep(
     createdAt: new Date(),
   });
 
-  // Fee-step rollbacks stay in review so checkout can open; other steps ask the student to fix and resubmit.
+  // Stay in review so staff/admin can act on the earlier step. Only require a
+  // student resubmit when the rollback names documents to fix (and is not the fee step).
   const offering = await Offering.findById(application.offeringId).select(
     'paymentConfig workflowSteps',
   );
   const reopenPayment = isWorkflowFeeStepId(offering, application, targetStepId);
-  application.currentStepId = targetStepId;
-  application.status = reopenPayment
-    ? APPLICATION_STATUS.IN_REVIEW
-    : APPLICATION_STATUS.NEEDS_CORRECTION;
-  application.correctionNote = note?.trim() || undefined;
-  application.correctionRequiredDocuments = Array.isArray(correctionRequiredDocuments)
+  const selectedFixDocs = Array.isArray(correctionRequiredDocuments)
     ? correctionRequiredDocuments.filter((name) => String(name).trim())
     : [];
+  application.currentStepId = targetStepId;
+  application.status =
+    selectedFixDocs.length && !reopenPayment
+      ? APPLICATION_STATUS.NEEDS_CORRECTION
+      : APPLICATION_STATUS.IN_REVIEW;
+  application.correctionNote = note?.trim() || undefined;
+  application.correctionRequiredDocuments = selectedFixDocs;
 
   // Store rollback metadata so the student sees a banner
   application.rollbackNote = note?.trim() || '';

@@ -7,8 +7,8 @@ export const HANDLER_TYPE = {
 export const AI_HANDLERS = [
   {
     value: 'document_verification',
-    label: 'AI — Verify uploaded documents',
-    description: 'Checks completeness and flags suspicious uploads for human review.',
+    label: 'AI — Verify documents and eligibility',
+    description: 'Checks each upload and marks it eligible only when scores meet the programme rules.',
   },
   {
     value: 'eligibility_screening',

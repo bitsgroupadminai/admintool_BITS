@@ -5,7 +5,7 @@ export const HANDLER_TYPE = {
 };
 
 const AI_LABELS = {
-  document_verification: 'Automatic document check',
+  document_verification: 'Automatic document and eligibility check',
   eligibility_screening: 'Automatic eligibility check',
   template_validation: 'Automatic format check',
 };

@@ -11,7 +11,6 @@ import {
   normalizeFieldKey,
   uniqueSubjects,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
-import { HANDLER_TYPE, AI_HANDLER } from '../../shared/enums/workflow.enums.js';
 
 /**
  * Pure decision logic for AI verification. Kept free of DB / OpenAI / queue imports
@@ -24,25 +23,81 @@ export const INTERNAL_ACTION = {
   ESCALATE: 'escalate',
 };
 
+export const ELIGIBILITY_VERDICT = {
+  ELIGIBLE: 'eligible',
+  INELIGIBLE: 'ineligible',
+};
+
+function eligibilityEvaluationBlocksApprove(evaluation) {
+  if (!evaluation) return false;
+  if (evaluation.eligible === false) return true;
+  return (evaluation.results ?? []).some((result) => result.status === 'unchecked');
+}
+
 /**
  * Map a document-verification verdict + confidence to an action using thresholds.
+ * When eligibility rules exist, a document is auto-approved only if it is valid
+ * and the extracted scores meet those rules.
  *
  * @param {{
  *   verdict: 'pass' | 'fail' | 'uncertain',
  *   confidence: number,
  *   thresholds: { autoApprove: number, autoReject: number },
  *   forceEscalate?: boolean,
+ *   eligibilityEvaluation?: { eligible?: boolean, results?: Array<{ status?: string }> } | null,
  * }} params
  */
-export function decideDocumentAction({ verdict, confidence, thresholds, forceEscalate = false }) {
+export function decideDocumentAction({
+  verdict,
+  confidence,
+  thresholds,
+  forceEscalate = false,
+  eligibilityEvaluation = null,
+}) {
   if (forceEscalate) return INTERNAL_ACTION.ESCALATE;
-  if (verdict === 'pass' && confidence >= thresholds.autoApprove) {
-    return INTERNAL_ACTION.APPROVE;
-  }
+  if (verdict === 'uncertain') return INTERNAL_ACTION.ESCALATE;
+
+  const eligibilityFailed = eligibilityEvaluation?.eligible === false;
+  const eligibilityUnchecked = (eligibilityEvaluation?.results ?? []).some(
+    (result) => result.status === 'unchecked',
+  );
+
   if (verdict === 'fail' && confidence >= thresholds.autoReject) {
     return INTERNAL_ACTION.RETURN;
   }
+  if (eligibilityFailed && !eligibilityUnchecked && confidence >= thresholds.autoReject) {
+    return INTERNAL_ACTION.RETURN;
+  }
+  if (eligibilityEvaluationBlocksApprove(eligibilityEvaluation)) {
+    return INTERNAL_ACTION.ESCALATE;
+  }
+  if (verdict === 'pass' && confidence >= thresholds.autoApprove) {
+    return INTERNAL_ACTION.APPROVE;
+  }
   return INTERNAL_ACTION.ESCALATE;
+}
+
+export function authenticityBlocksEligibility(finding = {}) {
+  if (finding.present === false) return true;
+  if (finding.matchesRequirement === false) return true;
+  if (finding.belongsToApplicant === false) return true;
+  if (finding.legible === false) return true;
+  const authenticity =
+    finding.authenticityVerdict ||
+    (finding.verdict === ELIGIBILITY_VERDICT.ELIGIBLE ||
+    finding.verdict === ELIGIBILITY_VERDICT.INELIGIBLE
+      ? null
+      : finding.verdict);
+  return authenticity === 'fail' || authenticity === 'uncertain';
+}
+
+export function documentEligibilityVerdict({ finding = {}, eligibilityStatus = 'not_applicable', isAcademic = false }) {
+  if (authenticityBlocksEligibility(finding)) return ELIGIBILITY_VERDICT.INELIGIBLE;
+  if (!isAcademic) return ELIGIBILITY_VERDICT.ELIGIBLE;
+  if (eligibilityStatus === 'failed' || eligibilityStatus === 'unchecked') {
+    return ELIGIBILITY_VERDICT.INELIGIBLE;
+  }
+  return ELIGIBILITY_VERDICT.ELIGIBLE;
 }
 
 function documentMergePriority(requirementName) {
@@ -364,7 +419,103 @@ export function hydrateEligibilityDecision(decision = {}, { eligibilityRules = [
       .map((result) => result.message),
     perDocument,
     eligibilityResult: evaluation,
-    verdict: !evaluation.eligible ? 'fail' : hasUnchecked ? 'uncertain' : decision.verdict || 'pass',
+    verdict: !evaluation.eligible || hasUnchecked
+      ? ELIGIBILITY_VERDICT.INELIGIBLE
+      : ELIGIBILITY_VERDICT.ELIGIBLE,
+  };
+}
+
+function findingNameKey(requirementName) {
+  return String(requirementName ?? '')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Attach eligibility criteria and an eligible/ineligible verdict to each
+ * document-verification finding. Photos and IDs are eligible when the file
+ * itself is valid; academic files also have to meet the offering rules.
+ */
+export function hydrateDocumentVerificationDecision(
+  decision = {},
+  { eligibilityRules = [], documents = [] } = {},
+) {
+  const authenticityDocs = asArray(decision.perDocument);
+  const fields = collectDecisionFields(decision);
+  const seededAcademic = seedAcademicDocuments(decision, documents, fields).map((doc) =>
+    fillDocumentExtraction(doc, decision, fields),
+  );
+  const academicEvaluated = evaluateEligibilityByDocument(seededAcademic, eligibilityRules);
+  const academicByName = new Map(
+    academicEvaluated.map((doc) => [findingNameKey(doc.requirementName), doc]),
+  );
+
+  const sourceFindings = authenticityDocs.length ? authenticityDocs : seededAcademic;
+  const perDocument = sourceFindings.map((finding) => {
+    const academic = academicByName.get(findingNameKey(finding.requirementName));
+    const isAcademic =
+      Boolean(academic) || isAcademicEligibilityDocument(finding.requirementName, finding);
+    const merged = academic
+      ? {
+          ...finding,
+          qualification: finding.qualification || academic.qualification,
+          aggregate: finding.aggregate ?? academic.aggregate,
+          examScore: finding.examScore ?? academic.examScore,
+          subjects: uniqueSubjects(
+            asArray(finding.subjects).length ? finding.subjects : academic.subjects,
+          ),
+          extractedFields: [
+            ...asArray(finding.extractedFields),
+            ...asArray(academic.extractedFields),
+          ],
+          eligibilityResult: academic.eligibilityResult,
+        }
+      : { ...finding, subjects: uniqueSubjects(finding.subjects) };
+
+    const authenticityVerdict = ['pass', 'fail', 'uncertain'].includes(finding.authenticityVerdict)
+      ? finding.authenticityVerdict
+      : ['pass', 'fail', 'uncertain'].includes(finding.verdict)
+        ? finding.verdict
+        : 'pass';
+    const eligibilityStatus = academic
+      ? summarizeDocumentEvaluation(academic.eligibilityResult)
+      : 'not_applicable';
+    const eligibilityVerdict = documentEligibilityVerdict({
+      finding: { ...merged, authenticityVerdict },
+      eligibilityStatus,
+      isAcademic,
+    });
+
+    return {
+      ...merged,
+      authenticityVerdict,
+      eligibilityVerdict,
+      verdict: eligibilityVerdict,
+    };
+  });
+
+  const overallIneligible = perDocument.some(
+    (doc) => doc.eligibilityVerdict === ELIGIBILITY_VERDICT.INELIGIBLE,
+  );
+  const profile = mergeEligibilityProfile(
+    perDocument.filter((doc) => isAcademicEligibilityDocument(doc.requirementName, doc)),
+    fields,
+  );
+  const evaluation = eligibilityRules.length
+    ? evaluateEligibilityRules(eligibilityRules, profile)
+    : { eligible: !overallIneligible, results: [] };
+  const hasUnchecked = (evaluation.results ?? []).some((result) => result.status === 'unchecked');
+  const eligible = !overallIneligible && evaluation.eligible !== false && !hasUnchecked;
+
+  return {
+    ...decision,
+    perDocument,
+    extractedFields: mergeExtractedFields(perDocument, fields),
+    eligibilityResult: evaluation,
+    verdict: eligible ? ELIGIBILITY_VERDICT.ELIGIBLE : ELIGIBILITY_VERDICT.INELIGIBLE,
+    issues: (evaluation.results ?? [])
+      .filter((result) => result.status === 'failed' || result.status === 'unchecked')
+      .map((result) => result.message),
   };
 }
 
@@ -440,18 +591,4 @@ export function decideEligibilityAction({
   }
 
   return { action, evaluation };
-}
-
-/**
- * After document verification, eligibility must be re-extracted from the current
- * uploads unless the workflow will immediately run the eligibility AI step.
- * Escalating or returning documents used to skip eligibility entirely, so the UI
- * kept hydrating a previous extraction.
- */
-export function shouldRefreshEligibilityAfterDocumentStep({ action, nextStep }) {
-  const eligibilityRunsNext =
-    action === INTERNAL_ACTION.APPROVE &&
-    nextStep?.handledBy?.type === HANDLER_TYPE.AI &&
-    nextStep?.handledBy?.assignee === AI_HANDLER.ELIGIBILITY_SCREENING;
-  return !eligibilityRunsNext;
 }

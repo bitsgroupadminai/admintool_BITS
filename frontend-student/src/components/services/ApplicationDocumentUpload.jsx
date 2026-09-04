@@ -14,28 +14,6 @@ import { downloadStudentDocument, isPreviewableMimeType } from '@/utils/document
 import { groupEligibilityNotesByDocument, documentEligibilityKey } from '@/utils/eligibility';
 import { getDocumentAiErrors, getDocumentAiStatus } from '@/utils/aiDocumentFinding';
 
-function academicEligibilityDocuments(documents = []) {
-  return documents.filter((doc) => {
-    const name = String(doc.requirementName ?? '').toLowerCase();
-    if (/photo|photograph|signature|aadhaar|aadhar|id proof|passport-size/.test(name)) {
-      return false;
-    }
-    return (
-      (doc.eligibilityResult?.results ?? []).some((result) => result.status !== 'not_applicable') ||
-      (doc.subjects ?? []).length > 0
-    );
-  });
-}
-
-function eligibilityOutcomeLabel(decision) {
-  if (decision?.eligibilityResult?.eligible === false) return 'Not eligible';
-  if ((decision?.eligibilityResult?.results ?? []).some((result) => result.status === 'unchecked')) {
-    return 'Needs review';
-  }
-  if (decision?.eligibilityResult?.eligible) return 'Eligible';
-  return decision?.summary || 'Review complete';
-}
-
 function DocumentUploadRow({
   requirement,
   uploadedDocument,
@@ -186,7 +164,7 @@ function DocumentUploadRow({
         <div className={`mt-3 rounded-lg border px-3 py-2 ${aiBoxClass}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={`text-[10px] font-bold uppercase tracking-wide ${aiTitleClass}`}>
-              AI check for {requirement.name}
+              Eligibility for {requirement.name}
             </p>
             {aiPending ? null : aiStatus ? (
               <span className={`text-xs font-bold ${aiTitleClass}`}>{aiStatus.label}</span>
@@ -195,11 +173,11 @@ function DocumentUploadRow({
           {aiPending ? (
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8]">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Verifying this document...
+              Checking this document against eligibility rules...
             </p>
           ) : aiStatus?.tone === 'pass' ? (
             <p className="mt-2 text-xs leading-relaxed text-[#065F46]">
-              This file looks like a valid {requirement.name}.
+              This {requirement.name} is eligible.
             </p>
           ) : (
             <dl className="mt-2 space-y-2">
@@ -213,10 +191,20 @@ function DocumentUploadRow({
               ))}
             </dl>
           )}
+          {!aiPending && (aiFinding?.subjects ?? []).length > 0 ? (
+            <ul className="mt-2 space-y-0.5">
+              {aiFinding.subjects.slice(0, 8).map((subject) => (
+                <li key={subject.name} className="text-[11px] text-[#334155]">
+                  {subject.name}: {subject.score ?? '—'}
+                  {subject.grade ? ` (${subject.grade})` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 
-      {eligibilityNotes.length > 0 && !failedAi ? (
+      {eligibilityNotes.length > 0 ? (
         <div className="mt-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
             This file should confirm
@@ -276,10 +264,6 @@ export function ApplicationDocumentUpload({
   const latestDocDecision = (application?.aiDecisions ?? []).find(
     (decision) => decision.handler === 'document_verification',
   );
-  const latestEligibilityDecision = (application?.aiDecisions ?? []).find(
-    (decision) => decision.handler === 'eligibility_screening',
-  );
-  const eligibilityDocuments = academicEligibilityDocuments(latestEligibilityDecision?.perDocument);
 
   const findAiFinding = (requirementName) => {
     if (!latestDocDecision) return null;
@@ -287,15 +271,7 @@ export function ApplicationDocumentUpload({
     const finding = (latestDocDecision.perDocument ?? []).find(
       (item) => String(item.requirementName ?? '').trim().toLowerCase() === matchName,
     );
-    if (!finding) return null;
-    return {
-      verdict: finding.verdict,
-      issue: finding.issue,
-      observedContent: finding.observedContent,
-      matchesRequirement: finding.matchesRequirement,
-      belongsToApplicant: finding.belongsToApplicant,
-      legible: finding.legible,
-    };
+    return finding ?? null;
   };
 
   if (!requirements.length) {
@@ -389,84 +365,6 @@ export function ApplicationDocumentUpload({
           <p className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-xs text-[#92400E]">
             Still needed: {missingRequired.map((item) => item.name).join(', ')}
           </p>
-        ) : null}
-
-        {!aiPending && latestEligibilityDecision ? (
-          <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-[#0A6640]">
-              AI eligibility review
-            </p>
-            <p
-              className={
-                latestEligibilityDecision.eligibilityResult?.eligible === false
-                  ? 'mt-2 text-xs font-semibold text-[#991B1B]'
-                  : (latestEligibilityDecision.eligibilityResult?.results ?? []).some(
-                        (result) => result.status === 'unchecked',
-                      )
-                    ? 'mt-2 text-xs font-semibold text-[#92400E]'
-                    : 'mt-2 text-xs font-semibold text-[#065F46]'
-              }
-            >
-              {eligibilityOutcomeLabel(latestEligibilityDecision)}
-            </p>
-            {eligibilityDocuments.length === 0 &&
-            (latestEligibilityDecision.eligibilityResult?.results ?? []).length > 0 ? (
-              <ul className="mt-2 space-y-1">
-                {latestEligibilityDecision.eligibilityResult.results.map((result, index) => (
-                  <li
-                    key={`${result.field}-${index}`}
-                    className={
-                      result.status === 'failed'
-                        ? 'text-xs leading-relaxed text-[#991B1B]'
-                        : result.status === 'passed'
-                          ? 'text-xs leading-relaxed text-[#065F46]'
-                          : 'text-xs leading-relaxed text-[#92400E]'
-                    }
-                  >
-                    {result.field}: {result.actual ?? '—'} (needs {result.requirement ?? result.expected ?? '—'})
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {eligibilityDocuments.map((doc, index) => {
-              const seen = new Set();
-              const subjects = (doc.subjects ?? []).filter((subject) => {
-                const key = String(subject.name ?? '').trim().toLowerCase();
-                if (!key || seen.has(key)) return false;
-                seen.add(key);
-                return true;
-              });
-              const threshold = (doc.eligibilityResult?.results ?? []).find((result) =>
-                /threshold/i.test(String(result.field ?? '')),
-              );
-              const required = threshold?.expected;
-              return (
-              <div key={`${doc.requirementName}-${index}`} className="mt-3">
-                <p className="text-xs font-semibold text-[#052E1C]">
-                  {doc.requirementName || `Document ${index + 1}`}
-                  {doc.verdict === 'failed'
-                    ? ' · Not eligible'
-                    : doc.verdict === 'passed'
-                      ? ' · Eligible'
-                      : ' · Incomplete'}
-                </p>
-                <ul className="mt-1 space-y-1">
-                  {subjects.length ? (
-                    subjects.map((subject) => (
-                      <li key={subject.name} className="text-xs text-[#334155]">
-                        {subject.name}: {subject.score ?? '—'}
-                        {subject.grade ? ` (${subject.grade})` : ''}
-                        {required != null ? ` · needs at least ${required}` : ''}
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs text-[#92400E]">No subject scores extracted from this document.</li>
-                  )}
-                </ul>
-              </div>
-              );
-            })}
-          </div>
         ) : null}
       </div>
 

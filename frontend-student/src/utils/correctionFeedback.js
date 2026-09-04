@@ -1,7 +1,9 @@
 function isNegativeFinding(finding) {
+  const verdict = finding.eligibilityVerdict || finding.verdict;
   return (
-    finding.verdict === 'fail' ||
-    finding.verdict === 'uncertain' ||
+    verdict === 'fail' ||
+    verdict === 'uncertain' ||
+    verdict === 'ineligible' ||
     Boolean(finding.issue)
   );
 }
@@ -12,26 +14,24 @@ function itemsFromAiDecisions(decisions = []) {
 
   for (const finding of documentDecision?.perDocument ?? []) {
     if (!isNegativeFinding(finding)) continue;
+    const eligibilityIssue = (finding.eligibilityResult?.results ?? []).find(
+      (result) => result.status === 'failed' || result.status === 'unchecked',
+    );
     items.push({
       title: finding.requirementName || 'Document',
-      detail: finding.issue || (finding.observedContent ? `What was uploaded: ${finding.observedContent}` : ''),
+      detail:
+        finding.issue ||
+        eligibilityIssue?.message ||
+        (finding.observedContent ? `What was uploaded: ${finding.observedContent}` : 'This document is ineligible.'),
     });
-  }
-
-  const eligibilityDecision = decisions.find(
-    (decision) => decision.handler === 'eligibility_screening',
-  );
-  for (const result of eligibilityDecision?.eligibilityResult?.results ?? []) {
-    if (result.status !== 'failed' && result.status !== 'unchecked') continue;
-    items.push({
-      title: result.field || 'Eligibility',
-      detail: result.message || '',
-    });
-  }
-
-  if (!items.length) {
-    for (const issue of eligibilityDecision?.issues ?? []) {
-      items.push({ title: '', detail: issue });
+    for (const result of finding.eligibilityResult?.results ?? []) {
+      if (result.status !== 'failed' && result.status !== 'unchecked') continue;
+      if (result.message && result.message !== eligibilityIssue?.message) {
+        items.push({
+          title: finding.requirementName || result.field || 'Eligibility',
+          detail: result.message,
+        });
+      }
     }
   }
 

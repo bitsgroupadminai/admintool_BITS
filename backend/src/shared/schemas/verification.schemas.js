@@ -14,26 +14,6 @@ export const VERIFICATION_VERDICT = {
 
 const verdictEnum = z.enum(['pass', 'fail', 'uncertain']);
 
-const documentFindingSchema = z.object({
-  requirementName: z.string().min(1).max(200),
-  present: z.boolean().default(false),
-  matchesRequirement: z.boolean().default(false),
-  legible: z.boolean().default(true),
-  belongsToApplicant: z.boolean().default(true),
-  verdict: verdictEnum,
-  observedContent: z.string().max(400).optional().default(''),
-  issue: z.string().max(1200).optional().default(''),
-  documentExcerpt: z.string().max(500).optional().default(''),
-});
-
-export const documentVerificationResponseSchema = z.object({
-  verdict: verdictEnum,
-  confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(2500),
-  perDocument: z.array(documentFindingSchema).max(30).default([]),
-  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
-});
-
 const extractedFieldSchema = z.object({
   field: z.string().min(1).max(120),
   value: z.union([z.string(), z.number(), z.boolean()]).nullable(),
@@ -52,6 +32,33 @@ const subjectScoreSchema = z.object({
   score: looseNumber,
   maxScore: looseNumber,
   grade: z.string().max(20).optional().default(''),
+});
+
+const documentFindingSchema = z.object({
+  requirementName: z.string().min(1).max(200),
+  present: z.boolean().default(false),
+  matchesRequirement: z.boolean().default(false),
+  legible: z.boolean().default(true),
+  belongsToApplicant: z.boolean().default(true),
+  verdict: verdictEnum,
+  observedContent: z.string().max(400).optional().default(''),
+  issue: z.string().max(1200).optional().default(''),
+  documentExcerpt: z.string().max(500).optional().default(''),
+  relevantToEligibility: z.boolean().optional().default(false),
+  qualification: z.string().max(200).optional().default(''),
+  aggregate: looseNumber,
+  examScore: looseNumber,
+  subjects: z.array(subjectScoreSchema).max(30).default([]),
+  extractedFields: z.array(extractedFieldSchema).max(40).default([]),
+});
+
+export const documentVerificationResponseSchema = z.object({
+  verdict: verdictEnum,
+  confidence: z.number().min(0).max(1),
+  summary: z.string().min(1).max(2500),
+  perDocument: z.array(documentFindingSchema).max(30).default([]),
+  extractedFields: z.array(extractedFieldSchema).max(40).default([]),
+  issues: z.array(z.string().min(1).max(800)).max(30).default([]),
 });
 
 const eligibilityDocumentExtractionSchema = z.object({

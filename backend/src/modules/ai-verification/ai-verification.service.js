@@ -10,7 +10,6 @@ import {
   applyWorkflowOutcome,
   findStepOutcome,
   getCurrentWorkflowStep,
-  getWorkflowSteps,
 } from '../../shared/helpers/workflowExecution.helper.js';
 import { formatDocumentRequirements, getIntakeDocumentRequirement } from '../../shared/helpers/applicationDocument.helper.js';
 import { prepareDocumentForVerification } from '../../shared/services/document-text.service.js';
@@ -47,7 +46,8 @@ import {
   mergeExtractedFields,
   mergeEligibilityProfile,
   hydrateEligibilityDecision,
-  shouldRefreshEligibilityAfterDocumentStep,
+  hydrateDocumentVerificationDecision,
+  ELIGIBILITY_VERDICT,
 } from './ai-verification.decision.js';
 
 export { isAiVerificationEnabled } from './ai-verification.config.js';
@@ -100,7 +100,6 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
     const step = getCurrentWorkflowStep(application);
     if (!step || step.handledBy?.type !== HANDLER_TYPE.AI) break;
 
-    const handler = step.handledBy?.assignee;
     const outcome = await evaluateAiStep({
       application,
       offering,
@@ -110,22 +109,6 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
     });
     await applyAiOutcome({ instituteId, application, offering, step, outcome });
     processedSteps.push({ stepId: step.stepId, action: outcome.action });
-
-    // Document re-verify often escalates (sample docs, identity, low confidence).
-    // Eligibility is a separate extraction and used to be skipped in that case,
-    // leaving the review panel on yesterday's stored scores.
-    if (handler === AI_HANDLER.DOCUMENT_VERIFICATION) {
-      const nextStep = getCurrentWorkflowStep(application);
-      if (shouldRefreshEligibilityAfterDocumentStep({ action: outcome.action, nextStep })) {
-        await recordEligibilitySnapshot({
-          instituteId,
-          application,
-          offering,
-          policyExcerpts,
-          allowSampleDocuments,
-        });
-      }
-    }
 
     if (outcome.action !== INTERNAL_ACTION.APPROVE) break;
   }
@@ -217,6 +200,12 @@ async function evaluateDocumentStep({
   await refreshApplicantNameFromProfile(application);
   const { docs, images, anyUnreadable } = await gatherApplicationDocuments(application);
   const requiredDocuments = formatDocumentRequirements(offering.documentRequirements ?? []);
+  const eligibilityRules = (offering.eligibilityRules ?? []).map((rule) => ({
+    field: rule.field,
+    fieldType: rule.fieldType,
+    operator: rule.operator,
+    value: rule.value,
+  }));
   const promptOptions = { allowSampleDocuments };
 
   const user = buildDocumentVerificationUserPrompt({
@@ -229,6 +218,7 @@ async function evaluateDocumentStep({
     documents: docs,
     policyExcerpts: allowSampleDocuments ? [] : policyExcerpts,
     allowSampleDocuments,
+    eligibilityRules,
   });
 
   const raw = await callModel({
@@ -238,8 +228,21 @@ async function evaluateDocumentStep({
     schema: documentVerificationResponseSchema,
   });
 
-  const failingDocs = (raw.perDocument ?? [])
-    .filter((doc) => doc.verdict !== 'pass')
+  const hydrated = hydrateDocumentVerificationDecision(
+    {
+      handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
+      verdict: raw.verdict,
+      perDocument: raw.perDocument ?? [],
+      extractedFields: mergeExtractedFields(raw.perDocument ?? [], raw.extractedFields ?? []),
+    },
+    {
+      eligibilityRules,
+      documents: application.documents ?? [],
+    },
+  );
+
+  const failingDocs = (hydrated.perDocument ?? [])
+    .filter((doc) => doc.eligibilityVerdict === ELIGIBILITY_VERDICT.INELIGIBLE)
     .map((doc) => doc.requirementName)
     .filter(Boolean);
 
@@ -248,20 +251,31 @@ async function evaluateDocumentStep({
     confidence: raw.confidence,
     thresholds: allowSampleDocuments ? SAMPLE_DOCUMENT_TESTING_THRESHOLDS : AI_VERIFY_THRESHOLDS,
     forceEscalate: allowSampleDocuments ? false : anyUnreadable && raw.verdict === 'pass',
+    eligibilityEvaluation: eligibilityRules.length ? hydrated.eligibilityResult : null,
   });
+
+  const issues = [
+    ...(hydrated.issues ?? []),
+    ...formatEligibilityComparisonIssues(hydrated.eligibilityResult, hydrated.extractedFields),
+  ].filter((issue, index, all) => issue && all.indexOf(issue) === index);
 
   return {
     action,
-    note: buildNote(raw, action),
+    note: buildNote({ ...raw, perDocument: hydrated.perDocument, issues }, action),
     correctionRequiredDocuments: action === INTERNAL_ACTION.RETURN ? failingDocs : [],
     decision: {
       handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
       action: mapAction(action),
-      verdict: raw.verdict,
+      verdict: hydrated.verdict,
       confidence: raw.confidence,
-      summary: raw.summary,
-      issues: raw.issues ?? [],
-      perDocument: raw.perDocument ?? [],
+      summary:
+        action === INTERNAL_ACTION.APPROVE
+          ? buildEligibilitySummary(hydrated.eligibilityResult, raw.summary)
+          : raw.summary,
+      issues,
+      perDocument: hydrated.perDocument,
+      extractedFields: hydrated.extractedFields,
+      eligibilityResult: hydrated.eligibilityResult,
       raw,
       modelUsed: AI_VERIFICATION_MODEL,
     },
@@ -275,6 +289,43 @@ async function evaluateEligibilityStep({
   policyExcerpts,
   allowSampleDocuments = false,
 }) {
+  const latestDocumentDecision = await AiDecision.findOne({
+    applicationId: application._id,
+    handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (
+    latestDocumentDecision &&
+    (latestDocumentDecision.eligibilityResult ||
+      (latestDocumentDecision.perDocument ?? []).some((doc) => doc.eligibilityVerdict))
+  ) {
+    const reusedAction =
+      latestDocumentDecision.action === AI_DECISION_ACTION.APPROVED
+        ? INTERNAL_ACTION.APPROVE
+        : latestDocumentDecision.action === AI_DECISION_ACTION.RETURNED_FOR_CORRECTION
+          ? INTERNAL_ACTION.RETURN
+          : INTERNAL_ACTION.ESCALATE;
+    return {
+      action: reusedAction,
+      note: latestDocumentDecision.summary ?? 'Eligibility was decided with document verification.',
+      correctionRequiredDocuments: [],
+      decision: {
+        handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
+        action: latestDocumentDecision.action,
+        verdict: latestDocumentDecision.verdict,
+        confidence: latestDocumentDecision.confidence,
+        summary: latestDocumentDecision.summary,
+        issues: latestDocumentDecision.issues ?? [],
+        perDocument: latestDocumentDecision.perDocument ?? [],
+        extractedFields: latestDocumentDecision.extractedFields ?? [],
+        eligibilityResult: latestDocumentDecision.eligibilityResult ?? null,
+        modelUsed: latestDocumentDecision.modelUsed ?? AI_VERIFICATION_MODEL,
+      },
+    };
+  }
+
   await refreshApplicantNameFromProfile(application);
   const { docs, images } = await gatherApplicationDocuments(application);
   const eligibilityRules = (offering.eligibilityRules ?? []).map((rule) => ({
@@ -439,52 +490,6 @@ async function persistDecision({ instituteId, application, offering, step, decis
     });
   } catch (err) {
     logger.error({ err, applicationId: application._id.toString() }, 'Failed to persist AiDecision');
-  }
-}
-
-function findEligibilityWorkflowStep(application) {
-  return getWorkflowSteps(application).find(
-    (step) =>
-      step.handledBy?.type === HANDLER_TYPE.AI &&
-      step.handledBy?.assignee === AI_HANDLER.ELIGIBILITY_SCREENING,
-  );
-}
-
-/**
- * Re-extract eligibility from the current document stack and store a new
- * AiDecision. Does not move the workflow — used when document verification
- * stops the worker before the eligibility step would run.
- */
-async function recordEligibilitySnapshot({
-  instituteId,
-  application,
-  offering,
-  policyExcerpts,
-  allowSampleDocuments,
-}) {
-  const eligibilityStep = findEligibilityWorkflowStep(application);
-  if (!eligibilityStep || !(offering.eligibilityRules ?? []).length) return;
-
-  try {
-    const outcome = await evaluateEligibilityStep({
-      application,
-      offering,
-      step: eligibilityStep,
-      policyExcerpts,
-      allowSampleDocuments,
-    });
-    await persistDecision({
-      instituteId,
-      application,
-      offering,
-      step: eligibilityStep,
-      decision: outcome.decision,
-    });
-  } catch (err) {
-    logger.error(
-      { err, applicationId: application._id.toString() },
-      'Eligibility snapshot after document verification failed',
-    );
   }
 }
 

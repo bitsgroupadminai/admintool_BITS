@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { useConfirm } from '@/components/ui/confirm-context';
 import { SlaBreachActions } from '@/components/applications/SlaBreachActions';
-import { ApplicationAiDecisionsPanel } from '@/components/applications/ApplicationAiDecisionsPanel';
+import {
+  DocumentEligibilityDetails,
+  displayEligibilityVerdict,
+  eligibilityBadgeMeta,
+} from '@/components/applications/DocumentEligibilityReview';
 import { ApplicationAuditLog } from '@/components/applications/ApplicationAuditLog';
 import { WorkflowFunnel } from '@/components/applications/WorkflowFunnel';
 import { InlineDocumentPreview } from '@/components/applications/InlineDocumentPreview';
@@ -34,11 +38,12 @@ function isDocumentAiStep(step) {
 
 function isNegativeAiDecision(decision) {
   if (!decision) return false;
-  if (['fail', 'uncertain'].includes(decision.verdict)) return true;
+  if (['fail', 'uncertain', 'ineligible'].includes(decision.verdict)) return true;
   if (['failed', 'returned_for_correction', 'escalated'].includes(decision.action)) return true;
-  return (decision.perDocument ?? []).some(
-    (item) => item.verdict === 'fail' || item.verdict === 'uncertain',
-  );
+  return (decision.perDocument ?? []).some((item) => {
+    const verdict = item.eligibilityVerdict || item.verdict;
+    return verdict === 'fail' || verdict === 'uncertain' || verdict === 'ineligible';
+  });
 }
 
 function hasNegativeAiReview(decisions) {
@@ -67,14 +72,13 @@ function findAiFinding(decisions, requirementName) {
 }
 
 const AI_VERDICT = {
-  pass: { label: 'Passed', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
-  fail: { label: 'Failed', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
-  uncertain: { label: 'Uncertain', className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]' },
+  eligible: { label: 'Eligible', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
+  ineligible: { label: 'Ineligible', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
 };
 
 const MANUAL_STATUS = {
-  approved: { label: 'Approved', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
-  rejected: { label: 'Rejected', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
+  approved: { label: 'Eligible', className: 'border-[#BBF7D0] bg-[#ECFDF5] text-[#0A6640]' },
+  rejected: { label: 'Ineligible', className: 'border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]' },
   needs_correction: { label: 'Needs correction', className: 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]' },
   pending: { label: 'Not reviewed', className: 'border-[#E2EEE8] bg-[#F9FCFB] text-[#4B6358]' },
 };
@@ -103,55 +107,79 @@ function DocumentVerificationPanel({
 }) {
   const [note, setNote] = useState(uploaded?.reviewNote ?? '');
   const aiMatch = findAiFinding(application.aiDecisions, requirement.name);
-  const aiVerdict = AI_VERDICT[aiMatch?.finding?.verdict] ?? AI_VERDICT[aiMatch?.decision?.verdict];
+  const eligibilityVerdict = displayEligibilityVerdict(aiMatch?.finding) ?? displayEligibilityVerdict(aiMatch?.decision);
+  const aiVerdict = eligibilityBadgeMeta(eligibilityVerdict) ?? AI_VERDICT[eligibilityVerdict];
   const manual = MANUAL_STATUS[uploaded?.reviewStatus] ?? MANUAL_STATUS.pending;
+  const eligibilityRules = application.eligibilityRules ?? [];
 
   return (
     <div className="space-y-3">
       {usesAiVerification ? (
         <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">AI verification</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">Eligibility</p>
+            {pendingAi ? null : eligibilityVerdict && aiVerdict ? (
+              <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${aiVerdict.className}`}>
+                {aiVerdict.label}
+              </span>
+            ) : null}
+          </div>
           {pendingAi ? (
             <p className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-[#1D4ED8]">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Verifying this document...
+              Checking this document against eligibility rules...
             </p>
           ) : aiMatch ? (
             <>
-              <p className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${aiVerdict?.className ?? AI_VERDICT.uncertain.className}`}>
-                {aiVerdict?.label ?? 'Checked'}
-              </p>
+              <div className="mt-3">
+                <DocumentEligibilityDetails
+                  requirement={requirement}
+                  finding={aiMatch.finding}
+                  eligibilityRules={eligibilityRules}
+                />
+              </div>
               {aiMatch.finding?.observedContent ? (
-                <p className="mt-2 text-sm text-[#334155]">
+                <p className="mt-3 text-sm text-[#334155]">
                   <span className="font-semibold text-[#052E1C]">What was uploaded: </span>
                   {aiMatch.finding.observedContent}
                 </p>
               ) : null}
               {aiMatch.finding?.issue ? (
                 <p className="mt-2 text-sm leading-relaxed text-[#334155]">{aiMatch.finding.issue}</p>
-              ) : aiMatch.finding?.verdict === 'pass' ? (
+              ) : eligibilityVerdict === 'eligible' ? (
                 <p className="mt-2 text-sm text-[#4B6358]">
-                  This file matches the requirement and belongs to the applicant.
-                </p>
-              ) : (
-                <p className="mt-2 text-sm text-[#4B6358]">No issues flagged for this document.</p>
-              )}
-              {aiMatch.finding?.documentExcerpt ? (
-                <p className="mt-2 text-xs italic text-[#4B6358]">
-                  Evidence: “{aiMatch.finding.documentExcerpt}”
+                  This file is valid and meets the eligibility requirement for this document.
                 </p>
               ) : null}
             </>
           ) : (
-            <p className="mt-2 text-sm text-[#4B6358]">No AI result for this document yet.</p>
+            <div className="mt-3">
+              <DocumentEligibilityDetails
+                requirement={requirement}
+                finding={null}
+                eligibilityRules={eligibilityRules}
+              />
+              <p className="mt-2 text-sm text-[#4B6358]">No AI result for this document yet.</p>
+            </div>
           )}
+        </div>
+      ) : eligibilityRules.length ? (
+        <div className="rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#0A6640]">Eligibility</p>
+          <div className="mt-3">
+            <DocumentEligibilityDetails
+              requirement={requirement}
+              finding={null}
+              eligibilityRules={eligibilityRules}
+            />
+          </div>
         </div>
       ) : null}
 
       {showManualReview && uploaded ? (
         <div className="rounded-xl border border-[#E2EEE8] bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#052E1C]">Staff review</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#052E1C]">Staff decision</p>
             <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${manual.className}`}>
               {manual.label}
             </span>
@@ -175,7 +203,7 @@ function DocumentVerificationPanel({
               disabled={reviewing}
               onClick={() => onReview({ status: 'approved', note })}
             >
-              Approve
+              Mark eligible
             </Button>
             <Button
               type="button"
@@ -183,7 +211,7 @@ function DocumentVerificationPanel({
               disabled={reviewing}
               onClick={() => onReview({ status: 'rejected', note })}
             >
-              Reject
+              Mark ineligible
             </Button>
             <Button
               type="button"
@@ -324,13 +352,8 @@ export function ApplicationReviewContent({
     createdAt: entry.createdAt,
   }));
 
-  const otherAiDecisions = (application.aiDecisions ?? []).filter(
-    (decision, index, all) =>
-      decision.handler !== 'document_verification' &&
-      all.findIndex((item) => item.handler === decision.handler) === index,
-  );
   const latestDocumentDecision = (application.aiDecisions ?? []).find(
-    (decision) => decision.handler === 'document_verification',
+    (decision) => decision.handler === 'document_verification' || decision.eligibilityResult,
   );
 
   const rollbackPanel = showRollbackUi ? (
@@ -517,7 +540,8 @@ export function ApplicationReviewContent({
           <div>
             <h2 className="text-lg font-bold text-[#052E1C]">Student documents</h2>
             <p className="mt-1 text-sm text-[#4B6358]">
-              Each upload is shown here with its verification status.
+              Review each upload against the eligibility requirement, then mark it eligible or
+              ineligible.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -551,10 +575,11 @@ export function ApplicationReviewContent({
           </p>
         ) : null}
 
-        {usesAiVerification && !pendingAi && latestDocumentDecision?.summary ? (
+        {usesAiVerification && !pendingAi && latestDocumentDecision ? (
           <p className="mt-4 rounded-xl border border-[#D4E5D0] bg-[#F6FAF5] px-4 py-3 text-sm leading-relaxed text-[#334155]">
-            <span className="font-semibold text-[#052E1C]">Overall AI review: </span>
-            {latestDocumentDecision.summary}
+            <span className="font-semibold text-[#052E1C]">Overall eligibility: </span>
+            {displayEligibilityVerdict(latestDocumentDecision) === 'eligible' ? 'Eligible' : 'Ineligible'}
+            {latestDocumentDecision.summary ? ` — ${latestDocumentDecision.summary}` : ''}
             {latestDocumentDecision.confidence != null
               ? ` (${Math.round(latestDocumentDecision.confidence * 100)}% confidence)`
               : ''}
@@ -614,10 +639,6 @@ export function ApplicationReviewContent({
           })}
         </div>
       </section>
-
-      {otherAiDecisions.length > 0 ? (
-        <ApplicationAiDecisionsPanel decisions={otherAiDecisions} />
-      ) : null}
 
       {afterDocuments}
 

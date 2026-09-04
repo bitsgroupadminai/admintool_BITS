@@ -10,7 +10,9 @@ import {
   evaluateEligibilityByDocument,
   mergeEligibilityProfile,
   hydrateEligibilityDecision,
-  shouldRefreshEligibilityAfterDocumentStep,
+  hydrateDocumentVerificationDecision,
+  documentEligibilityVerdict,
+  ELIGIBILITY_VERDICT,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
 import { evaluateEligibilityRules, uniqueSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
@@ -217,6 +219,17 @@ test('formatApplicantRecord includes name, email, mobile, details, and age from 
   assert.match(record, /Date of birth: 2004-06-15/);
   assert.match(record, /City: Jaipur/);
   assert.match(record, /Age \(from date of birth\): \d+/);
+});
+
+test('document verification prompt includes eligibility rules', () => {
+  const prompt = buildDocumentVerificationUserPrompt({
+    applicantName: 'Aarav Mehta',
+    requiredDocuments: [{ name: 'Class 12 marksheet', required: true }],
+    documents: [],
+    eligibilityRules: [{ field: 'Aggregate Requirement', fieldType: 'numeric', operator: 'gte', value: 75 }],
+  });
+  assert.match(prompt, /ELIGIBILITY RULES/);
+  assert.match(prompt, /Aggregate Requirement: at least 75/);
 });
 
 test('document verification prompt includes the full applicant record', () => {
@@ -572,39 +585,97 @@ test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {
   assert.equal(profile.subjects[0].name, 'Physics');
 });
 
-const eligibilityNextStep = {
-  handledBy: { type: HANDLER_TYPE.AI, assignee: 'eligibility_screening' },
-};
-const staffNextStep = {
-  handledBy: { type: HANDLER_TYPE.STAFF, assignee: 'reviewer' },
-};
+test('decideDocumentAction: eligibility failure blocks auto-approve', () => {
+  const action = decideDocumentAction({
+    verdict: 'pass',
+    confidence: 0.95,
+    thresholds,
+    eligibilityEvaluation: {
+      eligible: false,
+      results: [{ status: 'failed', field: 'Aggregate Requirement' }],
+    },
+  });
+  assert.equal(action, INTERNAL_ACTION.RETURN);
+});
 
-test('shouldRefreshEligibilityAfterDocumentStep: skip when eligibility will run next', () => {
+test('decideDocumentAction: unchecked eligibility escalates', () => {
+  const action = decideDocumentAction({
+    verdict: 'pass',
+    confidence: 0.95,
+    thresholds,
+    eligibilityEvaluation: {
+      eligible: true,
+      results: [{ status: 'unchecked', field: 'Subjects' }],
+    },
+  });
+  assert.equal(action, INTERNAL_ACTION.ESCALATE);
+});
+
+test('documentEligibilityVerdict: valid photo is eligible', () => {
   assert.equal(
-    shouldRefreshEligibilityAfterDocumentStep({
-      action: INTERNAL_ACTION.APPROVE,
-      nextStep: eligibilityNextStep,
+    documentEligibilityVerdict({
+      finding: { verdict: 'pass', matchesRequirement: true, belongsToApplicant: true, legible: true },
+      isAcademic: false,
     }),
-    false,
+    ELIGIBILITY_VERDICT.ELIGIBLE,
   );
 });
 
-test('shouldRefreshEligibilityAfterDocumentStep: refresh when documents escalate', () => {
+test('documentEligibilityVerdict: valid marksheet with failed scores is ineligible', () => {
   assert.equal(
-    shouldRefreshEligibilityAfterDocumentStep({
-      action: INTERNAL_ACTION.ESCALATE,
-      nextStep: eligibilityNextStep,
+    documentEligibilityVerdict({
+      finding: { verdict: 'pass', matchesRequirement: true, belongsToApplicant: true, legible: true },
+      eligibilityStatus: 'failed',
+      isAcademic: true,
     }),
-    true,
+    ELIGIBILITY_VERDICT.INELIGIBLE,
   );
 });
 
-test('shouldRefreshEligibilityAfterDocumentStep: refresh when next step is not eligibility', () => {
-  assert.equal(
-    shouldRefreshEligibilityAfterDocumentStep({
-      action: INTERNAL_ACTION.APPROVE,
-      nextStep: staffNextStep,
-    }),
-    true,
+test('hydrateDocumentVerificationDecision uses eligible/ineligible verdicts', () => {
+  const hydrated = hydrateDocumentVerificationDecision(
+    {
+      handler: 'document_verification',
+      verdict: 'pass',
+      perDocument: [
+        {
+          requirementName: 'Class 12 marksheet',
+          present: true,
+          matchesRequirement: true,
+          legible: true,
+          belongsToApplicant: true,
+          verdict: 'pass',
+          qualification: 'Class XII (10+2)',
+          aggregate: 80,
+          subjects: [
+            { name: 'Physics', score: 70 },
+            { name: 'Chemistry', score: 68 },
+            { name: 'Mathematics', score: 80 },
+          ],
+        },
+        {
+          requirementName: 'Passport-size photograph',
+          present: true,
+          matchesRequirement: true,
+          legible: true,
+          belongsToApplicant: true,
+          verdict: 'pass',
+        },
+      ],
+    },
+    {
+      eligibilityRules: bitsRules,
+      documents: [
+        { requirementName: 'Class 12 marksheet' },
+        { requirementName: 'Passport-size photograph' },
+      ],
+    },
   );
+
+  const class12 = hydrated.perDocument.find((doc) => doc.requirementName === 'Class 12 marksheet');
+  const photo = hydrated.perDocument.find((doc) => doc.requirementName === 'Passport-size photograph');
+  assert.equal(class12.verdict, 'eligible');
+  assert.equal(class12.eligibilityVerdict, 'eligible');
+  assert.equal(photo.verdict, 'eligible');
+  assert.equal(hydrated.verdict, 'eligible');
 });

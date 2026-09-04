@@ -45,7 +45,7 @@ export function getDocumentAiErrors(finding, requirementName) {
     return errors;
   }
 
-  if (looksLikeWrongFile(finding) || finding.verdict === 'fail') {
+  if (looksLikeWrongFile(finding) || finding.authenticityVerdict === 'fail') {
     errors.push({
       label: 'Problem',
       text: `Wrong file for “${expected}”.`,
@@ -68,17 +68,22 @@ export function getDocumentAiErrors(finding, requirementName) {
     return errors;
   }
 
-  if (finding.verdict === 'uncertain') {
+  const eligibilityFails = (finding.eligibilityResult?.results ?? []).filter(
+    (result) => result.status === 'failed' || result.status === 'unchecked',
+  );
+  if (eligibilityFails.length) {
+    return eligibilityFails.map((result) => ({
+      label: result.field || 'Eligibility',
+      text: result.message || `This ${expected} does not meet the eligibility requirement.`,
+    }));
+  }
+
+  const verdict = finding.eligibilityVerdict || finding.verdict;
+  if (verdict === 'ineligible' || verdict === 'fail' || verdict === 'uncertain') {
     errors.push({
       label: 'Problem',
-      text: issue || `AI could not confirm this ${expected}.`,
+      text: issue || `This ${expected} is ineligible.`,
     });
-    if (found) {
-      errors.push({
-        label: 'Uploaded instead',
-        text: found,
-      });
-    }
     return errors;
   }
 
@@ -91,14 +96,15 @@ export function getDocumentAiErrors(finding, requirementName) {
 
 export function getDocumentAiStatus(finding) {
   if (!finding) return null;
-  if (finding.verdict === 'pass') {
-    return { label: 'Passed', tone: 'pass' };
+  const verdict = finding.eligibilityVerdict || finding.verdict;
+  if (verdict === 'eligible' || verdict === 'pass') {
+    return { label: 'Eligible', tone: 'pass' };
   }
-  if (finding.verdict === 'fail') {
-    return { label: 'Failed', tone: 'fail' };
+  if (verdict === 'ineligible' || verdict === 'fail') {
+    return { label: 'Ineligible', tone: 'fail' };
   }
-  if (finding.verdict === 'uncertain') {
-    return { label: 'Needs a closer look', tone: 'uncertain' };
+  if (verdict === 'uncertain') {
+    return { label: 'Ineligible', tone: 'fail' };
   }
   return { label: 'Checked', tone: 'uncertain' };
 }
@@ -107,7 +113,8 @@ export function hasDocumentAiFailures(application) {
   const decision = (application?.aiDecisions ?? []).find(
     (item) => item.handler === 'document_verification',
   );
-  return (decision?.perDocument ?? []).some(
-    (finding) => finding.verdict === 'fail' || finding.verdict === 'uncertain',
-  );
+  return (decision?.perDocument ?? []).some((finding) => {
+    const verdict = finding.eligibilityVerdict || finding.verdict;
+    return verdict === 'fail' || verdict === 'uncertain' || verdict === 'ineligible';
+  });
 }

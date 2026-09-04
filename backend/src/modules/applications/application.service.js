@@ -39,7 +39,7 @@ import { settleAiWorkflowSteps } from '../ai-verification/ai-step.helper.js';
 import { enqueueApplicationAiVerification } from '../../core/queues/ai-verification.queue.js';
 import { isAiVerificationEnabled } from '../ai-verification/ai-verification.config.js';
 import { AiDecision, AI_DECISION_HANDLER } from '../ai-verification/aiDecision.model.js';
-import { hydrateEligibilityDecision } from '../ai-verification/ai-verification.decision.js';
+import { hydrateEligibilityDecision, hydrateDocumentVerificationDecision } from '../ai-verification/ai-verification.decision.js';
 import { HANDLER_TYPE, AI_HANDLER, OUTCOME_TYPE } from '../../shared/enums/workflow.enums.js';
 import { isSlaOverdue } from '../../shared/helpers/sla.helper.js';
 import { logger } from '../../core/logger/index.js';
@@ -132,6 +132,12 @@ function formatApplicationDetail(application, service, offering, assignee, user 
     createdAt: application.createdAt,
     updatedAt: application.updatedAt,
     documentRequirements: offering ? formatDocumentRequirements(offering.documentRequirements) : [],
+    eligibilityRules: (offering?.eligibilityRules ?? []).map((rule) => ({
+      field: rule.field,
+      fieldType: rule.fieldType,
+      operator: rule.operator,
+      value: rule.value,
+    })),
     documents: (application.documents ?? []).map(formatApplicationDocument),
     requiredDocumentCount: progress?.requiredDocumentCount ?? 0,
     uploadedRequiredCount: progress?.uploadedRequiredCount ?? 0,
@@ -175,10 +181,6 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
     Application.findOne({ _id: applicationId, instituteId }).select('documents offeringId').lean(),
   ]);
 
-  const decisions = [documentDecision, eligibilityDecision]
-    .filter(Boolean)
-    .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
-
   const offering = application
     ? await Offering.findOne({ _id: application.offeringId, instituteId }).select(
         'eligibilityRules documentRequirements',
@@ -199,36 +201,42 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
     })),
   ];
 
-  return decisions.map((decision) => {
-    const formatted = {
-      id: decision._id.toString(),
-      stepId: decision.stepId ?? null,
-      stepName: decision.stepName ?? '',
-      handler: decision.handler,
-      action: decision.action,
-      verdict: decision.verdict ?? null,
-      confidence: decision.confidence ?? null,
-      summary: decision.summary ?? '',
-      issues: Array.isArray(decision.issues) ? decision.issues : [],
-      perDocument: Array.isArray(decision.perDocument) ? decision.perDocument : [],
-      extractedFields: Array.isArray(decision.extractedFields) ? decision.extractedFields : [],
-      eligibilityResult: decision.eligibilityResult ?? null,
-      createdAt: decision.createdAt,
-      raw: decision.raw ?? null,
-    };
+  const toFormatted = (decision) => ({
+    id: decision._id.toString(),
+    stepId: decision.stepId ?? null,
+    stepName: decision.stepName ?? '',
+    handler: decision.handler,
+    action: decision.action,
+    verdict: decision.verdict ?? null,
+    confidence: decision.confidence ?? null,
+    summary: decision.summary ?? '',
+    issues: Array.isArray(decision.issues) ? decision.issues : [],
+    perDocument: Array.isArray(decision.perDocument) ? decision.perDocument : [],
+    extractedFields: Array.isArray(decision.extractedFields) ? decision.extractedFields : [],
+    eligibilityResult: decision.eligibilityResult ?? null,
+    createdAt: decision.createdAt,
+    raw: decision.raw ?? null,
+  });
 
-    if (decision.handler !== AI_DECISION_HANDLER.ELIGIBILITY_SCREENING) {
-      const { raw, ...rest } = formatted;
-      return rest;
-    }
+  const source = documentDecision
+    ? mergeLegacyEligibilityIntoDocument(toFormatted(documentDecision), eligibilityDecision)
+    : eligibilityDecision
+      ? toFormatted(eligibilityDecision)
+      : null;
+  if (!source) return [];
 
-    try {
-      const hydrated = hydrateEligibilityDecision(formatted, { eligibilityRules, documents });
-      return {
+  try {
+    const hydrator =
+      source.handler === AI_DECISION_HANDLER.DOCUMENT_VERIFICATION
+        ? hydrateDocumentVerificationDecision
+        : hydrateEligibilityDecision;
+    const hydrated = hydrator(source, { eligibilityRules, documents });
+    return [
+      {
         id: hydrated.id,
         stepId: hydrated.stepId,
         stepName: hydrated.stepName,
-        handler: hydrated.handler,
+        handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
         action: hydrated.action,
         verdict: hydrated.verdict,
         confidence: hydrated.confidence,
@@ -238,13 +246,56 @@ export async function loadApplicationAiDecisions(instituteId, applicationId) {
         extractedFields: hydrated.extractedFields,
         eligibilityResult: hydrated.eligibilityResult,
         createdAt: hydrated.createdAt,
+      },
+    ];
+  } catch (err) {
+    logger.error({ err, applicationId, decisionId: source.id }, 'Eligibility hydration failed');
+    const { raw, ...rest } = source;
+    return [{ ...rest, handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION }];
+  }
+}
+
+function mergeLegacyEligibilityIntoDocument(documentDecision, eligibilityDecision) {
+  if (!eligibilityDecision) return documentDecision;
+  const hasInlineEligibility = (documentDecision.perDocument ?? []).some(
+    (doc) =>
+      doc.eligibilityResult ||
+      (doc.subjects ?? []).length ||
+      doc.aggregate != null ||
+      doc.examScore != null,
+  );
+  if (hasInlineEligibility) return documentDecision;
+
+  const eligibilityDocs = Array.isArray(eligibilityDecision.perDocument)
+    ? eligibilityDecision.perDocument
+    : [];
+  const byName = new Map(
+    eligibilityDocs.map((doc) => [String(doc.requirementName ?? '').trim().toLowerCase(), doc]),
+  );
+  return {
+    ...documentDecision,
+    extractedFields: documentDecision.extractedFields?.length
+      ? documentDecision.extractedFields
+      : eligibilityDecision.extractedFields ?? [],
+    eligibilityResult: documentDecision.eligibilityResult ?? eligibilityDecision.eligibilityResult,
+    perDocument: (documentDecision.perDocument ?? []).map((finding) => {
+      const academic = byName.get(String(finding.requirementName ?? '').trim().toLowerCase());
+      if (!academic) return finding;
+      return {
+        ...finding,
+        qualification: finding.qualification || academic.qualification,
+        aggregate: finding.aggregate ?? academic.aggregate,
+        examScore: finding.examScore ?? academic.examScore,
+        subjects: finding.subjects?.length ? finding.subjects : academic.subjects,
+        extractedFields: [...(finding.extractedFields ?? []), ...(academic.extractedFields ?? [])],
+        eligibilityResult: finding.eligibilityResult ?? academic.eligibilityResult,
       };
-    } catch (err) {
-      logger.error({ err, applicationId, decisionId: formatted.id }, 'Eligibility hydration failed');
-      const { raw, ...rest } = formatted;
-      return rest;
-    }
-  });
+    }),
+    raw: {
+      ...(documentDecision.raw && typeof documentDecision.raw === 'object' ? documentDecision.raw : {}),
+      eligibilityPerDocument: eligibilityDocs,
+    },
+  };
 }
 
 async function getAssignedApplication(instituteId, applicationId, staffUserId) {
@@ -262,7 +313,9 @@ async function getAssignedApplication(instituteId, applicationId, staffUserId) {
 export async function loadApplicationContext(application, instituteId) {
   const [service, offering, institute] = await Promise.all([
     Service.findOne({ _id: application.serviceId, instituteId }).select('name'),
-    Offering.findOne({ _id: application.offeringId, instituteId }).select('name documentRequirements'),
+    Offering.findOne({ _id: application.offeringId, instituteId }).select(
+      'name documentRequirements eligibilityRules',
+    ),
     Institute.findById(instituteId).select('name'),
   ]);
 
@@ -437,7 +490,7 @@ export async function getStaffAssignmentSummary(instituteId, staffUserId) {
 export async function getApplicationDetail(instituteId, applicationId, user = null) {
   return cachedRead(
     cacheNs.APPLICATION_DETAIL,
-    [instituteId, applicationId, user?.userId, user?.role, 'elig-v3'],
+    [instituteId, applicationId, user?.userId, user?.role, 'elig-v4'],
     async () => {
       const application = await getInstituteApplication(instituteId, applicationId);
       const [context, assignee, aiDecisions] = await Promise.all([
@@ -474,7 +527,7 @@ export async function getAssignedApplicationDetail(
 ) {
   return cachedRead(
     cacheNs.APPLICATION_ASSIGNED_DETAIL,
-    [instituteId, applicationId, staffUserId, user?.userId, 'elig-v3'],
+    [instituteId, applicationId, staffUserId, user?.userId, 'elig-v4'],
     async () => {
       const application = await getAssignedApplication(instituteId, applicationId, staffUserId);
       const [context, assignee, aiDecisions] = await Promise.all([

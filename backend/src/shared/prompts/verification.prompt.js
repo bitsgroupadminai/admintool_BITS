@@ -94,14 +94,25 @@ Also decide:
 - matchesRequirement: does the content match what the requirement asks for?
 - legible: is it readable / not blank / not corrupted?
 - belongsToApplicant: does the identity on the document match the APPLICANT RECORD (name, and DOB/age when visible)?
-- verdict: pass / fail / uncertain for that single document.
+- verdict: pass / fail / uncertain for whether this file is the valid required document (not the final eligibility decision).
 
-Overall verdict:
+From EACH academic file (marksheet, scorecard, BITSAT), also extract that file's own values. Never mix Class 10, Class 12, and BITSAT.
+Class 12 / Senior Secondary / XII is 10+2. If this file is a Class 12 marksheet, set qualification to "Class XII (10+2)".
+
+You MUST read the marks table. For every subject row copy name, numeric score, maxScore if printed, and grade if printed. A marksheet extraction without numeric scores is incomplete.
+For BITSAT, extract examScore as the total and list each section in subjects[].
+
+- relevantToEligibility: true for marksheets / scorecards / BITSAT; false for photos, signatures, and ID cards
+- qualification, aggregate, examScore, subjects, extractedFields as specified below
+
+Overall authenticity verdict:
 - "pass": every required document is present, legible, matches its requirement, and belongs to the applicant.
 - "fail": at least one required document is clearly missing, the wrong type of file, illegible, or belongs to someone else.
 - "uncertain": you cannot confidently determine the above.
 
-summary must be a complete reviewer-facing paragraph: list each problem by document name, say what the file actually is, and say what the student should upload instead. On a pass, briefly confirm each required document was the correct type and belongs to the applicant.
+Do not decide eligibility against numeric cutoffs yourself. Extract the scores; the system compares them to the rules.
+
+summary must be a complete reviewer-facing paragraph: list each problem by document name, say what the file actually is, and say what the student should upload instead. On a clean authenticity pass, briefly confirm each required document was the correct type and belongs to the applicant.
 
 ${identityRules(allowSampleDocuments)}
 
@@ -122,9 +133,20 @@ Reply with JSON:
       "verdict": "pass" | "fail" | "uncertain",
       "observedContent": "what the uploaded file actually shows",
       "issue": "specific problem and what is required instead, or empty string",
-      "documentExcerpt": "verbatim evidence or empty string"
+      "documentExcerpt": "verbatim evidence or empty string",
+      "relevantToEligibility": true,
+      "qualification": "Class XII (10+2)",
+      "aggregate": 89,
+      "examScore": null,
+      "subjects": [
+        { "name": "Physics", "score": 85, "maxScore": 100, "grade": "A2" }
+      ],
+      "extractedFields": [
+        { "field": "exact rule name", "value": <number|string|boolean|null>, "documentExcerpt": "verbatim proof or empty" }
+      ]
     }
   ],
+  "extractedFields": [],
   "issues": ["specific problems the student must fix, one per issue"]
 }`;
 }
@@ -239,8 +261,33 @@ export const INTAKE_VERIFICATION_SYSTEM_PROMPT = getIntakeVerificationSystemProm
  *   documents?: Array<{ originalName?: string, requirementName?: string, kind?: string, text?: string, reason?: string }>,
  *   policyExcerpts?: string[],
  *   allowSampleDocuments?: boolean,
+ *   eligibilityRules?: Array<{ field: string, fieldType: string, operator: string, value: unknown }>,
  * }} ctx
  */
+function formatEligibilityRulesForPrompt(rules = []) {
+  const lines = (rules ?? [])
+    .map((rule) => {
+      const need =
+        rule.operator === 'gte'
+          ? `at least ${rule.value}`
+          : rule.operator === 'lte'
+            ? `at most ${rule.value}`
+            : rule.operator === 'gt'
+              ? `more than ${rule.value}`
+              : rule.operator === 'lt'
+                ? `less than ${rule.value}`
+                : rule.operator === 'neq'
+                  ? `other than ${rule.value}`
+                  : String(rule.value ?? '');
+      return `- ${rule.field}: ${need} (${rule.fieldType})`;
+    })
+    .join('\n');
+  return [
+    'ELIGIBILITY RULES (extract each file\'s own qualification, subjects, marks, grades, and totals; the system compares them to these rules):',
+    lines || '- (none configured)',
+  ].join('\n');
+}
+
 export function buildDocumentVerificationUserPrompt(ctx) {
   return [
     formatApplicantRecord(ctx),
@@ -254,6 +301,8 @@ export function buildDocumentVerificationUserPrompt(ctx) {
           }`,
       )
       .join('\n') || '- (none configured)',
+    '',
+    formatEligibilityRulesForPrompt(ctx.eligibilityRules),
     '',
     'UPLOADED DOCUMENTS (text extracted where possible; images are attached separately):',
     formatUploadedDocuments(ctx.documents),
@@ -281,24 +330,7 @@ export function buildEligibilityVerificationUserPrompt(ctx) {
   return [
     formatApplicantRecord(ctx),
     '',
-    'ELIGIBILITY RULES (do not mix files; extract each file\'s own qualification, subjects, marks, grades, and totals):',
-    (ctx.eligibilityRules ?? [])
-      .map((rule) => {
-        const need =
-          rule.operator === 'gte'
-            ? `at least ${rule.value}`
-            : rule.operator === 'lte'
-              ? `at most ${rule.value}`
-              : rule.operator === 'gt'
-                ? `more than ${rule.value}`
-                : rule.operator === 'lt'
-                  ? `less than ${rule.value}`
-                  : rule.operator === 'neq'
-                    ? `other than ${rule.value}`
-                    : String(rule.value ?? '');
-        return `- ${rule.field}: ${need} (${rule.fieldType})`;
-      })
-      .join('\n') || '- (none configured)',
+    formatEligibilityRulesForPrompt(ctx.eligibilityRules),
     '',
     'UPLOADED DOCUMENTS (transcribe every subject/section with numeric score and grade; do not mix files):',
     formatUploadedDocuments(ctx.documents),

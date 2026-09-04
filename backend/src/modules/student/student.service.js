@@ -12,6 +12,7 @@ import { SYSTEM_SERVICE_KEYS } from '../../shared/constants/systemServices.js';
 import { APPLICATION_STATUS } from '../../shared/enums/application.enums.js';
 import { getOfferingCompleteness } from '../../shared/helpers/offeringCompleteness.helper.js';
 import { applyCurrentStudentName } from '../../shared/helpers/applicantIdentity.helper.js';
+import { validateApplicantDetails } from '../../shared/helpers/applicantFields.helper.js';
 import { normalizeMobileNumber, formatPhoneForDisplay } from '../../shared/helpers/phone.helper.js';
 import {
   findDocumentRequirement,

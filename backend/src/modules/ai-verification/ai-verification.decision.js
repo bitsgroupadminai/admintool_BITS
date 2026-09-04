@@ -11,6 +11,7 @@ import {
   normalizeFieldKey,
   uniqueSubjects,
 } from '../../shared/helpers/eligibilityEvaluation.helper.js';
+import { HANDLER_TYPE, AI_HANDLER } from '../../shared/enums/workflow.enums.js';
 
 /**
  * Pure decision logic for AI verification. Kept free of DB / OpenAI / queue imports
@@ -439,4 +440,18 @@ export function decideEligibilityAction({
   }
 
   return { action, evaluation };
+}
+
+/**
+ * After document verification, eligibility must be re-extracted from the current
+ * uploads unless the workflow will immediately run the eligibility AI step.
+ * Escalating or returning documents used to skip eligibility entirely, so the UI
+ * kept hydrating a previous extraction.
+ */
+export function shouldRefreshEligibilityAfterDocumentStep({ action, nextStep }) {
+  const eligibilityRunsNext =
+    action === INTERNAL_ACTION.APPROVE &&
+    nextStep?.handledBy?.type === HANDLER_TYPE.AI &&
+    nextStep?.handledBy?.assignee === AI_HANDLER.ELIGIBILITY_SCREENING;
+  return !eligibilityRunsNext;
 }

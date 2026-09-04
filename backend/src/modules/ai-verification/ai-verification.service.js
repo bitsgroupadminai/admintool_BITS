@@ -10,6 +10,7 @@ import {
   applyWorkflowOutcome,
   findStepOutcome,
   getCurrentWorkflowStep,
+  getWorkflowSteps,
 } from '../../shared/helpers/workflowExecution.helper.js';
 import { formatDocumentRequirements, getIntakeDocumentRequirement } from '../../shared/helpers/applicationDocument.helper.js';
 import { prepareDocumentForVerification } from '../../shared/services/document-text.service.js';
@@ -46,6 +47,7 @@ import {
   mergeExtractedFields,
   mergeEligibilityProfile,
   hydrateEligibilityDecision,
+  shouldRefreshEligibilityAfterDocumentStep,
 } from './ai-verification.decision.js';
 
 export { isAiVerificationEnabled } from './ai-verification.config.js';
@@ -98,6 +100,7 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
     const step = getCurrentWorkflowStep(application);
     if (!step || step.handledBy?.type !== HANDLER_TYPE.AI) break;
 
+    const handler = step.handledBy?.assignee;
     const outcome = await evaluateAiStep({
       application,
       offering,
@@ -107,6 +110,22 @@ export async function runApplicationAiVerification({ instituteId, applicationId 
     });
     await applyAiOutcome({ instituteId, application, offering, step, outcome });
     processedSteps.push({ stepId: step.stepId, action: outcome.action });
+
+    // Document re-verify often escalates (sample docs, identity, low confidence).
+    // Eligibility is a separate extraction and used to be skipped in that case,
+    // leaving the review panel on yesterday's stored scores.
+    if (handler === AI_HANDLER.DOCUMENT_VERIFICATION) {
+      const nextStep = getCurrentWorkflowStep(application);
+      if (shouldRefreshEligibilityAfterDocumentStep({ action: outcome.action, nextStep })) {
+        await recordEligibilitySnapshot({
+          instituteId,
+          application,
+          offering,
+          policyExcerpts,
+          allowSampleDocuments,
+        });
+      }
+    }
 
     if (outcome.action !== INTERNAL_ACTION.APPROVE) break;
   }
@@ -420,6 +439,52 @@ async function persistDecision({ instituteId, application, offering, step, decis
     });
   } catch (err) {
     logger.error({ err, applicationId: application._id.toString() }, 'Failed to persist AiDecision');
+  }
+}
+
+function findEligibilityWorkflowStep(application) {
+  return getWorkflowSteps(application).find(
+    (step) =>
+      step.handledBy?.type === HANDLER_TYPE.AI &&
+      step.handledBy?.assignee === AI_HANDLER.ELIGIBILITY_SCREENING,
+  );
+}
+
+/**
+ * Re-extract eligibility from the current document stack and store a new
+ * AiDecision. Does not move the workflow — used when document verification
+ * stops the worker before the eligibility step would run.
+ */
+async function recordEligibilitySnapshot({
+  instituteId,
+  application,
+  offering,
+  policyExcerpts,
+  allowSampleDocuments,
+}) {
+  const eligibilityStep = findEligibilityWorkflowStep(application);
+  if (!eligibilityStep || !(offering.eligibilityRules ?? []).length) return;
+
+  try {
+    const outcome = await evaluateEligibilityStep({
+      application,
+      offering,
+      step: eligibilityStep,
+      policyExcerpts,
+      allowSampleDocuments,
+    });
+    await persistDecision({
+      instituteId,
+      application,
+      offering,
+      step: eligibilityStep,
+      decision: outcome.decision,
+    });
+  } catch (err) {
+    logger.error(
+      { err, applicationId: application._id.toString() },
+      'Eligibility snapshot after document verification failed',
+    );
   }
 }
 

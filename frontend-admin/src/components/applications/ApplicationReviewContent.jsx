@@ -325,7 +325,9 @@ export function ApplicationReviewContent({
   }));
 
   const otherAiDecisions = (application.aiDecisions ?? []).filter(
-    (decision) => decision.handler !== 'document_verification',
+    (decision, index, all) =>
+      decision.handler !== 'document_verification' &&
+      all.findIndex((item) => item.handler === decision.handler) === index,
   );
   const latestDocumentDecision = (application.aiDecisions ?? []).find(
     (decision) => decision.handler === 'document_verification',

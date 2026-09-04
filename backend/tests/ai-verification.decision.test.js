@@ -10,6 +10,7 @@ import {
   evaluateEligibilityByDocument,
   mergeEligibilityProfile,
   hydrateEligibilityDecision,
+  shouldRefreshEligibilityAfterDocumentStep,
 } from '../src/modules/ai-verification/ai-verification.decision.js';
 import { evaluateEligibilityRules, uniqueSubjects } from '../src/shared/helpers/eligibilityEvaluation.helper.js';
 import {
@@ -569,4 +570,41 @@ test('mergeEligibilityProfile prefers Class 12 subjects over Class 10', () => {
   assert.equal(profile.examScore, 312);
   assert.equal(profile.subjects.length, 3);
   assert.equal(profile.subjects[0].name, 'Physics');
+});
+
+const eligibilityNextStep = {
+  handledBy: { type: HANDLER_TYPE.AI, assignee: 'eligibility_screening' },
+};
+const staffNextStep = {
+  handledBy: { type: HANDLER_TYPE.STAFF, assignee: 'reviewer' },
+};
+
+test('shouldRefreshEligibilityAfterDocumentStep: skip when eligibility will run next', () => {
+  assert.equal(
+    shouldRefreshEligibilityAfterDocumentStep({
+      action: INTERNAL_ACTION.APPROVE,
+      nextStep: eligibilityNextStep,
+    }),
+    false,
+  );
+});
+
+test('shouldRefreshEligibilityAfterDocumentStep: refresh when documents escalate', () => {
+  assert.equal(
+    shouldRefreshEligibilityAfterDocumentStep({
+      action: INTERNAL_ACTION.ESCALATE,
+      nextStep: eligibilityNextStep,
+    }),
+    true,
+  );
+});
+
+test('shouldRefreshEligibilityAfterDocumentStep: refresh when next step is not eligibility', () => {
+  assert.equal(
+    shouldRefreshEligibilityAfterDocumentStep({
+      action: INTERNAL_ACTION.APPROVE,
+      nextStep: staffNextStep,
+    }),
+    true,
+  );
 });

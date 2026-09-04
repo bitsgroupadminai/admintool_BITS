@@ -153,21 +153,31 @@ async function getInstituteApplication(instituteId, applicationId) {
 }
 
 /**
- * Latest AI verification decisions per workflow step (excludes intake pre-screen),
+ * Latest AI verification decision per handler (excludes intake pre-screen),
  * newest first, for staff/admin review context.
  */
 export async function loadApplicationAiDecisions(instituteId, applicationId) {
-  const [decisions, application] = await Promise.all([
-    AiDecision.find({
+  const [documentDecision, eligibilityDecision, application] = await Promise.all([
+    AiDecision.findOne({
       instituteId,
       applicationId,
-      handler: { $ne: AI_DECISION_HANDLER.INTAKE_AUTHORIZATION },
+      handler: AI_DECISION_HANDLER.DOCUMENT_VERIFICATION,
     })
       .sort({ createdAt: -1 })
-      .limit(20)
+      .lean(),
+    AiDecision.findOne({
+      instituteId,
+      applicationId,
+      handler: AI_DECISION_HANDLER.ELIGIBILITY_SCREENING,
+    })
+      .sort({ createdAt: -1 })
       .lean(),
     Application.findOne({ _id: applicationId, instituteId }).select('documents offeringId').lean(),
   ]);
+
+  const decisions = [documentDecision, eligibilityDecision]
+    .filter(Boolean)
+    .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
 
   const offering = application
     ? await Offering.findOne({ _id: application.offeringId, instituteId }).select(

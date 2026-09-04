@@ -71,7 +71,7 @@ export function ServicesListPage() {
   const handleDelete = async (service) => {
     const hint =
       service.offeringCount > 0
-        ? `\n\nThis service has ${service.offeringCount} offering(s). Delete those first.`
+        ? `\n\nThis service has ${service.offeringCount} offering(s). Open the service and use Delete on each offering first.`
         : "";
     const ok = await confirm({
       title: `Delete "${service.name}"?`,

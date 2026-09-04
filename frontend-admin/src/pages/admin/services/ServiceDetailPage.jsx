@@ -206,7 +206,7 @@ export function ServiceDetailPage() {
     const ok = await confirm({
       title: `Delete "${service?.name}"?`,
       description:
-        "All knowledge documents will be removed. You must delete all offerings first.",
+        "All knowledge documents will be removed. Delete every offering in Your offerings below first.",
       confirmLabel: "Delete service",
       variant: "danger",
     });
@@ -953,11 +953,12 @@ export function ServiceDetailPage() {
                           <Copy className="h-4 w-4" strokeWidth={2} />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDeleteOffering(offering)}
-                          title="Delete offering"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[#9CA3AF] transition-all duration-200 hover:border-[#FCA5A5] hover:bg-red-50 hover:text-[#EF4444]"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#FECACA] bg-white px-4 py-2 text-sm font-semibold text-[#B91C1C] transition-all duration-200 hover:border-[#EF4444] hover:bg-red-50"
                         >
-                          <Trash2 className="h-4 w-4" strokeWidth={2} />
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                          Delete
                         </button>
                       </div>
                     </div>

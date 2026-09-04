@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Archive, CheckSquare, Power, PowerOff, Square } from 'lucide-react';
+import { Archive, CheckSquare, Power, PowerOff, Square, Trash2 } from 'lucide-react';
 import { useConfirm } from '@/components/ui/confirm-context';
 import { offeringsApi } from '@/api/offerings.api';
 
@@ -35,27 +35,42 @@ export function OfferingBulkToolbar({ offerings, onUpdated, selected: externalSe
 
   const runBulk = async (action) => {
     if (!selected.size) return;
-    const labels = { enable: 'enable', disable: 'disable', archive: 'archive' };
+    const labels = { enable: 'enable', disable: 'disable', archive: 'archive', delete: 'delete' };
     const ok = await confirm({
       title: `${labels[action]} ${selected.size} offering(s)?`,
-      description: `This will ${action} the selected offerings.`,
+      description:
+        action === 'delete'
+          ? 'This permanently removes the selected offerings. Offerings that already have student requests cannot be deleted.'
+          : `This will ${action} the selected offerings.`,
       confirmLabel: labels[action],
-      variant: action === 'archive' ? 'danger' : 'default',
+      variant: action === 'archive' || action === 'delete' ? 'danger' : 'default',
     });
     if (!ok) return;
 
     setSubmitting(true);
     try {
-      const { data } = await offeringsApi.bulk({
-        offeringIds: [...selected],
-        action,
-      });
-      const results = data.data.results ?? [];
-      const failed = results.filter((r) => !r.success);
-      if (failed.length) {
-        toast.error(`${failed.length} offering(s) could not be ${action}d`);
+      if (action === 'delete') {
+        const results = await Promise.allSettled(
+          [...selected].map((offeringId) => offeringsApi.remove(offeringId)),
+        );
+        const failed = results.filter((r) => r.status === 'rejected');
+        if (failed.length) {
+          toast.error(`${failed.length} offering(s) could not be deleted`);
+        } else {
+          toast.success('Offerings deleted');
+        }
       } else {
-        toast.success(`Offerings ${action}d`);
+        const { data } = await offeringsApi.bulk({
+          offeringIds: [...selected],
+          action,
+        });
+        const results = data.data.results ?? [];
+        const failed = results.filter((r) => !r.success);
+        if (failed.length) {
+          toast.error(`${failed.length} offering(s) could not be ${action}d`);
+        } else {
+          toast.success(`Offerings ${action}d`);
+        }
       }
       setSelected(new Set());
       await onUpdated();
@@ -110,6 +125,15 @@ export function OfferingBulkToolbar({ offerings, onUpdated, selected: externalSe
           >
             <Archive className="h-3.5 w-3.5" />
             Archive
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => runBulk('delete')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#FECACA] bg-white px-3 py-1.5 text-xs font-semibold text-[#B91C1C] transition hover:bg-[#FEF2F2] disabled:opacity-60"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
           </button>
         </>
       )}

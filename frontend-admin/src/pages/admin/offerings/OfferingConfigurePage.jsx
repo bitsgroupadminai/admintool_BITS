@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, MapPin, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
+import { useConfirm } from '@/components/ui/confirm-context';
 import { OfferingWizardNav, WIZARD_STEPS } from '@/components/offerings/OfferingWizardNav';
 import { ApplicantFieldBuilder } from '@/components/offerings/ApplicantFieldBuilder';
 import {
@@ -112,6 +113,7 @@ function StepFooter({ onBack, onSaveDraft, onContinue, saving, continueLabel = '
 export function OfferingConfigurePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const step = searchParams.get('step') || 'details';
 
@@ -624,6 +626,27 @@ export function OfferingConfigurePage() {
     }
   };
 
+  const handleDeleteOffering = async () => {
+    const name = detailsForm.name || offering.name;
+    const ok = await confirm({
+      title: `Delete offering "${name}"?`,
+      description:
+        offering.status === 'active'
+          ? 'This cannot be undone. Students will no longer see this offering.'
+          : 'This cannot be undone.',
+      confirmLabel: 'Delete offering',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await offeringsApi.remove(id);
+      toast.success('Offering deleted');
+      navigate(offering.serviceId ? `/admin/services/${offering.serviceId}` : '/admin/services');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete offering');
+    }
+  };
+
   const detailsValidation = useMemo(
     () =>
       validateOfferingDetails({
@@ -686,7 +709,13 @@ export function OfferingConfigurePage() {
             <h1 className="text-2xl font-semibold">{detailsForm.name || offering.name}</h1>
             <p className="text-sm text-muted">Configure offering · {service?.name}</p>
           </div>
-          <Badge variant={offering.status}>{offering.status}</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={offering.status}>{offering.status}</Badge>
+            <Button type="button" variant="destructive" onClick={handleDeleteOffering}>
+              <Trash2 className="h-4 w-4" />
+              Delete offering
+            </Button>
+          </div>
         </div>
 
         {dirtySteps[step] ? (

@@ -12,7 +12,6 @@ export const authApi = {
     const formData = new FormData();
     formData.append('avatar', file);
     return apiClient.post('/auth/profile/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (event) => {
         if (onProgress && event.total) {
           onProgress(Math.round((event.loaded / event.total) * 100));

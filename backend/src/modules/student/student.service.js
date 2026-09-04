@@ -369,10 +369,14 @@ async function recordEnrollmentIntake(application, offering, instituteId) {
     logger.error({ err, applicationId: application._id }, 'Failed to queue enrollment intake received email');
   });
 
-  await notifyInstituteTeamOfEnrollmentIntake(application, {
-    offeringName: offering.name,
-    serviceName: emailContext.serviceName,
-  });
+  try {
+    await notifyInstituteTeamOfEnrollmentIntake(application, {
+      offeringName: offering.name,
+      serviceName: emailContext.serviceName,
+    });
+  } catch (err) {
+    logger.error({ err, applicationId: application._id }, 'Failed to notify institute of enrollment intake');
+  }
 
   emitApplicationUpdated({
     instituteId,
@@ -565,9 +569,15 @@ export async function createEnrollmentApplication(instituteId, payload, intakeDo
   }
 
   await application.save();
-  await recordEnrollmentIntake(application, offering, instituteId);
+  try {
+    await recordEnrollmentIntake(application, offering, instituteId);
+  } catch (err) {
+    logger.error({ err, applicationId: application._id }, 'Failed to finalize enrollment intake');
+  }
 
-  await flushInstituteReadCache(instituteId);
+  await flushInstituteReadCache(instituteId).catch((err) => {
+    logger.error({ err, instituteId }, 'Failed to flush institute cache after enrollment intake');
+  });
   return {
     id: application._id.toString(),
     status: application.status,

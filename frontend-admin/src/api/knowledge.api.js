@@ -5,9 +5,7 @@ export const knowledgeApi = {
   upload: (serviceId, file) => {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.post(`/services/${serviceId}/knowledge-documents`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return apiClient.post(`/services/${serviceId}/knowledge-documents`, form);
   },
   remove: (serviceId, docId) =>
     apiClient.delete(`/services/${serviceId}/knowledge-documents/${docId}`),

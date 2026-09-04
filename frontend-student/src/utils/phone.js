@@ -131,12 +131,17 @@ export function serializeApplicantDetailsForSubmit(fields = [], values = {}) {
 
   for (const field of fields) {
     const raw = values[field.fieldKey];
+    if (raw === undefined || raw === null || raw === '') continue;
+
     if (field.fieldType === 'phone') {
       result[field.fieldKey] = serializePhoneValue(parsePhoneValue(raw));
       continue;
     }
 
-    result[field.fieldKey] = raw;
+    result[field.fieldKey] =
+      typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean'
+        ? raw
+        : String(raw);
   }
 
   return result;

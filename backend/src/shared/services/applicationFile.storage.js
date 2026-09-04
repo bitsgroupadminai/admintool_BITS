@@ -82,7 +82,9 @@ export async function persistUploadedApplicationFile(file) {
     if (file?.path) {
       await fs.unlink(file.path).catch(() => {});
     }
-    throw error;
+    if (error instanceof AppError) throw error;
+    logger.error({ err: error }, 'Failed to store application file');
+    throw new AppError('Could not store the uploaded document. Please try again.', 503);
   }
 }
 

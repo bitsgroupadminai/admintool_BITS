@@ -11,7 +11,6 @@ export const authApi = {
     const formData = new FormData();
     formData.append('avatar', file);
     return apiClient.post('/auth/profile/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (event) => {
         if (onProgress && event.total) {
           onProgress(Math.round((event.loaded / event.total) * 100));
@@ -41,9 +40,7 @@ export const studentApi = {
     if (intakeDocumentFile) {
       formData.append('intakeDocument', intakeDocumentFile);
     }
-    return apiClient.post(`/student/${instituteId}/enrollment/applications`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return apiClient.post(`/student/${instituteId}/enrollment/applications`, formData);
   },
   getEnrollmentIntakeStatus: (instituteId, offeringId, email) =>
     apiClient.get(`/student/${instituteId}/enrollment/intake-status`, {
@@ -66,7 +63,6 @@ export const studentApi = {
     return apiClient.post(
       `/student/services/${serviceId}/offerings/${offeringId}/applications/documents/${requirementId}`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
   },
   removeApplicationDocument: (serviceId, offeringId, requirementId) =>

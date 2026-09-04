@@ -47,6 +47,16 @@ export function getApiBaseUrl() {
   return KNOWN_PRODUCTION_API;
 }
 
+/**
+ * Absolute API URL. Used for multipart uploads from Vercel so the file
+ * does not pass through the SPA rewrite (which can strip the boundary).
+ */
+export function getDirectApiBaseUrl() {
+  const fromEnv = normalizeAbsoluteUrl(import.meta.env.VITE_API_BASE_URL);
+  if (fromEnv) return withApiV1(fromEnv);
+  return KNOWN_PRODUCTION_API;
+}
+
 /** Origin of the API host (no `/api/v1`), used for `/uploads` and sockets. */
 export function getApiOrigin() {
   if (shouldUseSameOriginProxy() && typeof window !== 'undefined') {
@@ -71,6 +81,19 @@ apiClient.interceptors.request.use((config) => {
   const token = readSessionToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Let the browser set multipart boundary. A bare multipart Content-Type
+  // (or the default application/json) makes Multer fail with a 500.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (typeof config.headers?.delete === 'function') {
+      config.headers.delete('Content-Type');
+    } else if (config.headers) {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
+    if (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')) {
+      config.baseURL = getDirectApiBaseUrl();
+    }
   }
   return config;
 });

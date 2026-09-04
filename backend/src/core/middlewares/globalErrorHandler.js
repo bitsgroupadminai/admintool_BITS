@@ -28,6 +28,18 @@ export function globalErrorHandler(err, req, res, _next) {
     return sendError(res, status === 401 || status === 403 ? 503 : status, description);
   }
 
+  if (err.code === 11000) {
+    return sendError(res, 409, 'This record already exists.');
+  }
+
+  if (
+    err.name === 'MulterError' ||
+    err.code === 'LIMIT_UNEXPECTED_FILE' ||
+    /multipart|boundary|Unexpected end of form/i.test(err.message ?? '')
+  ) {
+    return sendError(res, 400, 'Could not read the uploaded file. Please try again.');
+  }
+
   if (err.code === 'LIMIT_FILE_SIZE') {
     const isAvatar = req.originalUrl?.includes('/profile/avatar');
     return sendError(

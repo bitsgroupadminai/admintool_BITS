@@ -190,6 +190,14 @@ const envSchema = z.object({
     .transform((value) => value === 'true'),
   /** Interval (ms) between background dependency health checks. */
   HEALTH_MONITOR_INTERVAL_MS: z.coerce.number().min(5_000).default(60_000),
+  /**
+   * When true, 500 responses include the underlying error name/message/stack.
+   * Default on so portal testing can see the real failure in the browser.
+   */
+  EXPOSE_ERROR_DETAILS: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 const parsed = envSchema.safeParse(cleanedEnv);
@@ -213,6 +221,7 @@ console.log(
     hasPinecone: Boolean(env.PINECONE_API_KEY),
     hasSmtp: Boolean(env.SMTP_USER && env.SMTP_PASS),
     hasResend: Boolean(env.RESEND_API_KEY),
+    exposeErrorDetails: env.EXPOSE_ERROR_DETAILS,
   }),
 );
 

@@ -23,22 +23,36 @@ const NETWORK_MESSAGES = {
  * @param {unknown} data
  * @returns {string | null}
  */
+function formatErrorItem(item) {
+  if (typeof item === 'string') return item.trim();
+  if (!item || typeof item !== 'object') return '';
+  const message = typeof item.message === 'string' ? item.message.trim() : '';
+  if (!message) return '';
+  const name = typeof item.name === 'string' && item.name && item.name !== 'Error' ? `${item.name}: ` : '';
+  const code = item.code != null && item.code !== '' ? ` [${item.code}]` : '';
+  return `${name}${message}${code}`;
+}
+
 function extractServerMessage(data) {
   if (!data) return null;
 
   if (typeof data === 'string') {
     const trimmed = data.trim();
     if (!trimmed || trimmed.startsWith('<')) return null;
-    if (trimmed.length > 300) return null;
+    if (trimmed.length > 800) return `${trimmed.slice(0, 800)}…`;
     return trimmed;
   }
 
-  if (typeof data === 'object' && data !== null && typeof data.message === 'string') {
-    const trimmed = data.message.trim();
-    return trimmed || null;
-  }
+  if (typeof data !== 'object') return null;
 
-  return null;
+  const top = typeof data.message === 'string' ? data.message.trim() : '';
+  const detail = Array.isArray(data.errors)
+    ? data.errors.map(formatErrorItem).filter(Boolean).join(' · ')
+    : '';
+
+  if (detail && top && detail.includes(top)) return detail;
+  if (detail && top && detail !== top) return `${top} — ${detail}`;
+  return detail || top || null;
 }
 
 /**
